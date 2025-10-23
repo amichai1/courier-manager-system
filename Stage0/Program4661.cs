@@ -1,18 +1,20 @@
-﻿internal partial class Program
+﻿namespace Stage0
 {
-    private static void Main(string[] args)
+    internal partial class Program
     {
-        Welcome4661();
-        Welcomeyyyy();
-        Console.ReadKey();
-    }
+        private static void Main(string[] args)
+        {
+            Welcome4661();
+            Welcomeyyyy();
+        }
 
-    static partial void Welcomeyyyy();
-    private static void Welcome4661()
-    {
-        Console.WriteLine("Hello, World!");
-        Console.Write("Enter your name:\n");
-        System.String name = Console.ReadLine() ?? "Guest";
-        Console.WriteLine($"{name}, Welcome to my first console application!");
+        static partial void Welcomeyyyy();
+        private static void Welcome4661()
+        {
+            Console.WriteLine("Hello, World!");
+            Console.Write("Enter your name:\n");
+            System.String name = Console.ReadLine() ?? "Guest";
+            Console.WriteLine($"{name}, Welcome to my first console application!");
+        }
     }
 }
