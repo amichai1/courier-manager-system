@@ -46,10 +46,7 @@ namespace DalTest
                 Console.Write("Enter your choice: ");
 
                 if (!Enum.TryParse(Console.ReadLine(), out MainMenu choice))
-                {
-                    Console.WriteLine("Error, Invalid choice!.");
-                    continue;
-                }
+                    throw new FormatException("Error, Invalid choice!.");
 
                 try
                 {
@@ -84,7 +81,7 @@ namespace DalTest
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Erorr: {ex.Message}!");
+                    Console.WriteLine(ex.Message);
                 }
             }
         }
@@ -108,8 +105,7 @@ namespace DalTest
 
                 if (!Enum.TryParse(Console.ReadLine(), out CrudMenu choice))
                 {
-                    Console.WriteLine("Error, Invalid choice!");
-                    continue;
+                    throw new FormatException("Error, Invalid choice!.");
                 }
 
                 try
@@ -120,28 +116,55 @@ namespace DalTest
                             exit = true;
                             break;
                         case CrudMenu.Create:
+                            if (entity == "Courier") s_dalCourier?.Create(new Courier()); 
+                            else if (entity == "Order") s_dalOrder?.Create(new Order());
+                            else if (entity == "Delivery") s_dalDelivery?.Create(new Delivery());
                             break;
                         case CrudMenu.Read:
+                            Console.Write("Enter ID: ");
+                            if(!int.TryParse(Console.ReadLine(), out int readId)) 
+                                throw new FormatException("Error, Invalid choice!.");
+                            if (entity == "Courier") Console.WriteLine(s_dalCourier?.Read(readId));
+                            else if (entity == "Order") Console.WriteLine(s_dalOrder?.Read(readId));
+                            else if (entity == "Delivery") Console.WriteLine(s_dalDelivery?.Read(readId));
                             break;
                         case CrudMenu.ReadAll:
+                            if (entity == "Courier") foreach (var c in s_dalCourier.ReadAll()) Console.WriteLine(c);
+                            else if (entity == "Order") foreach (var o in s_dalOrder.ReadAll()) Console.WriteLine(o);
+                            else if (entity == "Delivery") foreach (var d in s_dalDelivery.ReadAll()) Console.WriteLine(d);
                             break;
                         case CrudMenu.Update:
+                            Console.Write("Enter ID to update: ");
+                            if(!int.TryParse(Console.ReadLine(), out int updateId))
+                                throw new FormatException("Error, Invalid choice!.");
+                            if (entity == "Courier") s_dalCourier?.Update(new Courier { Id = updateId });
+                            else if (entity == "Order") s_dalOrder?.Update(new Order { Id = updateId });
+                            else if (entity == "Delivery") s_dalDelivery?.Update(new Delivery { Id = updateId }); 
                             break;
                         case CrudMenu.Delete:
+                            Console.Write("Enter ID to delete: ");
+                            if(!int.TryParse(Console.ReadLine(), out int deleteId))
+                                throw new FormatException("Error, Invalid choice!.");
+                            if (entity == "Courier") s_dalCourier?.Delete(deleteId);
+                            else if (entity == "Order") s_dalOrder?.Delete(deleteId);
+                            else if (entity == "Delivery") s_dalDelivery?.Delete(deleteId);
                             break;
                         case CrudMenu.DeleteAll:
+                            if (entity == "Courier") s_dalCourier?.DeleteAll();
+                            else if (entity == "Order") s_dalOrder?.DeleteAll();
+                            else if (entity == "Delivery") s_dalDelivery?.DeleteAll();
                             break;
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error in {entity} action: {ex.Message}!");
+                    Console.WriteLine($"Error in {entity} action: {ex.Message}");
                 }
             }
         }
 
-        // Config Menu 
-        private static void RunConfigMenu()
+// Config Menu 
+private static void RunConfigMenu()
         {
             bool exit = false;
 
@@ -159,7 +182,7 @@ namespace DalTest
                 {
                     case "0": exit = true; break;
                     case "1": Console.WriteLine(s_dalConfig?.Clock); break;
-                    case "2": s_dalConfig?.Clock.AddHours(1); break;
+                    case "2": s_dalConfig.Clock = s_dalConfig.Clock.AddHours(1); break;
                     case "3": s_dalConfig?.Reset(); break;
                     default: Console.WriteLine("Invalid choice."); break;
                 }
