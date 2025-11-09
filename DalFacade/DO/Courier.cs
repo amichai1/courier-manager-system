@@ -20,18 +20,18 @@
 public record Courier
 (
     int Id,
-    string Name = "",
-    string Phone = "",
-    string Email = "",
-    string Password = "",
-    bool IsActive = false,
-    double? MaxDeliveryDistance = null,
-    DeliveryType DeliveryType = DeliveryType.OnFoot,
-    DateTime StartWorkingDate = default
+    DateTime StartWorkingDate
 )
 {
     /// <summary>
     /// Default parameterless constructor for future use in stage 3 of the project.
     /// </summary>
-    public Courier() :this(0) { }
+    public new string Name { get; set; } = "";
+    public new string Phone { get; set; } = "";
+    public new string Email { get; set; } = "";
+    public new string Password { get; set; } = "";
+    public new bool IsActive { get; set; } = false;
+    public new double? MaxDeliveryDistance { get; set; } = null;
+    public new DeliveryType DeliveryType { get; set; } = DeliveryType.OnFoot;
+    public Courier() :this(0, default) { }
 }

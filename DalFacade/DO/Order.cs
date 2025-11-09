@@ -21,22 +21,22 @@
 /// <param name="CreatedAt">Date and time when the order was created</param>
 public record Order
 (
-    int Id,
-    OrderType OrderType,
-    string? Description = null,
-    string Address = "",
-    double Latitude = 0,
-    double Longitude = 0,
-    string CustomerName = "",
-    string CustomerPhone = "",
-    double Weight = 0,
-    double Volume = 0,
-    bool IsFragile = false,
+    int Id = 0,
     DateTime CreatedAt = default
 )
 {
     /// <summary>
     /// Default parameterless constructor for future use in stage 3 of the project.
     /// </summary>
-    public Order() : this(0, OrderType.Retail) { }
+    public new OrderType OrderType { get; set; } = OrderType.Retail;
+    public new string? Description { get; set; } = null;
+    public new string Address { get; set; } = "";
+    public new double Latitude { get; set; } = 0;
+    public new double Longitude { get; set; } = 0;
+    public new string CustomerName { get; set; } = "";
+    public new string CustomerPhone { get; set; } = "";
+    public new double Weight { get; set; } = 0;
+    public new double Volume { get; set; } = 0;
+    public new bool IsFragile { get; set; } = false;
+    public Order() : this(0, default) { }
 }

@@ -10,12 +10,12 @@
 internal static class Config
 {
     // Running ID Configuration for Order
-    internal const int startOrderId = 0;
+    internal const int startOrderId = 1;
     private static int nextOrderId = startOrderId;
     internal static int NextOrderId { get => nextOrderId++; }
 
     // Running ID Configuration for Delivery
-    internal const int startDeliveryId = 0;
+    internal const int startDeliveryId = 1;
     private static int nextDeliveyId = startDeliveryId;
     internal static int NextDeliveryId { get => nextDeliveyId++; }
 
@@ -26,7 +26,7 @@ internal static class Config
     /// Maintained separately from the computer's real clock.
     /// Can be initialized and advanced by the manager or simulator.
     /// </remarks>
-    internal static DateTime Clock { get; set; } = DateTime.Now;
+    internal static DateTime Clock { get; set; } = new DateTime (2025, 01, 01, 8,0,0);
 
     // Manager Credentials     
     /// <summary>

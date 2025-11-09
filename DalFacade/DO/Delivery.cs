@@ -24,13 +24,13 @@ public record Delivery
     int CourierId,
     DeliveryType DeliveryType,
     DateTime StartTime = default,
-    Double? ActualDistance = null,
-    DeliveryStatus? CompletionStatus = null,
-    DateTime? EndTime = null
+    Double? ActualDistance = null
 )
 {
     /// <summary>
     /// Default parameterless constructor for future use in stage 3 of the project.
     /// </summary>
-    public Delivery() : this(0, 0, 0, DeliveryType.OnFoot) { }
+    public new DeliveryStatus? CompletionStatus { get; set; } = null;
+    public new DateTime? EndTime { get; set; } = null;
+    public Delivery() : this(0, 0, 0, DeliveryType.OnFoot,default, null) { }
 }

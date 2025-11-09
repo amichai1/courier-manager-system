@@ -116,21 +116,21 @@ public static class Initialization
             DeliveryType deliveryType = deliveryTypes[i % deliveryTypes.Length];
 
             DateTime startDate = s_dalConfig?.Clock.AddDays(-s_rand.Next(30, 365)) ?? DateTime.Now.AddDays(-15);
-
             Courier courier = new Courier(
-                Id: id,
-                Name: courierNames[i],
-                Phone: phone,
-                Email: email,
-                Password: plainPassword,
-                IsActive: isActive,
-                MaxDeliveryDistance: maxDistance,
-                DeliveryType: deliveryType,
-                StartWorkingDate: startDate
-            );
+                id,
+                startDate 
+            )
+            {
+                Name = courierNames[i],
+                Phone = phone,
+                Email = email,
+                Password = plainPassword,
+                IsActive = isActive,
+                MaxDeliveryDistance = maxDistance,
+                DeliveryType = deliveryType,
+            };
 
             s_dalCourier?.Create(courier);
-
             Console.WriteLine($"  Created: {courierNames[i]}, ID: {id}, Password: {plainPassword}");
         }
     }
@@ -342,18 +342,21 @@ public static class Initialization
             // Create order (ID will be auto-generated)
             Order order = new Order(
                 Id: 0, // Will be auto-generated
-                OrderType: orderType,
-                Description: description,
-                Address: address,
-                Latitude: lat,
-                Longitude: lon,
-                CustomerName: customerName,
-                CustomerPhone: customerPhone,
-                Weight: weight,
-                Volume: volume,
-                IsFragile: isFragile,
                 CreatedAt: createdAt
-            );
+            )
+            {
+                OrderType = orderType,
+                Description = description,
+                Address = address,
+                Latitude = lat,
+                Longitude = lon,
+                CustomerName = customerName,
+                CustomerPhone = customerPhone,
+                Weight = weight,
+                Volume = volume,
+                IsFragile = isFragile,
+            }
+        ;
             s_dalOrder?.Create(order);
         }
     }
@@ -478,11 +481,12 @@ public static class Initialization
                 CourierId: courier.Id,
                 DeliveryType: courier.DeliveryType,
                 StartTime: startTime,
-                ActualDistance: status.HasValue || s_rand.Next(0, 2) == 0 ? actualDistance : null,
-                CompletionStatus: status,
-                EndTime: endTime
-            );
-
+                ActualDistance: status.HasValue || s_rand.Next(0, 2) == 0 ? actualDistance : null
+            )
+            {
+                CompletionStatus = status,
+                EndTime = endTime
+            };
             s_dalDelivery?.Create(delivery);
         }
 
