@@ -399,12 +399,12 @@ public static class Initialization
             );
 
             // Find eligible couriers
-            var eligibleCouriers = allCouriers
+            var eligibleCouriers = allCouriers?
                 .Where(c => c.MaxDeliveryDistance == null || orderDistance <= c.MaxDeliveryDistance)
                 .Where(c => c.IsActive is true)
                 .ToList();
 
-            if (eligibleCouriers.Count == 0)
+            if (eligibleCouriers?.Count == 0)
             {
                 // No eligible courier, leave order open
                 openOrdersCreated++;
@@ -412,7 +412,7 @@ public static class Initialization
             }
 
             // Select random eligible courier
-            var courier = eligibleCouriers[s_rand.Next(eligibleCouriers.Count)];
+            var courier = eligibleCouriers?[s_rand.Next(eligibleCouriers.Count)];
 
             // Determine delivery status based on targets
             DeliveryStatus? status;

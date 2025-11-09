@@ -26,12 +26,12 @@ public record Courier
     /// <summary>
     /// Default parameterless constructor for future use in stage 3 of the project.
     /// </summary>
-    public new string Name { get; set; } = "";
-    public new string Phone { get; set; } = "";
-    public new string Email { get; set; } = "";
-    public new string Password { get; set; } = "";
-    public new bool IsActive { get; set; } = false;
-    public new double? MaxDeliveryDistance { get; set; } = null;
-    public new DeliveryType DeliveryType { get; set; } = DeliveryType.OnFoot;
+    public string Name { get; set; } = "";
+    public string Phone { get; set; } = "";
+    public string Email { get; set; } = "";
+    public string Password { get; set; } = "";
+    public bool IsActive { get; set; } = false;
+    public double? MaxDeliveryDistance { get; set; } = null;
+    public DeliveryType DeliveryType { get; set; } = DeliveryType.OnFoot;
     public Courier() :this(0, default) { }
 }

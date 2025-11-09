@@ -28,15 +28,15 @@ public record Order
     /// <summary>
     /// Default parameterless constructor for future use in stage 3 of the project.
     /// </summary>
-    public new OrderType OrderType { get; set; } = OrderType.Retail;
-    public new string? Description { get; set; } = null;
-    public new string Address { get; set; } = "";
-    public new double Latitude { get; set; } = 0;
-    public new double Longitude { get; set; } = 0;
-    public new string CustomerName { get; set; } = "";
-    public new string CustomerPhone { get; set; } = "";
-    public new double Weight { get; set; } = 0;
-    public new double Volume { get; set; } = 0;
-    public new bool IsFragile { get; set; } = false;
+    public OrderType OrderType { get; set; } = OrderType.Retail;
+    public string? Description { get; set; } = null;
+    public string Address { get; set; } = "";
+    public double Latitude { get; set; } = 0;
+    public double Longitude { get; set; } = 0;
+    public string CustomerName { get; set; } = "";
+    public string CustomerPhone { get; set; } = "";
+    public double Weight { get; set; } = 0;
+    public double Volume { get; set; } = 0;
+    public bool IsFragile { get; set; } = false;
     public Order() : this(0, default) { }
 }

@@ -30,7 +30,7 @@ public record Delivery
     /// <summary>
     /// Default parameterless constructor for future use in stage 3 of the project.
     /// </summary>
-    public new DeliveryStatus? CompletionStatus { get; set; } = null;
-    public new DateTime? EndTime { get; set; } = null;
+    public DeliveryStatus? CompletionStatus { get; set; } = null;
+    public DateTime? EndTime { get; set; } = null;
     public Delivery() : this(0, 0, 0, DeliveryType.OnFoot,default, null) { }
 }

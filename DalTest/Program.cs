@@ -224,17 +224,19 @@ internal class Program
                         break;
 
                     case ConfigMenu.AddMinute:
-                        s_dalConfig.Clock = s_dalConfig.Clock.AddMinutes(1);
+                        if(s_dalConfig is not null)
+                            s_dalConfig.Clock = s_dalConfig.Clock.AddMinutes(1);
                         Console.WriteLine("Clock advanced by 1 minute.");
                         break;
 
                     case ConfigMenu.AddHour:
-                        s_dalConfig.Clock = s_dalConfig.Clock.AddHours(1);
+                        if (s_dalConfig is not null)
+                            s_dalConfig.Clock = s_dalConfig.Clock.AddHours(1);
                         Console.WriteLine("Clock advanced by 1 hour.");
                         break;
 
                     case ConfigMenu.ShowClock:
-                        Console.WriteLine(s_dalConfig.Clock);
+                        Console.WriteLine(s_dalConfig?.Clock);
                         break;
 
                     case ConfigMenu.SetMaxDistance:
@@ -245,13 +247,14 @@ internal class Program
                             if (!string.IsNullOrWhiteSpace(maxDeliveryDistance) &&
                                 maxDeliveryDistance.Trim().Equals("null", StringComparison.OrdinalIgnoreCase))
                             {
-                                s_dalConfig.MaxDeliveryDistance = null;
+                                if (s_dalConfig is not null)
+                                    s_dalConfig.MaxDeliveryDistance = null;
                                 Console.WriteLine("MaxDeliveryDistance cleared (no limit).");
                             }
                             else
                             {
                                 double value = ReadDouble("MaxDeliveryDistance (km): ", initialInput: maxDeliveryDistance);
-                                s_dalConfig.MaxDeliveryDistance = value;
+                                if (s_dalConfig is not null) s_dalConfig.MaxDeliveryDistance = value;
                                 Console.WriteLine("MaxDeliveryDistance updated.");
                             }
                             break;
@@ -338,10 +341,10 @@ internal class Program
         return new Courier
         {
             Id = id,
-            Name = name,
-            Phone = phone,
-            Email = email,
-            Password = password,
+            Name = name ?? "",
+            Phone = phone ?? "",
+            Email = email ?? "",
+            Password = password ?? "",
             IsActive = isActive,
             MaxDeliveryDistance = maxDeliveryDistance,
             DeliveryType = deliveryType,
@@ -351,11 +354,15 @@ internal class Program
 
     private static void UpdateCourierInteractive(int id)
     {
-        var existing = s_dalCourier.Read(id);
+        var existing = s_dalCourier?.Read(id);
 
         Console.WriteLine("Current courier:");
         Console.WriteLine(existing);
-
+        if (existing == null)
+        {
+            Console.WriteLine("Error, this id not exist!");
+            return;
+        }
         Console.Write("New Name (empty = keep): ");
         string? nameInput = Console.ReadLine();
         if (!string.IsNullOrWhiteSpace(nameInput))
@@ -426,9 +433,9 @@ internal class Program
         {
             OrderType = orderType,
             Description = desc,
-            Address = address,
-            CustomerName = customerName,
-            CustomerPhone = customerPhone,
+            Address = address ?? "",
+            CustomerName = customerName ?? "",
+            CustomerPhone = customerPhone ?? "",
             Weight = weight,
             Volume = volume,
             IsFragile = isFragile,
@@ -441,7 +448,11 @@ internal class Program
 
         Console.WriteLine("Current order:");
         Console.WriteLine(existing);
-
+        if (existing == null)
+        {
+            Console.WriteLine("Error, this id not exist!");
+            return;
+        }
         Console.Write("OrderType (name/number, empty = keep): ");
         string? typeInput = Console.ReadLine();
         if (!string.IsNullOrWhiteSpace(typeInput))
@@ -527,7 +538,11 @@ internal class Program
 
         Console.WriteLine("Current delivery:");
         Console.WriteLine(existing);
-
+        if (existing == null)
+        {
+            Console.WriteLine("Error, this id not exist!");
+            return;
+        }
         Console.Write("CompletionStatus (Completed/Failed/Cancelled) [empty = keep, 'null' = clear]: ");
         string? statusInput = Console.ReadLine();
         if (!string.IsNullOrWhiteSpace(statusInput))
