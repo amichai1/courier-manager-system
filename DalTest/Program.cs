@@ -1,14 +1,14 @@
 ﻿using DO;
 using DalApi;
 using Dal;
+using System;
 
 namespace DalTest;
+
 internal class Program
 {
-    private static ICourier? s_dalCourier = new CourierImplementation();
-    private static IOrder? s_dalOrder = new OrderImplementation();
-    private static IDelivery? s_dalDelivery = new DeliveryImplementation();
-    private static IConfig? s_dalConfig = new ConfigImplementation();
+    // [Stage 2 Fix: Replaced four specific DAL interfaces with the unified IDal interface]
+    static readonly DalApi.IDal s_dal = new Dal.DalList();
 
     private enum MainMenu { Exit, Couriers, Orders, Deliveries, Config, InitDb, ShowAll, Reset }
     private enum CrudMenu { Exit, Create, Read, ReadAll, Update, Delete, DeleteAll }
@@ -44,7 +44,7 @@ internal class Program
             Console.WriteLine("5. Init data base");
             Console.WriteLine("6. Show all data");
             Console.WriteLine("7. Reset");
-            
+
             try
             {
                 int choiceNum = ReadInt("Enter your choice: ");
@@ -74,7 +74,8 @@ internal class Program
                         RunConfigMenu();
                         break;
                     case MainMenu.InitDb:
-                        Initialization.Do(s_dalCourier, s_dalOrder, s_dalDelivery, s_dalConfig);
+                        // [Stage 2 Fix: Calling Initialization.Do with the unified IDal object]
+                        Initialization.Do(s_dal);
                         Console.WriteLine("Initialization success!");
                         break;
                     case MainMenu.ShowAll:
@@ -98,6 +99,11 @@ internal class Program
     private static void RunCrudMenu(string entity)
     {
         bool exit = false;
+
+        // [Stage 2 Fix: Local variables referencing the relevant sub-interface via s_dal]
+        ICourier? dalCourier = entity == "Courier" ? s_dal.Courier : null;
+        IOrder? dalOrder = entity == "Order" ? s_dal.Order : null;
+        IDelivery? dalDelivery = entity == "Delivery" ? s_dal.Delivery : null;
 
         while (!exit)
         {
@@ -129,38 +135,38 @@ internal class Program
                         if (entity == "Courier")
                         {
                             var courier = ReadCourierFromConsole();
-                            s_dalCourier?.Create(courier);
+                            dalCourier?.Create(courier);
                             Console.WriteLine("Courier created.");
-                            Console.WriteLine(s_dalCourier?.Read(courier.Id));
-
+                            Console.WriteLine(dalCourier?.Read(courier.Id));
                         }
                         else if (entity == "Order")
                         {
                             var order = ReadOrderFromConsole();
-                            s_dalOrder?.Create(order);
+                            dalOrder?.Create(order);
                             Console.WriteLine("Order created.");
-                            Console.WriteLine(s_dalOrder?.Read(order.Id));
+                            Console.WriteLine(dalOrder?.Read(order.Id));
                         }
                         else if (entity == "Delivery")
                         {
                             var delivery = ReadDeliveryFromConsole();
-                            s_dalDelivery?.Create(delivery);
+                            dalDelivery?.Create(delivery);
                             Console.WriteLine("Delivery created.");
-                            Console.WriteLine(s_dalDelivery?.Read(delivery.Id));
+                            Console.WriteLine(dalDelivery?.Read(delivery.Id));
                         }
                         break;
 
                     case CrudMenu.Read:
                         int readId = ReadInt("Enter ID: ");
-                        if (entity == "Courier") Console.WriteLine(s_dalCourier?.Read(readId));
-                        else if (entity == "Order") Console.WriteLine(s_dalOrder?.Read(readId));
-                        else if (entity == "Delivery") Console.WriteLine(s_dalDelivery?.Read(readId));
+                        if (entity == "Courier") Console.WriteLine(dalCourier?.Read(readId));
+                        else if (entity == "Order") Console.WriteLine(dalOrder?.Read(readId));
+                        else if (entity == "Delivery") Console.WriteLine(dalDelivery?.Read(readId));
                         break;
 
                     case CrudMenu.ReadAll:
-                        if (entity == "Courier") foreach (var c in s_dalCourier.ReadAll()) Console.WriteLine(c);
-                        else if (entity == "Order") foreach (var o in s_dalOrder.ReadAll()) Console.WriteLine(o);
-                        else if (entity == "Delivery") foreach (var d in s_dalDelivery.ReadAll()) Console.WriteLine(d);
+                        // [Reads all entities of the current type and prints them]
+                        if (entity == "Courier" && dalCourier is not null) foreach (var c in dalCourier.ReadAll()) Console.WriteLine(c);
+                        else if (entity == "Order" && dalOrder is not null) foreach (var o in dalOrder.ReadAll()) Console.WriteLine(o);
+                        else if (entity == "Delivery" && dalDelivery is not null) foreach (var d in dalDelivery.ReadAll()) Console.WriteLine(d);
                         break;
 
                     case CrudMenu.Update:
@@ -172,15 +178,15 @@ internal class Program
 
                     case CrudMenu.Delete:
                         int deleteId = ReadInt("Enter ID to delete: ");
-                        if (entity == "Courier") s_dalCourier?.Delete(deleteId);
-                        else if (entity == "Order") s_dalOrder?.Delete(deleteId);
-                        else if (entity == "Delivery") s_dalDelivery?.Delete(deleteId);
+                        if (entity == "Courier") dalCourier?.Delete(deleteId);
+                        else if (entity == "Order") dalOrder?.Delete(deleteId);
+                        else if (entity == "Delivery") dalDelivery?.Delete(deleteId);
                         break;
 
                     case CrudMenu.DeleteAll:
-                        if (entity == "Courier") s_dalCourier?.DeleteAll();
-                        else if (entity == "Order") s_dalOrder?.DeleteAll();
-                        else if (entity == "Delivery") s_dalDelivery?.DeleteAll();
+                        if (entity == "Courier") dalCourier?.DeleteAll();
+                        else if (entity == "Order") dalOrder?.DeleteAll();
+                        else if (entity == "Delivery") dalDelivery?.DeleteAll();
                         Console.WriteLine($"{entity} list cleared.");
                         break;
                 }
@@ -192,10 +198,15 @@ internal class Program
         }
     }
 
-    // Config Menu 
+    /// <summary>
+    /// Configuration Menu
+    /// </summary>
     private static void RunConfigMenu()
     {
         bool exit = false;
+
+        // [Stage 2 Fix: Referencing the Config sub-interface via the unified s_dal]
+        IConfig? dalConfig = s_dal.Config;
 
         while (!exit)
         {
@@ -224,19 +235,19 @@ internal class Program
                         break;
 
                     case ConfigMenu.AddMinute:
-                        if(s_dalConfig is not null)
-                            s_dalConfig.Clock = s_dalConfig.Clock.AddMinutes(1);
+                        if (dalConfig is not null)
+                            dalConfig.Clock = dalConfig.Clock.AddMinutes(1);
                         Console.WriteLine("Clock advanced by 1 minute.");
                         break;
 
                     case ConfigMenu.AddHour:
-                        if (s_dalConfig is not null)
-                            s_dalConfig.Clock = s_dalConfig.Clock.AddHours(1);
+                        if (dalConfig is not null)
+                            dalConfig.Clock = dalConfig.Clock.AddHours(1);
                         Console.WriteLine("Clock advanced by 1 hour.");
                         break;
 
                     case ConfigMenu.ShowClock:
-                        Console.WriteLine(s_dalConfig?.Clock);
+                        Console.WriteLine(dalConfig?.Clock);
                         break;
 
                     case ConfigMenu.SetMaxDistance:
@@ -247,14 +258,14 @@ internal class Program
                             if (!string.IsNullOrWhiteSpace(maxDeliveryDistance) &&
                                 maxDeliveryDistance.Trim().Equals("null", StringComparison.OrdinalIgnoreCase))
                             {
-                                if (s_dalConfig is not null)
-                                    s_dalConfig.MaxDeliveryDistance = null;
+                                if (dalConfig is not null)
+                                    dalConfig.MaxDeliveryDistance = null;
                                 Console.WriteLine("MaxDeliveryDistance cleared (no limit).");
                             }
                             else
                             {
                                 double value = ReadDouble("MaxDeliveryDistance (km): ", initialInput: maxDeliveryDistance);
-                                if (s_dalConfig is not null) s_dalConfig.MaxDeliveryDistance = value;
+                                if (dalConfig is not null) dalConfig.MaxDeliveryDistance = value;
                                 Console.WriteLine("MaxDeliveryDistance updated.");
                             }
                             break;
@@ -262,16 +273,16 @@ internal class Program
 
                     case ConfigMenu.ShowAllConfigurations:
                         Console.WriteLine("Current Configuration:");
-                        Console.WriteLine($"Clock: { s_dalConfig?.Clock }");
-                        Console.WriteLine($"Manager id: { s_dalConfig?.ManagerId }");
-                        Console.WriteLine($"Manager passowrd is: { s_dalConfig?.ManagerPassword }");
-                        Console.WriteLine($"Company address is: { s_dalConfig?.CompanyAddress }"); 
-                        Console.WriteLine($"Max delivery distance is: { s_dalConfig?.MaxDeliveryDistance?.ToString() ?? "(no limit)" }");
-                        Console.WriteLine($"Risk range is: { s_dalConfig?.RiskRange }");
+                        Console.WriteLine($"Clock: {dalConfig?.Clock}");
+                        Console.WriteLine($"Manager id: {dalConfig?.ManagerId}");
+                        Console.WriteLine($"Manager passowrd is: {dalConfig?.ManagerPassword}");
+                        Console.WriteLine($"Company address is: {dalConfig?.CompanyAddress}");
+                        Console.WriteLine($"Max delivery distance is: {dalConfig?.MaxDeliveryDistance?.ToString() ?? "(no limit)"}");
+                        Console.WriteLine($"Risk range is: {dalConfig?.RiskRange}");
                         break;
 
                     case ConfigMenu.ResetConfig:
-                        s_dalConfig?.Reset();
+                        dalConfig?.Reset();
                         Console.WriteLine("Configuration reset.");
                         break;
 
@@ -290,25 +301,29 @@ internal class Program
     // Utility Methods
     private static void ShowAllData()
     {
+        // [Reads and prints all Couriers via the unified IDal interface]
         Console.WriteLine("\nAll courier:\n ");
-        foreach (var c in s_dalCourier.ReadAll()) Console.WriteLine(c);
+        foreach (var c in s_dal.Courier.ReadAll()) Console.WriteLine(c);
 
+        // [Reads and prints all Orders via the unified IDal interface]
         Console.WriteLine("\nAll order:\n");
-        foreach (var o in s_dalOrder.ReadAll()) Console.WriteLine(o);
+        foreach (var o in s_dal.Order.ReadAll()) Console.WriteLine(o);
 
+        // [Reads and prints all Deliveries via the unified IDal interface]
         Console.WriteLine("\nAll delivery:\n");
-        foreach (var d in s_dalDelivery.ReadAll()) Console.WriteLine(d);
+        foreach (var d in s_dal.Delivery.ReadAll()) Console.WriteLine(d);
     }
 
     private static void ResetDatabase()
     {
-        s_dalCourier?.DeleteAll();
-        s_dalOrder?.DeleteAll();
-        s_dalDelivery?.DeleteAll();
-        s_dalConfig?.Reset();
+        // [Stage 2 Fix: Using the single ResetDB method from IDal to clear all data]
+        s_dal.ResetDB();
         Console.WriteLine("DB reset successful.");
     }
 
+    /// <summary>
+    /// Reads new Courier details from the console input for creation
+    /// </summary>
     private static Courier ReadCourierFromConsole()
     {
         int id = ReadInt("Id: ");
@@ -332,7 +347,7 @@ internal class Program
         double? maxDeliveryDistance = null;
         if (!string.IsNullOrWhiteSpace(maxDistanceInput))
             maxDeliveryDistance = ReadDouble("Max Delivery Distance: ", initialInput: maxDistanceInput);
-     
+
         Console.Write("Delivery Type (Car, Motorcycle, Bicycle, OnFoot): ");
         DeliveryType deliveryType = ReadEnum<DeliveryType>("Delivery Type: ", allowEmpty: false);
 
@@ -352,9 +367,12 @@ internal class Program
         };
     }
 
+    /// <summary>
+    /// Prompts user for updates to an existing Courier entity
+    /// </summary>
     private static void UpdateCourierInteractive(int id)
     {
-        var existing = s_dalCourier?.Read(id);
+        var existing = s_dal.Courier.Read(id);
 
         Console.WriteLine("Current courier:");
         Console.WriteLine(existing);
@@ -403,10 +421,13 @@ internal class Program
         if (!string.IsNullOrWhiteSpace(typeInput))
             existing.DeliveryType = ReadEnum<DeliveryType>("DeliveryType: ", initialInput: typeInput);
 
-        s_dalCourier.Update(existing);
+        s_dal.Courier.Update(existing);
         Console.WriteLine("Courier updated successfully.");
     }
 
+    /// <summary>
+    /// Reads new Order details from the console input for creation
+    /// </summary>
     private static Order ReadOrderFromConsole()
     {
         OrderType orderType = ReadEnum<OrderType>("OrderType (name/number): ", allowEmpty: false);
@@ -442,9 +463,13 @@ internal class Program
             CreatedAt = createdAt
         };
     }
+
+    /// <summary>
+    /// Prompts user for updates to an existing Order entity
+    /// </summary>
     private static void UpdateOrderInteractive(int id)
     {
-        var existing = s_dalOrder!.Read(id);
+        var existing = s_dal.Order.Read(id);
 
         Console.WriteLine("Current order:");
         Console.WriteLine(existing);
@@ -493,9 +518,13 @@ internal class Program
         if (!string.IsNullOrWhiteSpace(fragInput))
             existing.IsFragile = ReadBool("IsFragile: ", initialInput: fragInput);
 
-        s_dalOrder.Update(existing);
+        s_dal.Order.Update(existing);
         Console.WriteLine("Order updated successfully.");
     }
+
+    /// <summary>
+    /// Reads new Delivery details from the console input for creation
+    /// </summary>
     private static Delivery ReadDeliveryFromConsole()
     {
         int orderId = ReadInt("OrderId: ");
@@ -532,9 +561,13 @@ internal class Program
             EndTime = endTime
         };
     }
+
+    /// <summary>
+    /// Prompts user for updates to an existing Delivery entity
+    /// </summary>
     private static void UpdateDeliveryInteractive(int id)
     {
-        var existing = s_dalDelivery?.Read(id);
+        var existing = s_dal.Delivery.Read(id);
 
         Console.WriteLine("Current delivery:");
         Console.WriteLine(existing);
@@ -563,15 +596,15 @@ internal class Program
                 existing.EndTime = ReadDateTime("EndTime: ", initialInput: endInput);
         }
 
-        s_dalDelivery.Update(existing);
+        s_dal.Delivery.Update(existing);
         Console.WriteLine("Delivery updated successfully.");
     }
 
+    // [Utility function to read an integer from console]
     private static int ReadInt(string prompt, string? initialInput = null)
     {
         while (true)
         {
-
             if (initialInput is null) Console.Write(prompt);
             string? s = initialInput ?? Console.ReadLine();
             initialInput = null;
@@ -580,6 +613,7 @@ internal class Program
         }
     }
 
+    // [Utility function to read a double from console]
     private static double ReadDouble(string prompt, string? initialInput = null)
     {
         while (true)
@@ -592,6 +626,7 @@ internal class Program
         }
     }
 
+    // [Utility function to read a boolean from console]
     private static bool ReadBool(string prompt, string? initialInput = null)
     {
         while (true)
@@ -604,6 +639,7 @@ internal class Program
         }
     }
 
+    // [Utility function to read a DateTime from console]
     private static DateTime ReadDateTime(string prompt, string? initialInput = null)
     {
         while (true)
@@ -616,6 +652,7 @@ internal class Program
         }
     }
 
+    // [Utility function to read an Enum value from console]
     private static TEnum ReadEnum<TEnum>(string prompt, string? initialInput = null, bool allowEmpty = false)
         where TEnum : struct, Enum
     {

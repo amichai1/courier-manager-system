@@ -9,10 +9,7 @@ using System.Text;
 /// </summary>
 public static class Initialization
 {
-    private static ICourier? s_dalCourier;
-    private static IOrder? s_dalOrder;
-    private static IDelivery? s_dalDelivery;
-    private static IConfig? s_dalConfig;
+    private static IDal? s_dal;
     private static readonly Random s_rand = new();
 
     // Valid Israeli phone prefixes
@@ -21,20 +18,14 @@ public static class Initialization
     /// <summary>
     /// Main initialization method - resets and populates all data lists.
     /// </summary>
-    public static void Do(ICourier? dalCourier, IOrder? dalOrder, IDelivery? dalDelivery, IConfig? dalConfig)
+    public static void Do(IDal dal)
     {
         // Initialize interface references with null checking
-        s_dalCourier = dalCourier ?? throw new NullReferenceException("DAL Courier object cannot be null!");
-        s_dalOrder = dalOrder ?? throw new NullReferenceException("DAL Order object cannot be null!");
-        s_dalDelivery = dalDelivery ?? throw new NullReferenceException("DAL Delivery object cannot be null!");
-        s_dalConfig = dalConfig ?? throw new NullReferenceException("DAL Config object cannot be null!");
+        s_dal = dal ?? throw new NullReferenceException("DAL object cannot be null!");
 
         // Reset configuration and clear all lists
         Console.WriteLine("Resetting configuration values and clearing data lists...");
-        s_dalConfig.Reset();
-        s_dalCourier.DeleteAll();
-        s_dalOrder.DeleteAll();
-        s_dalDelivery.DeleteAll();
+        s_dal.ResetDB();
 
         // Initialize company settings
         Console.WriteLine("Initializing company configuration...");
@@ -52,25 +43,26 @@ public static class Initialization
 
         Console.WriteLine("Data initialization completed successfully!");
     }
+
     /// <summary>
     /// Initializes company configuration settings.
     /// </summary>
     private static void CreateConfig()
     {
-        s_dalConfig!.Clock = DateTime.Now;
-        s_dalConfig.ManagerId = 123456789;
-        s_dalConfig.ManagerPassword = "Admin123!";
-        s_dalConfig.CompanyAddress = "Yona Green 7, Petah Tikva, Israel";
-        s_dalConfig.CompanyLatitude = 32.098799;
-        s_dalConfig.CompanyLongitude = 34.8979087;
-        s_dalConfig.MaxDeliveryDistance = 50.0;
-        s_dalConfig.CarSpeed = 30.0;
-        s_dalConfig.MotorcycleSpeed = 35.0;
-        s_dalConfig.BicycleSpeed = 15.0;
-        s_dalConfig.OnFootSpeed = 4.0;
-        s_dalConfig.MaxDeliveryTime = TimeSpan.FromHours(2);
-        s_dalConfig.RiskRange = TimeSpan.FromMinutes(90);
-        s_dalConfig.InactivityRange = TimeSpan.FromDays(30);
+        s_dal!.Config.Clock = DateTime.Now;
+        s_dal.Config.ManagerId = 123456789;
+        s_dal.Config.ManagerPassword = "Admin123!";
+        s_dal.Config.CompanyAddress = "Yona Green 7, Petah Tikva, Israel";
+        s_dal.Config.CompanyLatitude = 32.098799;
+        s_dal.Config.CompanyLongitude = 34.8979087;
+        s_dal.Config.MaxDeliveryDistance = 50.0;
+        s_dal.Config.CarSpeed = 30.0;
+        s_dal.Config.MotorcycleSpeed = 35.0;
+        s_dal.Config.BicycleSpeed = 15.0;
+        s_dal.Config.OnFootSpeed = 4.0;
+        s_dal.Config.MaxDeliveryTime = TimeSpan.FromHours(2);
+        s_dal.Config.RiskRange = TimeSpan.FromMinutes(90);
+        s_dal.Config.InactivityRange = TimeSpan.FromDays(30);
     }
 
     private static void CreateCouriers()
@@ -108,17 +100,18 @@ public static class Initialization
 
             bool isActive = s_rand.Next(0, 10) != 0;
 
-            double maxDeliveryDistance = s_dalConfig?.MaxDeliveryDistance ?? 50.0; // Default if not set
+            double maxDeliveryDistance = s_dal?.Config.MaxDeliveryDistance ?? 50.0;
             double? maxDistance = s_rand.Next(0, 10) < 3
                 ? null
                 : s_rand.Next(5, (int)maxDeliveryDistance + 1);
 
             DeliveryType deliveryType = deliveryTypes[i % deliveryTypes.Length];
 
-            DateTime startDate = s_dalConfig?.Clock.AddDays(-s_rand.Next(30, 365)) ?? DateTime.Now.AddDays(-15);
+            DateTime startDate = s_dal?.Config.Clock.AddDays(-s_rand.Next(30, 365)) ?? DateTime.Now.AddDays(-15);
+
             Courier courier = new Courier(
                 id,
-                startDate 
+                startDate
             )
             {
                 Name = courierNames[i],
@@ -130,7 +123,7 @@ public static class Initialization
                 DeliveryType = deliveryType,
             };
 
-            s_dalCourier?.Create(courier);
+            s_dal!.Courier.Create(courier);
             Console.WriteLine($"  Created: {courierNames[i]}, ID: {id}, Password: {plainPassword}");
         }
     }
@@ -168,7 +161,7 @@ public static class Initialization
             id = int.Parse(idStr);
 
             // Verify ID doesn't already exist
-            isValid = s_dalCourier?.Read(id) == null;
+            isValid = s_dal?.Courier.Read(id) == null;
 
         } while (!isValid);
 
@@ -337,7 +330,7 @@ public static class Initialization
             }
 
             // Order created in the past (last 45 days)
-            DateTime createdAt = s_dalConfig.Clock.AddDays(-s_rand.Next(0, 45));
+            DateTime createdAt = s_dal!.Config.Clock.AddDays(-s_rand.Next(0, 45));
 
             // Create order (ID will be auto-generated)
             Order order = new Order(
@@ -357,7 +350,7 @@ public static class Initialization
                 IsFragile = isFragile,
             }
         ;
-            s_dalOrder?.Create(order);
+            s_dal.Order.Create(order);
         }
     }
 
@@ -367,11 +360,11 @@ public static class Initialization
     /// </summary>
     private static void CreateDeliveries()
     {
-        var allCouriers = s_dalCourier?.ReadAll().Where(c => c.IsActive).ToList();
-        var allOrders = s_dalOrder?.ReadAll().OrderBy(o => o.CreatedAt).ToList();
+        var allCouriers = s_dal!.Courier.ReadAll().Where(c => c.IsActive).ToList();
+        var allOrders = s_dal.Order.ReadAll().OrderBy(o => o.CreatedAt).ToList();
 
         // Track courier availability (when they finish their last delivery)
-        var courierAvailability = allCouriers?.ToDictionary(c => c.Id, c => c.StartWorkingDate);
+        var courierAvailability = allCouriers.ToDictionary(c => c.Id, c => c.StartWorkingDate);
 
         // Targets
         int targetOpenOrders = 20;
@@ -392,19 +385,19 @@ public static class Initialization
 
             // Calculate order distance from company
             double orderDistance = CalculateAirDistance(
-                s_dalConfig.CompanyLatitude.Value,
-                s_dalConfig.CompanyLongitude.Value,
+                s_dal.Config.CompanyLatitude.Value,
+                s_dal.Config.CompanyLongitude.Value,
                 order.Latitude,
                 order.Longitude
             );
 
             // Find eligible couriers
-            var eligibleCouriers = allCouriers?
+            var eligibleCouriers = allCouriers
                 .Where(c => c.MaxDeliveryDistance == null || orderDistance <= c.MaxDeliveryDistance)
                 .Where(c => c.IsActive is true)
                 .ToList();
 
-            if (eligibleCouriers?.Count == 0)
+            if (eligibleCouriers.Count() == 0)
             {
                 // No eligible courier, leave order open
                 openOrdersCreated++;
@@ -412,7 +405,7 @@ public static class Initialization
             }
 
             // Select random eligible courier
-            var courier = eligibleCouriers?[s_rand.Next(eligibleCouriers.Count)];
+            var courier = eligibleCouriers[s_rand.Next(eligibleCouriers.Count)];
 
             // Determine delivery status based on targets
             DeliveryStatus? status;
@@ -439,7 +432,7 @@ public static class Initialization
                 ? order.CreatedAt
                 : courierAvailability[courier.Id];
 
-            DateTime latestStart = s_dalConfig.Clock.AddHours(-2);
+            DateTime latestStart = s_dal.Config.Clock.AddHours(-2);
             if (earliestStart >= latestStart)
                 latestStart = earliestStart.AddHours(2);
 
@@ -471,7 +464,7 @@ public static class Initialization
             else
             {
                 // In progress
-                courierAvailability[courier.Id] = s_dalConfig!.Clock;
+                courierAvailability[courier.Id] = s_dal.Config.Clock;
             }
 
             // Create delivery
@@ -487,7 +480,7 @@ public static class Initialization
                 CompletionStatus = status,
                 EndTime = endTime
             };
-            s_dalDelivery?.Create(delivery);
+            s_dal.Delivery.Create(delivery);
         }
 
         // Remaining orders stay open
@@ -507,8 +500,8 @@ public static class Initialization
         double dLon = (lon2 - lon1) * Math.PI / 180;
 
         double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
-                   Math.Cos(lat1 * Math.PI / 180) * Math.Cos(lat2 * Math.PI / 180) *
-                   Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+                       Math.Cos(lat1 * Math.PI / 180) * Math.Cos(lat2 * Math.PI / 180) *
+                       Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
 
         double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
         return R * c;
