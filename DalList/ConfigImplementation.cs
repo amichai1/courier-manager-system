@@ -9,7 +9,7 @@ using DalApi;
 /// Exposes only configuration properties needed by upper layers (BL, PL).
 /// Internal settings like running ID counters remain private to the DAL.
 /// </remarks>
-public class ConfigImplementation : IConfig
+internal class ConfigImplementation : IConfig
 {
     /// <summary>
     /// System clock for the delivery simulation.

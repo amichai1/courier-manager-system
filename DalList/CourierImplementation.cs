@@ -6,7 +6,7 @@ using DO;
 /// Implementation of data access methods for Courier entity.
 /// Provides CRUD operations for managing courier data in the system.
 /// </summary>
-public class CourierImplementation : ICourier
+internal class CourierImplementation : ICourier
 {
     /// <summary>
     /// Creates a new courier in the system.

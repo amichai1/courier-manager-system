@@ -6,7 +6,7 @@ using DO;
 /// Implementation of data access methods for Order entity.
 /// Provides CRUD operations for managing order data in the system.
 /// </summary>
-public class OrderImplementation : IOrder
+internal class OrderImplementation : IOrder
 {
     /// <summary>
     /// Creates a new order in the system with auto-generated running ID.
@@ -45,9 +45,7 @@ public class OrderImplementation : IOrder
     /// <exception cref="Exception">Thrown if order with the given ID does not exist</exception>
     public void Update(Order item)
     {
-        var ExistItem = Read(item.Id);
-        if (ExistItem is null)
-            throw new Exception($"Order with ID={item.Id} does not exists");
+        var ExistItem = Read(item.Id) ?? throw new Exception($"Order with ID={item.Id} does not exists"); ;
         DataSource.Orders.Remove(ExistItem);
         DataSource.Orders.Add(item);
     }

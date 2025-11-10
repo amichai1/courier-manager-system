@@ -7,7 +7,7 @@ using System.Collections.Generic;
 /// Implementation of data access methods for Delivery entity.
 /// Provides CRUD operations for managing delivery data in the system.
 /// </summary>
-public class DeliveryImplementation : IDelivery
+internal class DeliveryImplementation : IDelivery
 {
     /// <summary>
     /// Creates a new delivery in the system with auto-generated running ID.
