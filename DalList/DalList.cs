@@ -7,6 +7,7 @@ sealed public class DalList : IDal
     public IOrder Order => new OrderImplementation();
 
     public IDelivery Delivery => new DeliveryImplementation();
+    public IConfig Config => new ConfigImplementation();
 
     public void ResetDB()
     {
