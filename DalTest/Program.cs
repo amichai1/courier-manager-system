@@ -7,8 +7,8 @@ namespace DalTest;
 
 internal class Program
 {
-    // [Stage 2 Fix: Replaced four specific DAL interfaces with the unified IDal interface]
-    static readonly DalApi.IDal s_dal = new Dal.DalList();
+    //static readonly DalApi.IDal s_dal = new Dal.DalList(); // stage 2
+    static readonly IDal s_dal = new DalXml(); //stage 3
 
     private enum MainMenu { Exit, Couriers, Orders, Deliveries, Config, InitDb, ShowAll, Reset }
     private enum CrudMenu { Exit, Create, Read, ReadAll, Update, Delete, DeleteAll }
@@ -35,7 +35,7 @@ internal class Program
 
         while (!exit)
         {
-            Console.WriteLine("Main menu \n");
+            Console.WriteLine("Main Menu:");
             Console.WriteLine("0. Exit");
             Console.WriteLine("1. Manage couriers");
             Console.WriteLine("2. Manage orders");

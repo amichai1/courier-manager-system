@@ -1,23 +1,17 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <config>
-	<NextOrderId>1</NextOrderId>
-	<NextDeliveryId>1</NextDeliveryId>
-
-	<Clock>2025-01-01T08:00:00</Clock>
-	<ManagerId>123456789</ManagerId>
-	<ManagerPassword>Admin123!</ManagerPassword>
-
-	<CompanyAddress></CompanyAddress>
-	<CompanyLatitude></CompanyLatitude>
-	<CompanyLongitude></CompanyLongitude>
-	<MaxDeliveryDistance>50.0</MaxDeliveryDistance>
-
-	<CarSpeed>30.0</CarSpeed>
-	<MotorcycleSpeed>35.0</MotorcycleSpeed>
-	<BicycleSpeed>15.0</BicycleSpeed>
-	<OnFootSpeed>4.0</OnFootSpeed>
-
-	<MaxDeliveryTime>02:00:00</MaxDeliveryTime>
-	<RiskRange>01:30:00</RiskRange>
-	<InactivityRange>30.00:00:00</InactivityRange>
+  <NextOrderId>1</NextOrderId>
+  <NextDeliveryId>1</NextDeliveryId>
+  <Clock>01/01/2025 08:00:00</Clock>
+  <ManagerId>123456789</ManagerId>
+  <ManagerPassword>Admin123!</ManagerPassword>
+  <CompanyAddress></CompanyAddress>
+  <MaxDeliveryDistance>50</MaxDeliveryDistance>
+  <CarSpeed>30</CarSpeed>
+  <MotorcycleSpeed>35</MotorcycleSpeed>
+  <BicycleSpeed>15</BicycleSpeed>
+  <OnFootSpeed>4</OnFootSpeed>
+  <MaxDeliveryTime>02:00:00</MaxDeliveryTime>
+  <RiskRange>01:30:00</RiskRange>
+  <InactivityRange>30.00:00:00</InactivityRange>
 </config>
