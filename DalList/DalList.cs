@@ -1,13 +1,14 @@
 ﻿namespace Dal;
 using DalApi;
-sealed public class DalList : IDal
+
+sealed internal class DalList : IDal
 {
-    public ICourier Courier => new CourierImplementation();
-
-    public IOrder Order => new OrderImplementation();
-
-    public IDelivery Delivery => new DeliveryImplementation();
-    public IConfig Config => new ConfigImplementation();
+    public static IDal Instance { get; } = new DalList();
+    private DalList() { }
+    public ICourier Courier { get; } = new CourierImplementation();
+    public IOrder Order { get; } = new OrderImplementation();
+    public IDelivery Delivery { get; } = new DeliveryImplementation();
+    public IConfig Config { get; } = new ConfigImplementation();
 
     public void ResetDB()
     {

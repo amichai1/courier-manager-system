@@ -1,2 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Couriers />
+<Couriers>
+  <Courier>
+    <Id>1</Id>
+    <Name>1</Name>
+    <Phone>2</Phone>
+    <Email>3</Email>
+    <Password>4</Password>
+    <IsActive>true</IsActive>
+    <DeliveryType>Bicycle</DeliveryType>
+    <StartWorkingDate>1111-11-11T11:11:00.0000000</StartWorkingDate>
+  </Courier>
+</Couriers>

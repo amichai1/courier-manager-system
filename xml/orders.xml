@@ -1,2 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ArrayOfOrder xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" />
+<ArrayOfOrder xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Order>
+    <Id>1</Id>
+    <CreatedAt>1111-11-11T11:11:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>3</Description>
+    <Address>4</Address>
+    <Latitude>0</Latitude>
+    <Longitude>0</Longitude>
+    <CustomerName>5</CustomerName>
+    <CustomerPhone>6</CustomerPhone>
+    <Weight>5</Weight>
+    <Volume>6</Volume>
+    <IsFragile>true</IsFragile>
+  </Order>
+  <Order>
+    <Id>2</Id>
+    <CreatedAt>1111-11-11T11:11:00</CreatedAt>
+    <OrderType>Groceries</OrderType>
+    <Description>1</Description>
+    <Address />
+    <Latitude>0</Latitude>
+    <Longitude>0</Longitude>
+    <CustomerName />
+    <CustomerPhone />
+    <Weight>1</Weight>
+    <Volume>1</Volume>
+    <IsFragile>true</IsFragile>
+  </Order>
+</ArrayOfOrder>

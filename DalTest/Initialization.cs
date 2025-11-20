@@ -18,10 +18,12 @@ public static class Initialization
     /// <summary>
     /// Main initialization method - resets and populates all data lists.
     /// </summary>
-    public static void Do(IDal dal)
+    //public static void Do(IDal dal) //stage 2
+    public static void Do() //stage 4
     {
         // Initialize interface references with null checking
-        s_dal = dal ?? throw new NullReferenceException("DAL object cannot be null!");
+        //s_dal = dal ?? throw new NullReferenceException("DAL object can not be null!"); //stage 2
+        s_dal = DalApi.Factory.Get; //stage 4
 
         // Reset configuration and clear all lists
         Console.WriteLine("Resetting configuration values and clearing data lists...");

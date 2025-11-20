@@ -8,7 +8,8 @@ namespace DalTest;
 internal class Program
 {
     //static readonly DalApi.IDal s_dal = new Dal.DalList(); // stage 2
-    static readonly IDal s_dal = new DalXml(); //stage 3
+    //static readonly IDal s_dal = new DalXml(); //stage 3
+    static readonly IDal s_dal = Factory.Get; //stage 4
 
     private enum MainMenu { Exit, Couriers, Orders, Deliveries, Config, InitDb, ShowAll, Reset }
     private enum CrudMenu { Exit, Create, Read, ReadAll, Update, Delete, DeleteAll }
@@ -74,8 +75,8 @@ internal class Program
                         RunConfigMenu();
                         break;
                     case MainMenu.InitDb:
-                        // [Stage 2 Fix: Calling Initialization.Do with the unified IDal object]
-                        Initialization.Do(s_dal);
+                        //Initialization.Do(s_dal); //stage 2
+                        Initialization.Do(); //stage 4
                         Console.WriteLine("Initialization success!");
                         break;
                     case MainMenu.ShowAll:

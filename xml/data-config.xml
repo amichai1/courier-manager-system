@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <config>
-  <NextOrderId>1</NextOrderId>
+  <NextOrderId>3</NextOrderId>
   <NextDeliveryId>1</NextDeliveryId>
   <Clock>01/01/2025 08:00:00</Clock>
   <ManagerId>123456789</ManagerId>
