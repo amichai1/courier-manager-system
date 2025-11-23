@@ -24,11 +24,14 @@ namespace BO;
 /// <param name="CurrentOrder">The order that the courier is currently handling, if any</param>"
 public class Courier
 {
+    internal CourierStatus Status;
+    public required Location Location { get; set; }
+
     public int Id { get; init; }
-    public string Name { get; set; }
-    public string Phone { get; set; }
-    public string Email { get; set; }
-    public string Password { get; set; }
+    public required string Name { get; set; }
+    public required string Phone { get; set; }
+    public required string Email { get; set; }
+    public required string Password { get; set; }
     public bool IsActive { get; set; }
     public double? MaxDeliveryDistance { get; set; }
     public DeliveryType DeliveryType { get; set; }
@@ -36,4 +39,6 @@ public class Courier
     public int DeliveredOnTime { get; set; }
     public int DeliveredLate { get; set; }
     public OrderInProgress? CurrentOrder { get; set; }
+    public double TotalWeightInDelivery { get; internal set; }
+    public  int OrdersInDelivery { get; internal set; }
 }

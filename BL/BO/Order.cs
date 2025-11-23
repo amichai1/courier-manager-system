@@ -1,6 +1,8 @@
 ﻿namespace BO;
 public class Order
 {
+    internal object CustomerLocation;
+
     public int Id { get; init; }
     public OrderType OrderType { get; set; }
     public string? Description { get; set; }
@@ -20,4 +22,7 @@ public class Order
     public ScheduleStatus ScheduleStatus { get; init; }
     public TimeSpan? OrderComplitionTime { get; init; }
     public List<DeliveryPerOrderInList> DeliveryHistory { get; init; } = new();
+    public DateTime? CourierAssociatedDate { get; internal set; }
+    public DateTime? PickupDate { get; internal set; }
+    public DateTime? DeliveryDate { get; internal set; }
 }

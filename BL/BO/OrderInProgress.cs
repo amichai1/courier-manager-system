@@ -6,7 +6,7 @@ public class OrderInProgress
     public int OrderId { get; init; }
     public OrderType OrderType { get; init; }
     public string? Description { get; set; }
-    public string Address { get; init; }
+    public string? Address { get; init; }
     double? ActualDistance { get; init; }
     public string CustomerName { get; init; }
     public string CustomerPhone { get; init; }

@@ -50,7 +50,9 @@ public enum OrderStatus
     InProgress,
     Delivered,
     OrderRefused,
-    Canceled
+    Canceled,
+    Confirmed,
+    AssociatedToCourier
 }
 
 public enum DeliveryStatus
@@ -97,4 +99,24 @@ public enum ScheduleStatus
     OnTime,
     InRisk,
     Late
+}
+/// <summary>
+/// Defines the logical status of a Courier.
+/// </summary>
+public enum CourierStatus
+{
+    Available,
+    OnRouteForPickup,
+    OnRouteForDelivery,
+    Inactive 
+}
+/// <summary>
+/// Defines the logical type of the vehicle used by the courier.
+/// </summary>
+public enum VehicleType 
+{
+    Car,
+    Motorcycle,
+    Bicycle,
+    OnFoot
 }
