@@ -85,9 +85,9 @@ internal class Program
                     switch (choice)
                     {
                         case 1: HandleCourierMenu(); break;
-                        case 2: HandleOrderMenu(); break; // Implemented below
-                        case 3: HandleDeliveryMenu(); break; // Implemented below
-                        case 4: HandleAdminMenu(); break; // Implemented below
+                        case 2: HandleOrderMenu(); break;
+                        case 3: HandleDeliveryMenu(); break;
+                        case 4: HandleAdminMenu(); break;
                         case 0: exit = true; break;
                         default: Console.WriteLine("Invalid choice."); break;
                     }
@@ -117,7 +117,6 @@ internal class Program
 
     private static BO.Courier GetCourierFromUser(int id)
     {
-        // Helper to construct a BO.Courier from console input (minimal fields)
         return new BO.Courier
         {
             Id = id,
@@ -127,8 +126,6 @@ internal class Program
             Password = InputHelper.ReadString("Enter Password: "),
             IsActive = true,
             DeliveryType = (DeliveryType)InputHelper.ReadInt("Enter Vehicle Type (0=Car, 1=Motorcycle, 2=Bicycle, 3=Foot): "),
-
-            // Location must be initialized for DAL consistency
             Location = new BO.Location { Latitude = 32.0, Longitude = 34.8 },
             StartWorkingDate = s_bl.Admin.GetClock()
         };
@@ -173,14 +170,14 @@ internal class Program
                         BO.Courier oldCourier = s_bl.Couriers.Read(id);
                         Console.WriteLine($"Current Details:\n{oldCourier}");
 
-                        // Simple Update Example: Updating the Name field only
-                        string newName = InputHelper.ReadString("Enter New Name (leave blank to skip): ");
-                        if (!string.IsNullOrEmpty(newName))
+                        Console.Write("Enter New Name (leave blank to skip): ");
+                        string? newNameInput = Console.ReadLine();
+                        if (!string.IsNullOrEmpty(newNameInput))
                         {
                             BO.Courier updatedCourier = new BO.Courier
                             {
                                 Id = oldCourier.Id,
-                                Name = newName,
+                                Name = newNameInput,
                                 Phone = oldCourier.Phone,
                                 Email = oldCourier.Email,
                                 Password = oldCourier.Password,
@@ -188,9 +185,9 @@ internal class Program
                                 DeliveryType = oldCourier.DeliveryType,
                                 Location = oldCourier.Location,
                                 StartWorkingDate = oldCourier.StartWorkingDate,
-                                 MaxDeliveryDistance = oldCourier.MaxDeliveryDistance,
-                                 DeliveredOnTime = oldCourier.DeliveredOnTime,
-                                 DeliveredLate = oldCourier.DeliveredLate,
+                                MaxDeliveryDistance = oldCourier.MaxDeliveryDistance,
+                                DeliveredOnTime = oldCourier.DeliveredOnTime,
+                                DeliveredLate = oldCourier.DeliveredLate,
                                 CurrentOrder = oldCourier.CurrentOrder,
                             };
                             s_bl.Couriers.Update(updatedCourier);
@@ -220,7 +217,6 @@ internal class Program
     // *** ORDER MANAGEMENT IMPLEMENTATION ***
     // ====================================================
 
-    // Helper Method: Reads multiple OrderItems from the user 
     private static List<BO.OrderItem> GetOrderItemsFromUser()
     {
         List<BO.OrderItem> items = new List<BO.OrderItem>();
@@ -237,7 +233,6 @@ internal class Program
                 int quantity = InputHelper.ReadInt("Enter Quantity: ");
                 double price = InputHelper.ReadDouble("Enter Price per Unit: ");
 
-                // Mock Product Name as we don't have Product Manager
                 string productName = "Product_" + productId;
 
                 items.Add(new BO.OrderItem
@@ -247,7 +242,7 @@ internal class Program
                     ProductName = productName,
                     Price = price,
                     Quantity = quantity,
-                    TotalPrice = price * quantity // Calculate TotalPrice locally
+                    TotalPrice = price * quantity
                 });
 
                 itemId++;
@@ -265,13 +260,11 @@ internal class Program
         return items;
     }
 
-    // Helper Method: Constructs a new BO.Order from user input
     private static BO.Order GetOrderFromUser(int id)
     {
         List<BO.OrderItem> items = GetOrderItemsFromUser();
-        double totalWeight = items.Sum(i => i.Quantity * 0.5); // Mock weight calculation
+        double totalWeight = items.Sum(i => i.Quantity * 0.5);
 
-        // Required input for location and customer
         double latitude = InputHelper.ReadDouble("Enter Latitude (Destination): ");
         double longitude = InputHelper.ReadDouble("Enter Longitude (Destination): ");
         string customerName = InputHelper.ReadString("Enter Customer Name: ");
@@ -291,11 +284,9 @@ internal class Program
             CustomerName = customerName,
             CustomerPhone = customerPhone,
             Weight = totalWeight,
-            Volume = totalWeight / 10, // Mock volume calculation
+            Volume = totalWeight / 10,
             IsFragile = false,
             CreatedAt = s_bl.Admin.GetClock(),
-
-            // Other properties like Status and Expected/Max Delivered Time are calculated by the BL
         };
     }
 
@@ -369,7 +360,6 @@ internal class Program
         }
     }
 
-
     // ====================================================
     // *** DELIVERY MANAGEMENT IMPLEMENTATION ***
     // ====================================================
@@ -403,8 +393,6 @@ internal class Program
                         break;
                     case 3:
                         id = InputHelper.ReadInt("Enter Delivery ID to calculate ETA: ");
-
-                        // Call the complex calculation method in BL
                         DateTime estimatedTime = s_bl.Deliveries.CalculateEstimatedCompletionTime(id);
 
                         Console.WriteLine($"\n--- ETA Calculation for Delivery {id} ---");

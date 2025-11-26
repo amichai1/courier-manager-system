@@ -10,7 +10,7 @@ namespace BL.Helpers;
 
 internal static class OrderManager
 {
-    private static readonly IDal s_dal = (IDal)Factory.Get();
+    private static readonly IDal s_dal = DalApi.Factory.Get;
 
     // ------------------------------------
     // --- 1. CONVERSION (Mappers) ---

@@ -1,10 +1,10 @@
-﻿using DalApi;
-using BO;
+﻿using BO;
+using DalApi;
 using DO;
+using Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Helpers;
 
 namespace BL.Helpers;
 
@@ -14,7 +14,7 @@ namespace BL.Helpers;
 /// </summary>
 internal static class DeliveryManager
 {
-    private static readonly IDal s_dal = (IDal)Factory.Get();
+    private static readonly IDal s_dal = DalApi.Factory.Get;
     private const double EARTH_RADIUS_KM = 6371; // Earth radius for distance calculation
 
     // ------------------------------------
@@ -68,8 +68,14 @@ internal static class DeliveryManager
         );
 
         // --- Determine Status ---
-        // Status is derived from the Order's dates/states
-        BO.OrderStatus logicalStatus = BO.OrderStatus.Confirmed; // Needs actual logic
+        BO.OrderStatus logicalStatus = BO.OrderStatus.Confirmed;
+
+        // --- Calculate Estimated Time WITHOUT calling CalculateEstimatedCompletionTime (avoid recursion) ---
+        TimeSpan estimatedTime = CalculateEstimatedTimeInternal(
+            distFromCourierToPickup + distFromPickupToTarget,
+            assignedCourier.DeliveryType,
+            config
+        );
 
         return new BO.Delivery
         {
@@ -96,8 +102,32 @@ internal static class DeliveryManager
             // Calculated Fields
             DistanceFromCourierToPickup = distFromCourierToPickup,
             DistanceFromPickupToTarget = distFromPickupToTarget,
-            EstimatedTime = CalculateEstimatedCompletionTime(doDelivery.Id) - AdminManager.Now
+            EstimatedTime = estimatedTime
         };
+    }
+
+    /// <summary>
+    /// Internal helper to calculate estimated time without causing recursion.
+    /// Calculates time based on distance and vehicle type.
+    /// </summary>
+    private static TimeSpan CalculateEstimatedTimeInternal(double totalDistance, BO.DeliveryType deliveryType, BO.Config config)
+    {
+        // Get Courier Speed based on Vehicle Type from Config
+        double speed = deliveryType switch
+        {
+            BO.DeliveryType.Car => config.CarSpeed,
+            BO.DeliveryType.Motorcycle => config.MotorcycleSpeed,
+            BO.DeliveryType.Bicycle => config.BicycleSpeed,
+            BO.DeliveryType.OnFoot => config.OnFootSpeed,
+            _ => config.CarSpeed
+        };
+
+        // Avoid division by zero
+        if (speed <= 0)
+            speed = config.CarSpeed;
+
+        double timeHours = totalDistance / speed;
+        return TimeSpan.FromHours(timeHours);
     }
 
     // Return a default DO.Delivery template when external code requests one.
@@ -176,27 +206,36 @@ internal static class DeliveryManager
     {
         lock (AdminManager.BlMutex)
         {
-            // 1. Fetch current delivery data (which includes distances/locations)
-            BO.Delivery boDelivery = ReadDelivery(deliveryId);
-            BO.Config config = AdminManager.GetConfig();
-
-            // 2. Get Courier Speed based on Vehicle Type from Config
-            double speed = boDelivery.CourierVehicleType switch
+            try
             {
-                VehicleType.Car => config.CarSpeed,
-                VehicleType.Motorcycle => config.MotorcycleSpeed,
-                VehicleType.Bicycle => config.BicycleSpeed,
-                VehicleType.OnFoot => config.OnFootSpeed,
-                _ => config.CarSpeed
-            };
+                // 1. Fetch current delivery data (which includes distances/locations)
+                BO.Delivery boDelivery = ReadDelivery(deliveryId);
+                BO.Config config = AdminManager.GetConfig();
 
-            // 3. Calculate Total Estimated Travel Distance (assuming actual distance is AirDistance * SafetyFactor, 
-            // but here we use the already calculated AirDistances from the BO entity)
-            double actualDistanceToTarget = boDelivery.DistanceFromCourierToPickup + boDelivery.DistanceFromPickupToTarget;
-            double timeHours = actualDistanceToTarget / speed;
+                // 2. Get Courier Speed based on Vehicle Type from Config
+                double speed = boDelivery.CourierVehicleType switch
+                {
+                    VehicleType.Car => config.CarSpeed,
+                    VehicleType.Motorcycle => config.MotorcycleSpeed,
+                    VehicleType.Bicycle => config.BicycleSpeed,
+                    VehicleType.OnFoot => config.OnFootSpeed,
+                    _ => config.CarSpeed
+                };
 
-            // 4. Return Estimated End Time (AdminManager.Now + Time)
-            return AdminManager.Now.AddHours(timeHours);
+                if (speed <= 0)
+                    speed = config.CarSpeed;
+
+                // 3. Calculate Total Estimated Travel Distance
+                double actualDistanceToTarget = boDelivery.DistanceFromCourierToPickup + boDelivery.DistanceFromPickupToTarget;
+                double timeHours = actualDistanceToTarget / speed;
+
+                // 4. Return Estimated End Time (AdminManager.Now + Time)
+                return AdminManager.Now.AddHours(timeHours);
+            }
+            catch (Exception ex)
+            {
+                throw new BLOperationFailedException($"Failed to calculate ETA for delivery {deliveryId}.", ex);
+            }
         }
     }
 

@@ -37,5 +37,37 @@ public class Delivery
     public TimeSpan EstimatedTime { get; set; } 
 
     // Override ToString
-    public override string ToString() => this.ToStringProperty();
+    public override string ToString()
+    {
+        return $"""
+            ── DELIVERY IDENTIFIERS ──
+            Delivery ID:             {Id}
+            Order ID:                {OrderId}
+            Status:                  {Status}
+            
+            ── COURIER INFORMATION ──
+            Courier ID:              {CourierId}
+            Courier Name:            {CourierName ?? "[Not assigned]"}
+            Vehicle Type:            {CourierVehicleType}
+            Courier Location:        {(CourierLocation != null ? $"Lat={CourierLocation.Latitude}, Lon={CourierLocation.Longitude}" : "[Not available]")}
+            
+            ── CUSTOMER INFORMATION ──
+            Customer Name:           {CustomerName ?? "[Unknown]"}
+            Customer Location:       {(CustomerLocation != null ? $"Lat={CustomerLocation.Latitude}, Lon={CustomerLocation.Longitude}" : "[Not available]")}
+            Package Weight:          {Weight} kg
+            
+            ── DELIVERY TIMELINE ──
+            Associated Date:         {(CourierAssociatedDate.HasValue ? CourierAssociatedDate.Value.ToString("yyyy-MM-dd HH:mm:ss") : "[Not associated]")}
+            Pickup Date:             {(PickupDate.HasValue ? PickupDate.Value.ToString("yyyy-MM-dd HH:mm:ss") : "[Not picked up]")}
+            Delivery Date:           {(DeliveryDate.HasValue ? DeliveryDate.Value.ToString("yyyy-MM-dd HH:mm:ss") : "[Not delivered]")}
+            
+            ── DISTANCE CALCULATIONS ──
+            Distance (Courier→Pickup): {DistanceFromCourierToPickup:F2} km
+            Distance (Pickup→Target):  {DistanceFromPickupToTarget:F2} km
+            Total Distance:            {(DistanceFromCourierToPickup + DistanceFromPickupToTarget):F2} km
+            
+            ── ESTIMATED TIME ──
+            Estimated Completion:    {(EstimatedTime.TotalHours > 0 ? $"{EstimatedTime.TotalHours:F2} hours ({EstimatedTime.Hours}h {EstimatedTime.Minutes}m)" : "[Calculating...]")}
+            """;
+    }
 }

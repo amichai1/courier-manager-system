@@ -40,5 +40,26 @@ public class Courier
     public int DeliveredLate { get; set; }
     public OrderInProgress? CurrentOrder { get; set; }
     public double TotalWeightInDelivery { get; internal set; }
-    public  int OrdersInDelivery { get; internal set; }
+    public int OrdersInDelivery { get; internal set; }
+
+    public override string ToString()
+    {
+        return $"""
+            ID:                    {Id}
+            Name:                  {Name}
+            Phone:                 {Phone}
+            Email:                 {Email}
+            Password:              {Password}
+            Is Active:             {(IsActive ? "Yes" : "No")}
+            Delivery Type:         {DeliveryType}
+            Max Delivery Distance: {(MaxDeliveryDistance.HasValue ? $"{MaxDeliveryDistance} km" : "Unlimited")}
+            Start Working Date:    {StartWorkingDate:yyyy-MM-dd HH:mm:ss}
+            Delivered On Time:     {DeliveredOnTime}
+            Delivered Late:        {DeliveredLate}
+            Location:              Lat={Location.Latitude}, Lon={Location.Longitude}
+            Current Order:         {(CurrentOrder?.OrderId ?? 0)}
+            Total Weight:          {TotalWeightInDelivery} kg
+            Orders In Delivery:    {OrdersInDelivery}
+            """;
+    }
 }
