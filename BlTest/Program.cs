@@ -316,7 +316,7 @@ internal class Program
         {
             Id = id,
             OrderType = orderType,
-            Description = InputHelper.ReadString("Enter Description (optional): "),
+            Description = InputHelper.ReadString("Enter Description: "),
             Address = InputHelper.ReadString("Enter Address: "),
             Latitude = latitude,
             Longitude = longitude,

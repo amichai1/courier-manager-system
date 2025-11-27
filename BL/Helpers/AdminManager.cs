@@ -1,11 +1,11 @@
-﻿using System;
-using System.Runtime.CompilerServices;
-using DalApi;
+﻿using BL.Helpers;
 using BO;
+using DalApi;
+using DalTest;
+using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using DalTest;
-using Helpers;
 
 namespace Helpers;
 
@@ -21,6 +21,7 @@ internal static class AdminManager
     private static volatile Thread? s_thread = null;
     private static volatile bool s_stop = false;
     private static int s_interval = 0;
+    private static Task? _periodicTask = null;
 
     /// <summary>
     /// Property for providing current application's clock value for any BL class that may need it
@@ -48,8 +49,8 @@ internal static class AdminManager
     {
         lock (BlMutex)
         {
-            DalTest.Initialization.Do();                          // Creates orders via DAL
-            AdminManager.UpdateClock(AdminManager.Now);           // This calls PeriodicOrderUpdates
+            DalTest.Initialization.Do();
+            AdminManager.UpdateClock(AdminManager.Now);
             AdminManager.SetConfig(AdminManager.GetConfig());
         }
     }
@@ -65,11 +66,40 @@ internal static class AdminManager
     [MethodImpl(MethodImplOptions.Synchronized)]
     internal static void UpdateClock(DateTime newClock)
     {
-        var oldClock = s_dal.Config.Clock;
+        DateTime oldClock = s_dal.Config.Clock;
         s_dal.Config.Clock = newClock;
-        BL.Helpers.CourierManager.PeriodicCourierUpdates(oldClock, newClock);
-        BL.Helpers.OrderManager.PeriodicOrderUpdates(oldClock, newClock);
-        BL.Helpers.DeliveryManager.PeriodicDeliveryUpdates(oldClock, newClock); 
+
+        // Call periodic update methods implemented for each entity.
+        // Keep calls inside try/catch so one failing manager doesn't stop others.
+        try
+        {
+            CourierManager.PeriodicCourierUpdates(oldClock, newClock);
+        }
+        catch (Exception ex)
+        {
+            // convert/log as needed; don't crash the clock runner
+            System.Diagnostics.Debug.WriteLine($"PeriodicCourierUpdates failed: {ex.Message}");
+        }
+
+        try
+        {
+            OrderManager.PeriodicOrderUpdates(oldClock, newClock);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"PeriodicOrderUpdates failed: {ex.Message}");
+        }
+
+        try
+        {
+            DeliveryManager.PeriodicDeliveryUpdates(oldClock, newClock);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"PeriodicDeliveryUpdates failed: {ex.Message}");
+        }
+
+        //Calling all the observers of clock update
         ClockUpdatedObservers?.Invoke();
     }
 
@@ -120,14 +150,14 @@ internal static class AdminManager
         }
         if (s_dal.Config.ManagerPassword != configuration.ManagerPassword)
         {
-            s_dal.Config.ManagerPassword = configuration.ManagerPassword ?? string.Empty;
+            s_dal.Config.ManagerPassword = configuration.ManagerPassword;
             configChanged = true;
         }
 
         // [2] Location and Nullable Properties
         if (s_dal.Config.CompanyAddress != configuration.CompanyAddress)
         {
-            s_dal.Config.CompanyAddress = configuration.CompanyAddress ?? string.Empty;
+            s_dal.Config.CompanyAddress = configuration.CompanyAddress;
             configChanged = true;
         }
         if (s_dal.Config.CompanyLatitude != configuration.CompanyLatitude)
@@ -198,7 +228,12 @@ internal static class AdminManager
     {
         while (!s_stop)
         {
-            UpdateClock(Now.AddMinutes(s_interval)); 
+            UpdateClock(Now.AddMinutes(s_interval));
+
+            // Add calls here to any logic simulation that was required in stage 7
+            // if (_simulateTask is null || _simulateTask.IsCompleted)
+            //     _simulateTask = Task.Run(() => StudentManager.SimulateCourseRegistrationAndGrade()); 
+
             try
             {
                 Thread.Sleep(1000);

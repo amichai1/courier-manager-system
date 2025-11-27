@@ -6,14 +6,6 @@ public record Courier
     DateTime StartWorkingDate
 )
 {
-    private string? v1;
-    private string? v2;
-    private string? v3;
-    private string? v4;
-    private DeliveryType type;
-    private double latitude;
-    private double longitude;
-
     public string Name { get; set; } = "";
     public string Phone { get; set; } = "";
     public string Email { get; set; } = "";
@@ -27,10 +19,10 @@ public record Courier
 
     public Courier(
         int id,
-        string v1,
-        string v2,
-        string v3,
-        string v4,
+        string name,
+        string phone,
+        string email,
+        string pasword,
         bool isActive,
         double? maxDeliveryDistance,
         DeliveryType type,
@@ -39,14 +31,14 @@ public record Courier
         double longitude)
         : this(id, startWorkingDate)
     {
-        this.v1 = v1;
-        this.v2 = v2;
-        this.v3 = v3;
-        this.v4 = v4;
+        this.Name = name;
+        this.Phone = phone;
+        this.Email = email;
+        this.Password = pasword;
         IsActive = isActive;
         MaxDeliveryDistance = maxDeliveryDistance;
-        this.type = type;
-        this.latitude = latitude;
-        this.longitude = longitude;
+        this.DeliveryType = type;
+        this.AddressLatitude = latitude;
+        this.AddressLongitude = longitude;
     }
 }

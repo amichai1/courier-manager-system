@@ -1,7 +1,8 @@
 ﻿namespace BO;
 public class Order
 {
-    internal object? CustomerLocation;
+    // strongly typed BO property (no fields)
+    public Location? CustomerLocation { get; set; }
 
     public int Id { get; init; }
     public OrderType OrderType { get; set; }
@@ -18,8 +19,11 @@ public class Order
     public DateTime CreatedAt { get; init; }
     public DateTime ExpectedDeliverdTime { get; init; }
     public DateTime MaxDeliveredTime { get; init; }
-    public OrderStatus OrderStatus { get; init; }
-    public ScheduleStatus ScheduleStatus { get; init; }
+
+    // Allow BL to derive and update status values
+    public OrderStatus OrderStatus { get; set; }
+    public ScheduleStatus ScheduleStatus { get; set; }
+
     public TimeSpan? OrderComplitionTime { get; init; }
     public List<DeliveryPerOrderInList> DeliveryHistory { get; init; } = new();
     public DateTime? CourierAssociatedDate { get; internal set; }

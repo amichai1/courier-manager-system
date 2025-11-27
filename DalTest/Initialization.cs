@@ -51,7 +51,7 @@ public static class Initialization
     /// </summary>
     private static void CreateConfig()
     {
-        s_dal!.Config.Clock = DateTime.Now;
+        s_dal.Config.Clock = new DateTime (2025, 1, 1, 8, 0, 0);
         s_dal.Config.ManagerId = 123456789;
         s_dal.Config.ManagerPassword = "Admin123!";
         s_dal.Config.CompanyAddress = "Yona Green 7, Petah Tikva, Israel";

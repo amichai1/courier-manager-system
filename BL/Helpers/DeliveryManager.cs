@@ -280,15 +280,61 @@ internal static class DeliveryManager
     }
 
     // ------------------------------------
-    // --- 5. PERIODIC UPDATES (No Logic Required Here) ---
+    // --- 5. PERIODIC UPDATES ---
     // ------------------------------------
 
     /// <summary>
-    /// Placeholder for periodic updates related to deliveries. Not used internally by the manager itself.
+    /// Periodic updates for deliveries when the system clock advances.
+    /// Behavior implemented:
+    /// - For in-progress deliveries (CompletionStatus == null and StartTime set) that exceed MaxDeliveryTime:
+    ///     * mark delivery CompletionStatus = Failed
+    ///     * set delivery EndTime = AdminManager.Now
+    ///     * update delivery in DAL
+    ///     * unassign the associated order (CourierId = 0, CourierAssociatedDate = null) so it returns to the pool
+    /// - In-progress deliveries that did not exceed MaxDeliveryTime are left unchanged.
     /// </summary>
     public static void PeriodicDeliveryUpdates(DateTime oldClock, DateTime newClock)
     {
-        // Logic for delivery status/time updates is handled externally or within specific Order/Courier logic.
-        // No implementation needed here.
+        lock (AdminManager.BlMutex)
+        {
+            try
+            {
+                var config = AdminManager.GetConfig();
+                // If MaxDeliveryTime is zero/default, do nothing
+                if (config.MaxDeliveryTime == default)
+                    return;
+
+                var deliveries = s_dal.Delivery.ReadAll().ToList();
+
+                foreach (var delivery in deliveries)
+                {
+                    // Consider only deliveries currently in progress (no completion status yet) and with a valid start time
+                    if (delivery.CompletionStatus.HasValue)
+                        continue;
+                    if (delivery.StartTime == default)
+                        continue;
+
+                    TimeSpan elapsed = AdminManager.Now - delivery.StartTime;
+                    if (elapsed > config.MaxDeliveryTime)
+                    {
+                        // Mark delivery as failed and set end time
+                        var updatedDelivery = delivery with
+                        {
+                            CompletionStatus = DO.DeliveryStatus.Failed,
+                            EndTime = AdminManager.Now
+                        };
+                        s_dal.Delivery.Update(updatedDelivery);
+                    }
+                }
+            }
+            catch (DO.DalDoesNotExistException ex)
+            {
+                throw new BLDoesNotExistException("PeriodicDeliveryUpdates: entity not found.", ex);
+            }
+            catch (Exception ex)
+            {
+                throw new BLOperationFailedException($"PeriodicDeliveryUpdates failed: {ex.Message}", ex);
+            }
+        }
     }
 }
