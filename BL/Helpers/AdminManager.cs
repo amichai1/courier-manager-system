@@ -5,6 +5,7 @@ using BO;
 using System.Threading;
 using System.Threading.Tasks;
 using DalTest;
+using Helpers;
 
 namespace Helpers;
 
@@ -20,7 +21,6 @@ internal static class AdminManager
     private static volatile Thread? s_thread = null;
     private static volatile bool s_stop = false;
     private static int s_interval = 0;
-    private static Task? _periodicTask = null;
 
     /// <summary>
     /// Property for providing current application's clock value for any BL class that may need it
@@ -48,8 +48,8 @@ internal static class AdminManager
     {
         lock (BlMutex)
         {
-            DalTest.Initialization.Do();
-            AdminManager.UpdateClock(AdminManager.Now);
+            DalTest.Initialization.Do();                          // Creates orders via DAL
+            AdminManager.UpdateClock(AdminManager.Now);           // This calls PeriodicOrderUpdates
             AdminManager.SetConfig(AdminManager.GetConfig());
         }
     }
@@ -67,16 +67,9 @@ internal static class AdminManager
     {
         var oldClock = s_dal.Config.Clock;
         s_dal.Config.Clock = newClock;
-
-        // Add calls here to any logic method that should be called periodically,
-        // after each clock update. These managers must be implemented in 7c.
-
-        // Example calls:
-        // CourierManager.PeriodicCourierUpdates(oldClock, newClock); 
-        // OrderManager.PeriodicOrderUpdates(oldClock, newClock);
-        // DeliveryManager.PeriodicDeliveryUpdates(oldClock, newClock); 
-
-        //Calling all the observers of clock update
+        BL.Helpers.CourierManager.PeriodicCourierUpdates(oldClock, newClock);
+        BL.Helpers.OrderManager.PeriodicOrderUpdates(oldClock, newClock);
+        BL.Helpers.DeliveryManager.PeriodicDeliveryUpdates(oldClock, newClock); 
         ClockUpdatedObservers?.Invoke();
     }
 
@@ -127,14 +120,14 @@ internal static class AdminManager
         }
         if (s_dal.Config.ManagerPassword != configuration.ManagerPassword)
         {
-            s_dal.Config.ManagerPassword = configuration.ManagerPassword;
+            s_dal.Config.ManagerPassword = configuration.ManagerPassword ?? string.Empty;
             configChanged = true;
         }
 
         // [2] Location and Nullable Properties
         if (s_dal.Config.CompanyAddress != configuration.CompanyAddress)
         {
-            s_dal.Config.CompanyAddress = configuration.CompanyAddress;
+            s_dal.Config.CompanyAddress = configuration.CompanyAddress ?? string.Empty;
             configChanged = true;
         }
         if (s_dal.Config.CompanyLatitude != configuration.CompanyLatitude)
@@ -205,12 +198,7 @@ internal static class AdminManager
     {
         while (!s_stop)
         {
-            UpdateClock(Now.AddMinutes(s_interval));
-
-            // Add calls here to any logic simulation that was required in stage 7
-            // if (_simulateTask is null || _simulateTask.IsCompleted)
-            //     _simulateTask = Task.Run(() => StudentManager.SimulateCourseRegistrationAndGrade()); 
-
+            UpdateClock(Now.AddMinutes(s_interval)); 
             try
             {
                 Thread.Sleep(1000);

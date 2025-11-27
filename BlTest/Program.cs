@@ -170,29 +170,68 @@ internal class Program
                         BO.Courier oldCourier = s_bl.Couriers.Read(id);
                         Console.WriteLine($"Current Details:\n{oldCourier}");
 
-                        Console.Write("Enter New Name (leave blank to skip): ");
-                        string? newNameInput = Console.ReadLine();
-                        if (!string.IsNullOrEmpty(newNameInput))
+                        // Read new values (empty input means keep current value)
+                        Console.Write("Enter New Name (leave blank to keep current): ");
+                        string? newName = Console.ReadLine();
+                        if (string.IsNullOrWhiteSpace(newName)) newName = oldCourier.Name;
+
+                        Console.Write("Enter New Email (leave blank to keep current): ");
+                        string? newEmail = Console.ReadLine();
+                        if (string.IsNullOrWhiteSpace(newEmail)) newEmail = oldCourier.Email;
+
+                        Console.Write("Enter New Phone (leave blank to keep current): ");
+                        string? newPhone = Console.ReadLine();
+                        if (string.IsNullOrWhiteSpace(newPhone)) newPhone = oldCourier.Phone;
+
+                        Console.Write("Enter New Password (leave blank to keep current): ");
+                        string? newPassword = Console.ReadLine();
+                        if (string.IsNullOrWhiteSpace(newPassword)) newPassword = oldCourier.Password;
+
+                        Console.Write("Enter New Vehicle Type (0=Car, 1=Motorcycle, 2=Bicycle, 3=Foot, or leave blank to keep current): ");
+                        string? vehicleTypeInput = Console.ReadLine();
+                        DeliveryType newDeliveryType = oldCourier.DeliveryType;
+                        if (!string.IsNullOrWhiteSpace(vehicleTypeInput) && int.TryParse(vehicleTypeInput, out int vehicleTypeInt))
                         {
-                            BO.Courier updatedCourier = new BO.Courier
-                            {
-                                Id = oldCourier.Id,
-                                Name = newNameInput,
-                                Phone = oldCourier.Phone,
-                                Email = oldCourier.Email,
-                                Password = oldCourier.Password,
-                                IsActive = oldCourier.IsActive,
-                                DeliveryType = oldCourier.DeliveryType,
-                                Location = oldCourier.Location,
-                                StartWorkingDate = oldCourier.StartWorkingDate,
-                                MaxDeliveryDistance = oldCourier.MaxDeliveryDistance,
-                                DeliveredOnTime = oldCourier.DeliveredOnTime,
-                                DeliveredLate = oldCourier.DeliveredLate,
-                                CurrentOrder = oldCourier.CurrentOrder,
-                            };
-                            s_bl.Couriers.Update(updatedCourier);
-                            Console.WriteLine($"Courier {id} updated successfully.");
+                            newDeliveryType = (DeliveryType)vehicleTypeInt;
                         }
+
+                        Console.Write("Enter New Status (0=Available, 1=Inactive, or leave blank to keep current): ");
+                        string? statusInput = Console.ReadLine();
+                        bool newIsActive = oldCourier.IsActive;
+                        if (!string.IsNullOrWhiteSpace(statusInput) && int.TryParse(statusInput, out int statusInt))
+                        {
+                            newIsActive = (statusInt != 1); // 1 = Inactive, so != 1 means Active
+                        }
+
+                        Console.Write("Enter New Max Delivery Distance in KM (or leave blank to keep current): ");
+                        string? maxDistanceInput = Console.ReadLine();
+                        double? newMaxDistance = oldCourier.MaxDeliveryDistance;
+                        if (!string.IsNullOrWhiteSpace(maxDistanceInput) && double.TryParse(maxDistanceInput, out double maxDist))
+                        {
+                            newMaxDistance = maxDist;
+                        }
+
+                        // Create updated courier object
+                        BO.Courier updatedCourier = new BO.Courier
+                        {
+                            Id = oldCourier.Id,
+                            Name = newName,
+                            Phone = newPhone,
+                            Email = newEmail,
+                            Password = newPassword,
+                            IsActive = newIsActive,
+                            DeliveryType = newDeliveryType,
+                            Location = oldCourier.Location,
+                            StartWorkingDate = oldCourier.StartWorkingDate,
+                            MaxDeliveryDistance = newMaxDistance,
+                            DeliveredOnTime = oldCourier.DeliveredOnTime,
+                            DeliveredLate = oldCourier.DeliveredLate,
+                            CurrentOrder = oldCourier.CurrentOrder,
+                        };
+
+                        s_bl.Couriers.Update(updatedCourier);
+                        Console.WriteLine($"Courier {id} updated successfully.");
+                        Console.WriteLine($"Updated Details:\n{s_bl.Couriers.Read(id)}");
                         break;
                     case 5:
                         id = InputHelper.ReadInt("Enter Courier ID to Delete: ");

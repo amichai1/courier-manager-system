@@ -25,6 +25,8 @@ public class Order
     public DateTime? CourierAssociatedDate { get; internal set; }
     public DateTime? PickupDate { get; internal set; }
     public DateTime? DeliveryDate { get; internal set; }
+    public int? CourierId { get; internal set; }
+    public string? CourierName { get; internal set; }
 
     public override string ToString()
     {
@@ -49,11 +51,14 @@ public class Order
             Is Fragile:              {(IsFragile ? "Yes" : "No")}
             Description:             {(string.IsNullOrEmpty(Description) ? "[None]" : Description)}
             
+            ── COURIER INFORMATION ──
+            Courier Name:            {(CourierName != null ? CourierName : "[Not assigned]")}
+            
             ── TIMELINE ──
             Created At:              {CreatedAt:yyyy-MM-dd HH:mm:ss}
             Expected Delivery Time:  {ExpectedDeliverdTime:yyyy-MM-dd HH:mm:ss}
             Max Delivery Time:       {MaxDeliveredTime:yyyy-MM-dd HH:mm:ss}
-            Courier Associated:      {(CourierAssociatedDate.HasValue ? CourierAssociatedDate.Value.ToString("yyyy-MM-dd HH:mm:ss") : "[Not assigned]")}
+            Courier assigment date:      {(CourierAssociatedDate.HasValue ? CourierAssociatedDate.Value.ToString("yyyy-MM-dd HH:mm:ss") : "[Not assigned]")}
             Pickup Date:             {(PickupDate.HasValue ? PickupDate.Value.ToString("yyyy-MM-dd HH:mm:ss") : "[Not picked up]")}
             Delivery Date:           {(DeliveryDate.HasValue ? DeliveryDate.Value.ToString("yyyy-MM-dd HH:mm:ss") : "[Not delivered]")}
             Completion Time:         {(OrderComplitionTime.HasValue ? $"{OrderComplitionTime.Value.TotalHours:F2} hours" : "[Not completed]")}

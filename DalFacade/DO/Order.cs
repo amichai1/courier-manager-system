@@ -38,7 +38,10 @@ public record Order
     public double Weight { get; set; } = 0;
     public double Volume { get; set; } = 0;
     public bool IsFragile { get; set; } = false;
-    public DateTime PickupDate { get; set; }
+    public DateTime? PickupDate { get; set; }
+    public DateTime? DeliveryDate { get; set; }
+    public int? CourierId { get; set; }
+    public DateTime? CourierAssociatedDate { get; set; }
 
     public Order() : this(0, default) { }
 }

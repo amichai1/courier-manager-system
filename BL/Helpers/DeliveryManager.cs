@@ -50,21 +50,46 @@ internal static class DeliveryManager
     {
         // Fetch related entities (required for full BO projection)
         // OrderManager and CourierManager are assumed to be implemented (Chapter 7c)
-        BO.Order associatedOrder = OrderManager.ReadOrder(doDelivery.OrderId);
-        BO.Courier assignedCourier = CourierManager.ReadCourier(doDelivery.CourierId);
+        BO.Order associatedOrder;
+        BO.Courier assignedCourier;
+
+        try
+        {
+            associatedOrder = OrderManager.ReadOrder(doDelivery.OrderId);
+        }
+        catch (Exception ex)
+        {
+            throw new BLOperationFailedException($"Failed to fetch Order ID {doDelivery.OrderId} for delivery conversion: {ex.Message}", ex);
+        }
+
+        try
+        {
+            assignedCourier = CourierManager.ReadCourier(doDelivery.CourierId);
+        }
+        catch (Exception ex)
+        {
+            throw new BLOperationFailedException($"Failed to fetch Courier ID {doDelivery.CourierId} for delivery conversion: {ex.Message}", ex);
+        }
 
         // Fetch Config data
         BO.Config config = AdminManager.GetConfig();
 
+        // Validation: Ensure all required locations are available
+        if (assignedCourier.Location is null)
+            throw new BLInvalidValueException($"Courier ID {doDelivery.CourierId} has no location data.");
+
+        if (config.CompanyLatitude is null || config.CompanyLongitude is null)
+            throw new BLInvalidValueException($"Company location is not configured in the system.");
+
         // --- Calculate Distances ---
         // Assuming Company location is stored in Config and Order location is in associatedOrder.
         double distFromCourierToPickup = CalculateAirDistance(
-            assignedCourier.Location!.Latitude, assignedCourier.Location!.Longitude,
+            assignedCourier.Location.Latitude, assignedCourier.Location.Longitude,
             associatedOrder.Latitude, associatedOrder.Longitude
         );
         double distFromPickupToTarget = CalculateAirDistance(
             associatedOrder.Latitude, associatedOrder.Longitude,
-            config.CompanyLatitude!.Value, config.CompanyLongitude!.Value
+            config.CompanyLatitude.Value, config.CompanyLongitude.Value
         );
 
         // --- Determine Status ---
@@ -166,13 +191,17 @@ internal static class DeliveryManager
                 // [2] CONVERSION: Convert DO to BO, including all calculations.
                 return ConvertDOToBO(doDelivery);
             }
+            catch (BLException)
+            {
+                throw;
+            }
             catch (DO.DalDoesNotExistException ex)
             {
                 throw new BLDoesNotExistException($"Delivery ID {id} not found.", ex);
             }
             catch (Exception ex)
             {
-                throw new BLOperationFailedException($"Failed to read delivery ID {id}.", ex);
+                throw new BLOperationFailedException($"Failed to read delivery ID {id}: {ex.Message}", ex);
             }
         }
     }
@@ -212,6 +241,13 @@ internal static class DeliveryManager
                 BO.Delivery boDelivery = ReadDelivery(deliveryId);
                 BO.Config config = AdminManager.GetConfig();
 
+                // Validation: Ensure all required data is present
+                if (boDelivery.CourierLocation is null)
+                    throw new BLInvalidValueException($"Courier location is not available for delivery {deliveryId}.");
+                
+                if (config.CompanyLatitude is null || config.CompanyLongitude is null)
+                    throw new BLInvalidValueException($"Company location is not configured in the system.");
+
                 // 2. Get Courier Speed based on Vehicle Type from Config
                 double speed = boDelivery.CourierVehicleType switch
                 {
@@ -232,9 +268,13 @@ internal static class DeliveryManager
                 // 4. Return Estimated End Time (AdminManager.Now + Time)
                 return AdminManager.Now.AddHours(timeHours);
             }
+            catch (BLException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
-                throw new BLOperationFailedException($"Failed to calculate ETA for delivery {deliveryId}.", ex);
+                throw new BLOperationFailedException($"Failed to calculate ETA for delivery {deliveryId}: {ex.Message}", ex);
             }
         }
     }

@@ -109,7 +109,7 @@ public static class Initialization
 
             DeliveryType deliveryType = deliveryTypes[i % deliveryTypes.Length];
 
-            DateTime startDate = s_dal?.Config.Clock.AddDays(-s_rand.Next(30, 365)) ?? DateTime.Now.AddDays(-15);
+            DateTime startDate = s_dal?.Config.Clock.AddDays(-s_rand.Next(0, 5)) ?? DateTime.Now.AddDays(-2);
 
             Courier courier = new Courier(
                 id,
@@ -369,7 +369,6 @@ public static class Initialization
         var courierAvailability = allCouriers.ToDictionary(c => c.Id, c => c.StartWorkingDate);
 
         // Targets
-        int targetOpenOrders = 20;
         int targetInProgress = 10;
         int targetClosed = 20;
         int openOrdersCreated = 0;
@@ -386,6 +385,9 @@ public static class Initialization
             availableOrders.RemoveAt(0);
 
             // Calculate order distance from company
+            if (s_dal.Config.CompanyLatitude is null || s_dal.Config.CompanyLongitude is null)
+                throw new InvalidOperationException("Company location is not configured.");
+
             double orderDistance = CalculateAirDistance(
                 s_dal.Config.CompanyLatitude.Value,
                 s_dal.Config.CompanyLongitude.Value,
