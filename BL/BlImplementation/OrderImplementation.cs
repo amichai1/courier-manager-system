@@ -1,10 +1,11 @@
-﻿namespace BL.BIImplementation;
+namespace BL.BIImplementation;
 
 using BlApi;
 using BO;
 using BL.Helpers;
 using System.Collections.Generic;
 using System;
+using global::Helpers;
 
 /// <summary>
 /// Implements the IBIOrder service contract, delegating logic to OrderManager.
@@ -26,4 +27,18 @@ internal class OrderImplementation : IBIOrder
         => OrderManager.PickUpOrder(orderId);
     public void DeliverOrder(int orderId)
         => OrderManager.DeliverOrder(orderId);
+
+    #region Stage 5 - Observer Pattern Implementation
+    public void AddObserver(Action listObserver) =>
+        OrderManager.Observers.AddListObserver(listObserver);
+
+    public void AddObserver(int id, Action observer) =>
+        OrderManager.Observers.AddObserver(id, observer);
+
+    public void RemoveObserver(Action listObserver) =>
+        OrderManager.Observers.RemoveListObserver(listObserver);
+
+    public void RemoveObserver(int id, Action observer) =>
+        OrderManager.Observers.RemoveObserver(id, observer);
+    #endregion Stage 5
 }

@@ -1,17 +1,18 @@
-﻿namespace BlApi;
-
+namespace BlApi;
+using Helpers;
 using BO;
 using System.Collections.Generic;
+using BIApi; // Add this
 
 /// <summary>
 /// Defines the service contract for managing Courier entities.
 /// </summary>
-public interface IBICourier
+public interface IBICourier : BIApi.IObservable // Stage 5 - Extend IObservable (use fully qualified name)
 {
     // CRUD Operations
     void Create(BO.Courier courier);
     BO.Courier Read(int id);
-    IEnumerable<BO.Courier> ReadAll(Func<BO.Courier, bool>? filter = null); // מחזיר את כל המידע (BO)
+    IEnumerable<BO.Courier> ReadAll(Func<BO.Courier, bool>? filter = null);
     void Update(BO.Courier courier);
     void Delete(int id);
 

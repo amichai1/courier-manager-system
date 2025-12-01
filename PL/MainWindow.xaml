@@ -1,0 +1,105 @@
+<Window x:Class="PL.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PL"
+        mc:Ignorable="d"
+        Title="Admin Main Window" Height="600" Width="900"
+        DataContext="{Binding RelativeSource={RelativeSource Mode=Self}}"
+        Loaded="Window_Loaded"
+        Closed="Window_Closed">
+    <!--External Grid with 2 columns (1/3 and 2/3 split)-->
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="2*"/>
+        </Grid.ColumnDefinitions>
+
+        <!--Left Column - Clock Section-->
+        <Grid Grid.Column="0" Background="LightGray" Margin="5">
+            <StackPanel Orientation="Vertical" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="10">
+                <!-- System Clock Display -->
+                <Label Content="{Binding CurrentTime, StringFormat='yyyy-MM-dd HH:mm:ss'}" 
+                        FontWeight="Bold" FontSize="16" 
+                        HorizontalAlignment="Center" Margin="0,10,0,20"/>
+
+                <!-- Add One Minute Button -->
+                <Button Content="Add 1 Minute" 
+                        Click="btnAddOneMinute_Click" 
+                        Height="40" Margin="5" Padding="10"/>
+
+                <!-- Add One Hour Button -->
+                <Button Content="Add 1 Hour" 
+                        Click="btnAddOneHour_Click" 
+                        Height="40" Margin="5" Padding="10"/>
+
+                <!-- Add One Day Button -->
+                <Button Content="Add 1 Day" 
+                        Click="btnAddOneDay_Click" 
+                        Height="40" Margin="5" Padding="10"/>
+
+                <!-- Add One Month Button -->
+                <Button Content="Add 1 Month" 
+                        Click="btnAddOneMonth_Click" 
+                        Height="40" Margin="5" Padding="10"/>
+
+                <!-- Add One Year Button -->
+                <Button Content="Add 1 Year" 
+                        Click="btnAddOneYear_Click" 
+                        Height="40" Margin="5" Padding="10"/>
+            </StackPanel>
+        </Grid>
+
+        <!--Right Column - Configuration Section-->
+        <Grid Grid.Column="1" Background="WhiteSmoke" Margin="5">
+            <StackPanel Orientation="Vertical" VerticalAlignment="Top" HorizontalAlignment="Stretch" Margin="10">
+                <!-- Configuration Section Header -->
+                <TextBlock Text="Configuration Settings" 
+                           FontWeight="Bold" FontSize="14" 
+                           Margin="0,0,0,15"/>
+
+                <!-- Configuration TextBoxes (based on BO.Config properties) -->
+                <Grid Height="Auto" Margin="0,5,0,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="200"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Label Grid.Column="0" Content="Max Range:" VerticalAlignment="Center"/>
+                    <TextBox Grid.Column="1" Text="{Binding Configuration.MaxRange, UpdateSourceTrigger=PropertyChanged}" 
+                            Height="30" Padding="5" VerticalAlignment="Center"/>
+                </Grid>
+
+                <!-- Update Configuration Button -->
+                <Button Content="Update Configuration" 
+                        Click="btnUpdateConfig_Click" 
+                        Height="40" Margin="0,15,0,5" Padding="10"/>
+
+                <!-- Manage Deliveries Button -->
+                <Button Content="Manage Deliveries" 
+                        Click="btnDeliveries_Click" 
+                        Height="40" Margin="0,5,0,5" Padding="10"/>
+
+                <!-- Manage Orders Button -->
+                <Button Content="Manage Orders" 
+                        Click="btnOrders_Click" 
+                        Height="40" Margin="0,5,0,5" Padding="10"/>
+
+                <!-- Manage Couriers Button -->
+                <Button Content="Manage Couriers" 
+                        Click="btnCouriers_Click" 
+                        Height="40" Margin="0,5,0,5" Padding="10"/>
+
+                <!-- Initialize Database Button -->
+                <Button Content="Initialize Database" 
+                        Click="btnInitializeDB_Click" 
+                        Height="40" Margin="0,5,0,5" Padding="10"/>
+
+                <!-- Reset Database Button -->
+                <Button Content="Reset Database" 
+                        Click="btnResetDB_Click" 
+                        Height="40" Margin="0,5,0,5" Padding="10"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

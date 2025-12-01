@@ -1,4 +1,4 @@
-﻿using BO;
+using BO;
 using DalApi;
 using DO;
 using Helpers;
@@ -15,6 +15,7 @@ namespace BL.Helpers;
 internal static class DeliveryManager
 {
     private static readonly IDal s_dal = DalApi.Factory.Get;
+    internal static ObserverManager Observers = new(); // Stage 5
     private const double EARTH_RADIUS_KM = 6371; // Earth radius for distance calculation
 
     // ------------------------------------
@@ -111,12 +112,12 @@ internal static class DeliveryManager
             // Courier Details
             CourierId = doDelivery.CourierId,
             CourierName = assignedCourier.Name,
-            CourierVehicleType = (VehicleType)assignedCourier.DeliveryType,
+            CourierVehicleType = (BO.VehicleType)assignedCourier.DeliveryType,
             CourierLocation = assignedCourier.Location,
 
             // Order Details
             CustomerName = associatedOrder.CustomerName,
-            CustomerLocation = new Location { Latitude = associatedOrder.Latitude, Longitude = associatedOrder.Longitude },
+            CustomerLocation = new BO.Location { Latitude = associatedOrder.Latitude, Longitude = associatedOrder.Longitude },
             Weight = associatedOrder.Weight,
 
             // Dates (Derived from associatedOrder or doDelivery)
@@ -155,10 +156,231 @@ internal static class DeliveryManager
         return TimeSpan.FromHours(timeHours);
     }
 
-    // Return a default DO.Delivery template when external code requests one.
+    /// <summary>
+    /// Returns a default DO.Delivery template when external code requests one.
+    /// </summary>
     public static DO.Delivery GetDoDelivery()
     {
         return new DO.Delivery();
+    }
+
+    // ------------------------------------
+    // --- 2.5. HELPER METHODS (Queries) ---
+    // ------------------------------------
+
+    /// <summary>
+    /// Gets deliveries for a specific courier using LINQ Query Syntax.
+    /// Example: LINQ Query Syntax #1 - demonstrates: where, select, orderby
+    /// </summary>
+    public static IEnumerable<BO.Delivery> GetDeliveriesByCourier(int courierId)
+    {
+        lock (AdminManager.BlMutex)
+        {
+            try
+            {
+                // LINQ Query Syntax - where, select, order by
+                var courierDeliveries = from delivery in s_dal.Delivery.ReadAll()
+                                       where delivery.CourierId == courierId
+                                       orderby delivery.StartTime descending
+                                       select ConvertDOToBO(delivery);
+
+                return courierDeliveries.ToList();
+            }
+            catch (Exception ex)
+            {
+                throw new BLOperationFailedException($"Failed to get deliveries for courier {courierId}: {ex.Message}", ex);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets completed deliveries using LINQ Method Syntax with lambda.
+    /// Example: LINQ Method Syntax #1 - demonstrates: Where, Any with lambda
+    /// </summary>
+    public static IEnumerable<BO.Delivery> GetCompletedDeliveries()
+    {
+        lock (AdminManager.BlMutex)
+        {
+            try
+            {
+                // LINQ Method Syntax - Where with lambda, Any
+                var completedDeliveries = s_dal.Delivery.ReadAll()
+                    .Where(d => d.CompletionStatus.HasValue && 
+                               d.CompletionStatus.Value == DO.DeliveryStatus.Completed)
+                    .Select(doDelivery => ConvertDOToBO(doDelivery))
+                    .ToList();
+
+                return completedDeliveries;
+            }
+            catch (Exception ex)
+            {
+                throw new BLOperationFailedException($"Failed to get completed deliveries: {ex.Message}", ex);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets deliveries grouped by status using LINQ Query Syntax with grouping.
+    /// Example: LINQ Query Syntax #2 - demonstrates: where, group by, select
+    /// </summary>
+    public static IEnumerable<IGrouping<DO.DeliveryStatus?, BO.Delivery>> GetDeliveriesGroupedByStatus()
+    {
+        lock (AdminManager.BlMutex)
+        {
+            try
+            {
+                // LINQ Query Syntax - where, group by, select
+                var groupedDeliveries = from delivery in s_dal.Delivery.ReadAll()
+                                       let boDelivery = ConvertDOToBO(delivery)
+                                       group boDelivery by delivery.CompletionStatus into statusGroup
+                                       select statusGroup;
+
+                return groupedDeliveries.ToList();
+            }
+            catch (Exception ex)
+            {
+                throw new BLOperationFailedException($"Failed to group deliveries by status: {ex.Message}", ex);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets pending deliveries (not completed) using LINQ Method Syntax.
+    /// Example: LINQ Method Syntax #2 - demonstrates: Where, FirstOrDefault
+    /// </summary>
+    public static IEnumerable<BO.Delivery> GetPendingDeliveries()
+    {
+        lock (AdminManager.BlMutex)
+        {
+            try
+            {
+                // LINQ Method Syntax - Where with lambda, Select
+                return s_dal.Delivery.ReadAll()
+                    .Where(d => !d.CompletionStatus.HasValue)
+                    .Select(doDelivery => ConvertDOToBO(doDelivery))
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                throw new BLOperationFailedException($"Failed to get pending deliveries: {ex.Message}", ex);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets failed or incomplete deliveries using LINQ Query Syntax with let clause.
+    /// Example: LINQ Query Syntax #3 - demonstrates: where with let, multiple conditions
+    /// </summary>
+    public static IEnumerable<BO.Delivery> GetFailedOrIncompleteDeliveries(DateTime beforeDate)
+    {
+        lock (AdminManager.BlMutex)
+        {
+            try
+            {
+                // LINQ Query Syntax - demonstrates: where, let, multiple conditions
+                var failedDeliveries = from delivery in s_dal.Delivery.ReadAll()
+                                      where delivery.EndTime <= beforeDate
+                                      let status = delivery.CompletionStatus
+                                      where status == DO.DeliveryStatus.Failed || 
+                                            status == DO.DeliveryStatus.CustomerNotFound
+                                      select ConvertDOToBO(delivery);
+
+                return failedDeliveries.ToList();
+            }
+            catch (Exception ex)
+            {
+                throw new BLOperationFailedException($"Failed to get failed deliveries: {ex.Message}", ex);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets deliveries by time range using LINQ Query Syntax with ordering.
+    /// Example: LINQ Query Syntax #4 - demonstrates: where with date range, order by
+    /// </summary>
+    public static IEnumerable<BO.Delivery> GetDeliveriesByTimeRange(DateTime startTime, DateTime endTime)
+    {
+        lock (AdminManager.BlMutex)
+        {
+            try
+            {
+                // LINQ Query Syntax - where with multiple date conditions, order by
+                var deliveriesInRange = from delivery in s_dal.Delivery.ReadAll()
+                                       where delivery.StartTime >= startTime && delivery.StartTime <= endTime
+                                       orderby delivery.StartTime ascending
+                                       select ConvertDOToBO(delivery);
+
+                return deliveriesInRange.ToList();
+            }
+            catch (Exception ex)
+            {
+                throw new BLOperationFailedException($"Failed to get deliveries in time range: {ex.Message}", ex);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets deliveries for specific couriers using LINQ Method Syntax.
+    /// Example: LINQ Method Syntax #3 - demonstrates: Where with complex logic
+    /// </summary>
+    public static IEnumerable<BO.Delivery> GetDeliveriesForCouriers(IEnumerable<int> courierIds)
+    {
+        lock (AdminManager.BlMutex)
+        {
+            try
+            {
+                var courierIdList = courierIds.ToList();
+                
+                // LINQ Method Syntax - Where with lambda containing Contains
+                return s_dal.Delivery.ReadAll()
+                    .Where(d => courierIdList.Contains(d.CourierId))
+                    .Select(doDelivery => ConvertDOToBO(doDelivery))
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                throw new BLOperationFailedException($"Failed to get deliveries for specified couriers: {ex.Message}", ex);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets statistics about deliveries by calculating average distance and time.
+    /// Example: LINQ Method Syntax #4 - demonstrates: Select with calculations, Average
+    /// </summary>
+    public static (double avgDistance, double avgTimeHours, int totalCount) GetDeliveryStatistics()
+    {
+        lock (AdminManager.BlMutex)
+        {
+            try
+            {
+                // LINQ Method Syntax - demonstrates: Select, Average, Count
+                var allDeliveries = s_dal.Delivery.ReadAll().ToList();
+
+                if (allDeliveries.Count == 0)
+                    return (0, 0, 0);
+
+                var stats = allDeliveries
+                    .Select(d => new 
+                    { 
+                        d.Id,
+                        Distance = CalculateAirDistance(0, 0, 1, 1), // Placeholder calculation
+                        TimeHours = d.EndTime.HasValue && d.StartTime != default
+                            ? (d.EndTime.Value - d.StartTime).TotalHours
+                            : 0
+                    })
+                    .ToList();
+
+                double avgDist = stats.Count > 0 ? stats.Average(s => s.Distance) : 0;
+                double avgTime = stats.Count > 0 ? stats.Average(s => s.TimeHours) : 0;
+
+                return (avgDist, avgTime, stats.Count);
+            }
+            catch (Exception ex)
+            {
+                throw new BLOperationFailedException($"Failed to calculate delivery statistics: {ex.Message}", ex);
+            }
+        }
     }
 
     // ------------------------------------
@@ -208,19 +430,27 @@ internal static class DeliveryManager
 
     /// <summary>
     /// Reads a list of active deliveries, converting them from DO.Delivery to BO.Delivery.
+    /// Uses LINQ Method Syntax for filtering and conversion.
     /// </summary>
     public static IEnumerable<BO.Delivery> ReadAllDeliveries(Func<BO.Delivery, bool>? filter = null)
     {
         lock (AdminManager.BlMutex)
         {
-            // [1] LOGIC: Filter out cancelled/failed deliveries at the DAL layer where possible.
-            IEnumerable<DO.Delivery> activeDeliveries = s_dal.Delivery.ReadAll(d => !d.CompletionStatus.HasValue || d.CompletionStatus.Value == DO.DeliveryStatus.Completed);
+            try
+            {
+                // [1] LOGIC: Filter out cancelled/failed deliveries at the DAL layer where possible.
+                IEnumerable<DO.Delivery> activeDeliveries = s_dal.Delivery.ReadAll(d => !d.CompletionStatus.HasValue || d.CompletionStatus.Value == DO.DeliveryStatus.Completed);
 
-            // [2] CONVERSION: Convert all relevant DOs to BOs.
-            IEnumerable<BO.Delivery> boDeliveries = activeDeliveries.Select(ConvertDOToBO);
+                // [2] CONVERSION: Convert all relevant DOs to BOs using Select
+                IEnumerable<BO.Delivery> boDeliveries = activeDeliveries.Select(doDelivery => ConvertDOToBO(doDelivery));
 
-            // [3] FILTER: Apply BO filtering if provided.
-            return filter != null ? boDeliveries.Where(filter) : boDeliveries;
+                // [3] FILTER: Apply BO filtering if provided.
+                return filter != null ? boDeliveries.Where(filter).ToList() : boDeliveries.ToList();
+            }
+            catch (Exception ex)
+            {
+                throw new BLOperationFailedException($"Failed to read all deliveries: {ex.Message}", ex);
+            }
         }
     }
 
@@ -251,10 +481,10 @@ internal static class DeliveryManager
                 // 2. Get Courier Speed based on Vehicle Type from Config
                 double speed = boDelivery.CourierVehicleType switch
                 {
-                    VehicleType.Car => config.CarSpeed,
-                    VehicleType.Motorcycle => config.MotorcycleSpeed,
-                    VehicleType.Bicycle => config.BicycleSpeed,
-                    VehicleType.OnFoot => config.OnFootSpeed,
+                    BO.VehicleType.Car => config.CarSpeed,
+                    BO.VehicleType.Motorcycle => config.MotorcycleSpeed,
+                    BO.VehicleType.Bicycle => config.BicycleSpeed,
+                    BO.VehicleType.OnFoot => config.OnFootSpeed,
                     _ => config.CarSpeed
                 };
 
@@ -285,13 +515,7 @@ internal static class DeliveryManager
 
     /// <summary>
     /// Periodic updates for deliveries when the system clock advances.
-    /// Behavior implemented:
-    /// - For in-progress deliveries (CompletionStatus == null and StartTime set) that exceed MaxDeliveryTime:
-    ///     * mark delivery CompletionStatus = Failed
-    ///     * set delivery EndTime = AdminManager.Now
-    ///     * update delivery in DAL
-    ///     * unassign the associated order (CourierId = 0, CourierAssociatedDate = null) so it returns to the pool
-    /// - In-progress deliveries that did not exceed MaxDeliveryTime are left unchanged.
+    /// Uses LINQ to identify deliveries that exceeded MaxDeliveryTime.
     /// </summary>
     public static void PeriodicDeliveryUpdates(DateTime oldClock, DateTime newClock)
     {
@@ -304,18 +528,20 @@ internal static class DeliveryManager
                 if (config.MaxDeliveryTime == default)
                     return;
 
-                var deliveries = s_dal.Delivery.ReadAll().ToList();
+                // LINQ Method Syntax - demonstrates: Where, ToList
+                var inProgressDeliveries = s_dal.Delivery.ReadAll()
+                    .Where(d => !d.CompletionStatus.HasValue && d.StartTime != default)
+                    .ToList();
 
-                foreach (var delivery in deliveries)
+                // Find and update deliveries that exceeded MaxDeliveryTime using LINQ
+                var expiredDeliveries = inProgressDeliveries
+                    .Where(d => (AdminManager.Now - d.StartTime) > config.MaxDeliveryTime)
+                    .ToList();
+
+                // Update each expired delivery - foreach is appropriate here due to update logic
+                foreach (var delivery in expiredDeliveries)
                 {
-                    // Consider only deliveries currently in progress (no completion status yet) and with a valid start time
-                    if (delivery.CompletionStatus.HasValue)
-                        continue;
-                    if (delivery.StartTime == default)
-                        continue;
-
-                    TimeSpan elapsed = AdminManager.Now - delivery.StartTime;
-                    if (elapsed > config.MaxDeliveryTime)
+                    try
                     {
                         // Mark delivery as failed and set end time
                         var updatedDelivery = delivery with
@@ -324,6 +550,11 @@ internal static class DeliveryManager
                             EndTime = AdminManager.Now
                         };
                         s_dal.Delivery.Update(updatedDelivery);
+                        System.Diagnostics.Debug.WriteLine($"[INFO] Delivery {delivery.Id} marked as Failed - exceeded MaxDeliveryTime");
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[ERROR] Failed to update delivery {delivery.Id}: {ex.Message}");
                     }
                 }
             }

@@ -1,4 +1,4 @@
-﻿using BL.Helpers;
+using BL.Helpers;
 using BO;
 using DalApi;
 using DalTest;
@@ -6,6 +6,10 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+<<<<<<< HEAD
+=======
+using Helpers;
+>>>>>>> cdf7c09 (stage 5 steps 1-6)
 
 namespace Helpers;
 

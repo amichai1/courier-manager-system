@@ -1,13 +1,15 @@
-﻿namespace BlApi;
+namespace BlApi;
+using Helpers;
 using BO;
 using System;
 using System.Collections.Generic;
+using BIApi; // Add this
 
 /// <summary>
 /// Defines the service contract for managing Delivery entities.
 /// Delivery objects are usually complex and read-only from the PL perspective.
 /// </summary>
-public interface IBIDelivery
+public interface IBIDelivery : BIApi.IObservable // Stage 5 - Extend IObservable (use fully qualified name)
 {
     /// <summary>
     /// Reads a detailed Delivery entity by its unique ID.

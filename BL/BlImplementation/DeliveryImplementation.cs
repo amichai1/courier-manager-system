@@ -1,4 +1,4 @@
-﻿namespace BL.BIImplementation;
+namespace BL.BIImplementation;
 
 using BlApi;
 using BO;
@@ -21,4 +21,18 @@ internal class DeliveryImplementation : IBIDelivery
     // --- Specific Operations (Calculations) ---
     public DateTime CalculateEstimatedCompletionTime(int deliveryId)
         => DeliveryManager.CalculateEstimatedCompletionTime(deliveryId);
+
+    #region Stage 5 - Observer Pattern Implementation
+    public void AddObserver(Action listObserver) =>
+        DeliveryManager.Observers.AddListObserver(listObserver);
+
+    public void AddObserver(int id, Action observer) =>
+        DeliveryManager.Observers.AddObserver(id, observer);
+
+    public void RemoveObserver(Action listObserver) =>
+        DeliveryManager.Observers.RemoveListObserver(listObserver);
+
+    public void RemoveObserver(int id, Action observer) =>
+        DeliveryManager.Observers.RemoveObserver(id, observer);
+    #endregion Stage 5
 }

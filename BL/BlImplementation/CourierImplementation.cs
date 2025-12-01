@@ -1,4 +1,4 @@
-﻿namespace BL.BIImplementation;
+namespace BL.BIImplementation;
 
 using BlApi;
 using BO;
@@ -25,4 +25,18 @@ internal class CourierImplementation : IBICourier
         => CourierManager.UpdateCourierLocation(courierId, newLocation);
     public void SetCourierStatus(int courierId, BO.CourierStatus status)
         => CourierManager.SetCourierStatus(courierId, status);
+
+    #region Stage 5 - Observer Pattern Implementation
+    public void AddObserver(Action listObserver) =>
+        CourierManager.Observers.AddListObserver(listObserver);
+
+    public void AddObserver(int id, Action observer) =>
+        CourierManager.Observers.AddObserver(id, observer);
+
+    public void RemoveObserver(Action listObserver) =>
+        CourierManager.Observers.RemoveListObserver(listObserver);
+
+    public void RemoveObserver(int id, Action observer) =>
+        CourierManager.Observers.RemoveObserver(id, observer);
+    #endregion Stage 5
 }

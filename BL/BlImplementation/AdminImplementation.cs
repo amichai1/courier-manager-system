@@ -1,51 +1,38 @@
-﻿namespace BL.BIImplementation;
-
+namespace BL.BIImplementation;
+using System.Collections.Generic;
 using BlApi;
 using BO;
-using Helpers;
 using System;
-using System.Collections.Generic;
 using global::Helpers;
 
 /// <summary>
-/// Implements the IAdmin service contract.
-/// Delegates all configuration and clock management to the static AdminManager class.
+/// Implements the IAdmin service contract, delegating logic to AdminManager.
 /// </summary>
 internal class AdminImplementation : IAdmin
 {
-    // --- Database Management ---
+    // Configuration Management
+    public BO.Config GetConfig() => AdminManager.GetConfig();
+    public void SetConfig(BO.Config configuration) => AdminManager.SetConfig(configuration);
 
-    public void ResetDB()
-    {
-        AdminManager.ResetDB();
-    }
+    // Clock Management
+    public DateTime GetClock() => AdminManager.Now;
+    public void ForwardClock(TimeSpan interval) => AdminManager.UpdateClock(AdminManager.Now.Add(interval));
 
-    public void InitializeDB()
-    {
-        AdminManager.InitializeDB();
-    }
+    // Database Management
+    public void ResetDB() => AdminManager.ResetDB();
+    public void InitializeDB() => AdminManager.InitializeDB();
 
-    // --- Clock Management ---
+    #region Stage 5 - Observer Pattern Implementation
+    public void AddClockObserver(Action clockObserver) =>
+        AdminManager.ClockUpdatedObservers += clockObserver;
 
-    public DateTime GetClock()
-    {
-        return AdminManager.Now;
-    }
+    public void RemoveClockObserver(Action clockObserver) =>
+        AdminManager.ClockUpdatedObservers -= clockObserver;
 
-    public void ForwardClock(TimeSpan interval)
-    {
-        AdminManager.UpdateClock(AdminManager.Now.Add(interval));
-    }
+    public void AddConfigObserver(Action configObserver) =>
+        AdminManager.ConfigUpdatedObservers += configObserver;
 
-    // --- Configuration Management ---
-
-    public BO.Config GetConfig()
-    {
-        return AdminManager.GetConfig();
-    }
-
-    public void SetConfig(BO.Config config)
-    {
-        AdminManager.SetConfig(config);
-    }
+    public void RemoveConfigObserver(Action configObserver) =>
+        AdminManager.ConfigUpdatedObservers -= configObserver;
+    #endregion Stage 5
 }
