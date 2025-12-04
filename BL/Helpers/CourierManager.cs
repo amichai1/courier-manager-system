@@ -298,6 +298,21 @@ internal static class CourierManager
     {
         lock (AdminManager.BlMutex)
         {
+            DO.Courier? doCourier = null;
+            try
+            {
+                doCourier = s_dal.Courier.Read(id);
+            }
+            catch (DO.DalDoesNotExistException ex)
+            {
+                throw new BO.BLDoesNotExistException($"Courier ID {id} does not exist.", ex);
+            }
+
+            if (doCourier?.IsActive ?? false)
+            {
+                throw new BO.BLEnableDeleteACtiveCourierException($"Cannot delete an active courier.");
+            }
+
             try
             {
                 s_dal.Courier.Delete(id);

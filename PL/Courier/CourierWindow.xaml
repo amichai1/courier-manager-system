@@ -4,9 +4,130 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PL.Courier"
+        xmlns:pl="clr-namespace:PL"
+        xmlns:System="clr-namespace:System;assembly=mscorlib"
         mc:Ignorable="d"
-        Title="CourierWindow" Height="450" Width="800">
-    <Grid>
-        
-    </Grid>
+        Title="Courier Management" Height="580" Width="680"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResize"
+        Background="#F5F7FA"
+        DataContext="{Binding RelativeSource={RelativeSource Mode=Self}}">
+
+    <!-- Window Content -->
+    <Border Background="{StaticResource BackgroundColor}" 
+            CornerRadius="8"
+            Margin="20"
+            Padding="30">
+        <Border.Effect>
+            <DropShadowEffect Color="#000000" 
+                            Opacity="0.1" 
+                            BlurRadius="20" 
+                            ShadowDepth="2"/>
+        </Border.Effect>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <StackPanel Grid.Row="0" Margin="0,0,0,10">
+                <TextBlock Text="Courier Details" Style="{StaticResource SectionHeader}"/>
+                <Rectangle Height="2" 
+                          Fill="{StaticResource PrimaryColor}" 
+                          HorizontalAlignment="Left" 
+                          Width="60"
+                          Margin="0,0,0,20"/>
+            </StackPanel>
+
+            <!-- Form Fields -->
+            <ScrollViewer Grid.Row="1" 
+                         VerticalScrollBarVisibility="Auto"
+                         Padding="0,0,10,0">
+                <Grid IsEnabled="{Binding IsFieldsEnabled}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="200"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Id -->
+                    <Label Grid.Row="0" Grid.Column="0" Content="Courier ID:" Style="{StaticResource LabelHeader}"/>
+                    <TextBox Grid.Row="0" Grid.Column="1" 
+                            Text="{Binding CurrentCourier.Id}" 
+                            IsReadOnly="True" 
+                            Style="{StaticResource TextBoxRegular}"/>
+
+                    <!-- Name -->
+                    <Label Grid.Row="1" Grid.Column="0" Content="Full Name:" Style="{StaticResource LabelHeader}"/>
+                    <TextBox Grid.Row="1" Grid.Column="1" 
+                            Text="{Binding CurrentCourier.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                            Style="{StaticResource TextBoxRegular}"/>
+
+                    <!-- Phone -->
+                    <Label Grid.Row="2" Grid.Column="0" Content="Phone Number:" Style="{StaticResource LabelHeader}"/>
+                    <TextBox Grid.Row="2" Grid.Column="1" 
+                            Text="{Binding CurrentCourier.Phone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                            Style="{StaticResource TextBoxRegular}"/>
+
+                    <!-- Email -->
+                    <Label Grid.Row="3" Grid.Column="0" Content="Email Address:" Style="{StaticResource LabelHeader}"/>
+                    <TextBox Grid.Row="3" Grid.Column="1" 
+                            Text="{Binding CurrentCourier.Email, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                            Style="{StaticResource TextBoxRegular}"/>
+
+                    <!-- Max Distance -->
+                    <Label Grid.Row="4" Grid.Column="0" Content="Max Distance (km):" Style="{StaticResource LabelHeader}"/>
+                    <TextBox Grid.Row="4" Grid.Column="1" 
+                            Text="{Binding CurrentCourier.MaxDeliveryDistance, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                            Style="{StaticResource TextBoxRegular}"/>
+
+                    <!-- Delivery Type -->
+                    <Label Grid.Row="5" Grid.Column="0" Content="Delivery Type:" Style="{StaticResource LabelHeader}"/>
+                    <ComboBox Grid.Row="5" Grid.Column="1" 
+                              ItemsSource="{StaticResource CourierDeliveryTypesKey}"
+                              SelectedValue="{Binding CurrentCourier.DeliveryType, Mode=TwoWay}" 
+                              Style="{StaticResource ComboBoxRegular}"/>
+
+                    <!-- Start Date -->
+                    <Label Grid.Row="6" Grid.Column="0" Content="Start Working Date:" Style="{StaticResource LabelHeader}"/>
+                    <DatePicker Grid.Row="6" Grid.Column="1" 
+                               SelectedDate="{Binding CurrentCourier.StartWorkingDate, Mode=TwoWay}" 
+                               Style="{StaticResource DatePickerRegular}"/>
+                </Grid>
+            </ScrollViewer>
+
+            <!-- Buttons -->
+            <Border Grid.Row="2" 
+                   BorderBrush="{StaticResource BorderColor}" 
+                   BorderThickness="0,1,0,0" 
+                   Padding="0,20,0,0"
+                   Margin="0,20,0,0">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="Delete Courier"
+                            Style="{StaticResource DeleteButtonStyle}"
+                            Visibility="{Binding DeleteVisibility}"
+                            Click="btnDelete_Click"
+                            Margin="0,0,20,0"/>
+                    <Button Content="{Binding ButtonText}" 
+                            Style="{StaticResource PrimaryButton}"
+                            Visibility="{Binding SaveButtonVisibility}" 
+                            Click="btnAddUpdate_Click"/>
+                    <Button Content="Cancel" 
+                           Style="{StaticResource SecondaryButton}"
+                           Click="btnClose_Click"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Border>
 </Window>

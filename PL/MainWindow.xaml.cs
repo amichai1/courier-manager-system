@@ -186,14 +186,19 @@ namespace PL
 
         private void clockObserver()
         {
-            CurrentTime = s_bl.Admin.GetClock();
+            Dispatcher.Invoke(() =>
+            {
+                CurrentTime = s_bl.Admin.GetClock();
+            });
         }
 
         private void configObserver()
         {
-            Configuration = s_bl.Admin.GetConfig();
+            Dispatcher.Invoke(() =>
+            {
+                Configuration = s_bl.Admin.GetConfig();
+            });
         }
-
         #endregion
     }
 }

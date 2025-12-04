@@ -1,9 +1,19 @@
-﻿<Application x:Class="PL.App"
+<Application x:Class="PL.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:PL"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="GeneralStyle.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- The existing list (with All) for use in filter screens -->
+            <local:DeliveryTypesCollection x:Key="DeliveryTypesCollectionKey" />
+            <!-- The new list (without All) for use in the delivery screen -->
+            <local:CourierDeliveryTypesCollection x:Key="CourierDeliveryTypesKey" />
+            
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

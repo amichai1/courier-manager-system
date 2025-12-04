@@ -1,4 +1,4 @@
-﻿namespace BO;
+namespace BO;
 
 using System;
 using System.Runtime.Serialization;
@@ -15,6 +15,13 @@ public class BLDoesNotExistException : BLException
 {
     public BLDoesNotExistException(string message) : base(message) { }
     public BLDoesNotExistException(string message, Exception innerException) : base(message, innerException) { }
+}
+
+[Serializable]
+public class BLEnableDeleteACtiveCourierException : BLException
+{
+    public BLEnableDeleteACtiveCourierException(string message) : base(message) { }
+    public BLEnableDeleteACtiveCourierException(string message, Exception innerException) : base(message, innerException) { }
 }
 
 [Serializable]
