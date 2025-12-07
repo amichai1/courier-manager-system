@@ -1,4 +1,4 @@
-﻿namespace BO;
+namespace BO;
 
 public class CourierInList
 {

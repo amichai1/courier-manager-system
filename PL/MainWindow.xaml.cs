@@ -44,29 +44,35 @@ namespace PL
 
         #region Clock Buttons
 
+        // קידום בדקה
         private void btnAddOneMinute_Click(object sender, RoutedEventArgs e)
         {
-            s_bl.Admin.ForwardClock(TimeSpan.FromMinutes(1));
+            s_bl.Admin.ForwardClock(BO.TimeUnit.Minute);
         }
 
+        // קידום בשעה
         private void btnAddOneHour_Click(object sender, RoutedEventArgs e)
         {
-            s_bl.Admin.ForwardClock(TimeSpan.FromHours(1));
+            s_bl.Admin.ForwardClock(BO.TimeUnit.Hour);
         }
 
+        // קידום ביום
         private void btnAddOneDay_Click(object sender, RoutedEventArgs e)
         {
-            s_bl.Admin.ForwardClock(TimeSpan.FromDays(1));
+            s_bl.Admin.ForwardClock(BO.TimeUnit.Day);
         }
 
+        // קידום בחודש (התיקון שביקשת)
         private void btnAddOneMonth_Click(object sender, RoutedEventArgs e)
         {
-            s_bl.Admin.ForwardClock(TimeSpan.FromDays(30));
+            // עכשיו זה יעבוד מושלם גם בפברואר
+            s_bl.Admin.ForwardClock(BO.TimeUnit.Month);
         }
 
+        // קידום בשנה
         private void btnAddOneYear_Click(object sender, RoutedEventArgs e)
         {
-            s_bl.Admin.ForwardClock(TimeSpan.FromDays(365));
+            s_bl.Admin.ForwardClock(BO.TimeUnit.Year);
         }
 
         #endregion
@@ -102,7 +108,7 @@ namespace PL
 
         private void btnCouriers_Click(object sender, RoutedEventArgs e)
         {
-            new Courier.CourierListWindow().Show();
+            PL.Courier.CourierListWindow.ShowList();
         }
 
         #endregion

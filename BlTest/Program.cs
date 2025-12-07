@@ -1,4 +1,4 @@
-﻿using BlApi;
+using BlApi;
 using BO;
 using DalApi;
 using System;
@@ -459,16 +459,44 @@ internal class Program
 
     private static void ForwardClockMenu()
     {
-        Console.Write("Enter time interval to forward (in hours): ");
-        if (double.TryParse(Console.ReadLine(), out double hours) && hours > 0)
+        Console.WriteLine("Select time unit to advance:");
+        Console.WriteLine("1. Minute (+1 Minute)");
+        Console.WriteLine("2. Hour (+1 Hour)");
+        Console.WriteLine("3. Day (+1 Day)");
+        Console.WriteLine("4. Month (+1 Month)");
+        Console.WriteLine("5. Year (+1 Year)");
+        Console.Write("Enter your choice (1-5): ");
+
+        if (int.TryParse(Console.ReadLine(), out int choice) && choice >= 1 && choice <= 5)
         {
-            TimeSpan interval = TimeSpan.FromHours(hours);
-            s_bl.Admin.ForwardClock(interval);
-            Console.WriteLine($"Clock forwarded by {hours} hours. New time: {s_bl.Admin.GetClock()}");
+            // המרה של הבחירה ל-Enum
+            BO.TimeUnit unit = (BO.TimeUnit)(choice - 1); // אם ה-Enum מתחיל מ-0
+
+            Console.Write($"Enter number of {unit}s to advance: ");
+            if (int.TryParse(Console.ReadLine(), out int amount) && amount > 0)
+            {
+                try
+                {
+                    // קוראים ל-ForwardClock שוב ושוב עבור כל יחידה
+                    for (int i = 0; i < amount; i++)
+                    {
+                        s_bl.Admin.ForwardClock(unit);
+                    }
+                    Console.WriteLine($"Clock forwarded by {amount} {unit}s. New time: {s_bl.Admin.GetClock()}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error forwarding clock: {ex.Message}");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Invalid amount value.");
+            }
         }
         else
         {
-            Console.WriteLine("Invalid hours value.");
+            Console.WriteLine("Invalid choice.");
         }
     }
 

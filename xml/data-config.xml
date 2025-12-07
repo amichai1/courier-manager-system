@@ -1,12 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <config>
-  <NextOrderId>3</NextOrderId>
+  <NextOrderId>1</NextOrderId>
   <NextDeliveryId>1</NextDeliveryId>
   <Clock>01/01/2025 08:00:00</Clock>
   <ManagerId>123456789</ManagerId>
   <ManagerPassword>Admin123!</ManagerPassword>
   <CompanyAddress></CompanyAddress>
-  <MaxDeliveryDistance>50</MaxDeliveryDistance>
   <CarSpeed>30</CarSpeed>
   <MotorcycleSpeed>35</MotorcycleSpeed>
   <BicycleSpeed>15</BicycleSpeed>
@@ -14,4 +13,5 @@
   <MaxDeliveryTime>02:00:00</MaxDeliveryTime>
   <RiskRange>01:30:00</RiskRange>
   <InactivityRange>30.00:00:00</InactivityRange>
+  <MaxDeliveryDistance>50</MaxDeliveryDistance>
 </config>

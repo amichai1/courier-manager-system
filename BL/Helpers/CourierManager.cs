@@ -229,6 +229,74 @@ internal static class CourierManager
     }
 
     /// <summary>
+    /// returns a list of CourierInList entities with accurate calculations of delays according to system settings.
+    /// </summary>
+    /// <returns></returns>
+    /// <exception cref="BLOperationFailedException"></exception>
+    public static IEnumerable<BO.CourierInList> GetCourierList()
+    {
+        lock (AdminManager.BlMutex)
+        {
+            try
+            {
+                TimeSpan maxAllowedTime = s_dal.Config.MaxDeliveryTime;
+                IEnumerable<DO.Courier> doCouriers = s_dal.Courier.ReadAll();
+
+                return doCouriers.Select(c =>
+                {
+                    // Retrieve all orders belonging to this messenger
+                    var courierOrders = s_dal.Order.ReadAll(o => o.CourierId == c.Id);
+
+                    // --- Calculation: Current order (in process) ---
+                    int? currentOrderId = courierOrders
+                                            .Where(o => o.DeliveryDate == null)
+                                            .Select(o => (int?)o.Id)
+                                            .FirstOrDefault();
+                    // --- Calculation: Delivered on time / late ---
+                    // Only take completed orders (have a delivery date)
+                    var deliveredOrders = courierOrders.Where(o => o.DeliveryDate != null);
+                    int onTime = 0;
+                    int late = 0;
+
+                    foreach (var order in deliveredOrders)
+                    {
+                        if (order.PickupDate.HasValue)
+                        {
+                            DateTime pickupTime = order.PickupDate.Value;
+                            DateTime actualDelivery = order.DeliveryDate!.Value;
+
+                            // deadline = pickup time + max allowed time
+                            DateTime deadline = pickupTime + maxAllowedTime;
+
+                            if (actualDelivery <= deadline)
+                                onTime++;
+                            else
+                                late++;
+                        }
+                    }
+
+                    return new BO.CourierInList
+                    {
+                        Id = c.Id,
+                        Name = c.Name,
+                        IsActive = c.IsActive,
+                        DeliveryType = (BO.DeliveryType)c.DeliveryType,
+                        StartWorkingDate = c.StartWorkingDate,
+
+                        // calculate fields:
+                        CurrentIdOrder = currentOrderId,
+                        DeliveredOnTime = onTime,
+                        DeliveredLate = late
+                    };
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                throw new BLOperationFailedException($"Failed to generate courier list: {ex.Message}", ex);
+            }
+        }
+    }
+    /// <summary>
     /// Updates the courier's current geographical location.
     /// </summary>
     public static void UpdateCourierLocation(int courierId, BO.Location newLocation)
@@ -273,7 +341,17 @@ internal static class CourierManager
             {
                 throw new BLInvalidValueException("Cannot directly set courier status to OnRoute states.");
             }
+            if (status == BO.CourierStatus.Inactive)
+            {
+                // בדיקה האם יש הזמנה כלשהי שמשויכת לשליח וטרם נמסרה (תאריך מסירה ריק)
+                bool hasActiveOrders = s_dal.Order.ReadAll()
+                    .Any(o => o.CourierId == courierId && o.DeliveryDate == null);
 
+                if (hasActiveOrders)
+                {
+                    throw new BLInvalidValueException("Cannot deactivate courier while they have deliveries in progress.");
+                }
+            }
             try
             {
                 DO.Courier? doCourier = s_dal.Courier.Read(courierId);

@@ -17,6 +17,7 @@ internal class CourierImplementation : IBICourier
     public BO.Courier Read(int id) => CourierManager.ReadCourier(id);
     public IEnumerable<BO.Courier> ReadAll(Func<BO.Courier, bool>? filter = null)
         => CourierManager.ReadAllCouriers(filter);
+    public IEnumerable<BO.CourierInList> GetCourierList() => CourierManager.GetCourierList();
     public void Update(BO.Courier courier) => CourierManager.UpdateCourier(courier);
     public void Delete(int id) => CourierManager.DeleteCourier(id);
 

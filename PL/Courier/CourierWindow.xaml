@@ -59,13 +59,13 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <!-- Id -->
                     <Label Grid.Row="0" Grid.Column="0" Content="Courier ID:" Style="{StaticResource LabelHeader}"/>
                     <TextBox Grid.Row="0" Grid.Column="1" 
                             Text="{Binding CurrentCourier.Id}" 
-                            IsReadOnly="True" 
                             Style="{StaticResource TextBoxRegular}"/>
 
                     <!-- Name -->
@@ -104,6 +104,16 @@
                     <DatePicker Grid.Row="6" Grid.Column="1" 
                                SelectedDate="{Binding CurrentCourier.StartWorkingDate, Mode=TwoWay}" 
                                Style="{StaticResource DatePickerRegular}"/>
+                    <!-- Is Active -->
+                    <Label Grid.Row="7" Grid.Column="0" Content="Is Active Courier:" Style="{StaticResource LabelHeader}"/>
+                    <CheckBox Grid.Row="7" Grid.Column="1"
+                              IsChecked="{Binding CurrentCourier.IsActive, Mode=TwoWay}"
+                              VerticalAlignment="Center"
+                              Margin="5,0,0,0">
+                        <CheckBox.LayoutTransform>
+                            <ScaleTransform ScaleX="1.2" ScaleY="1.2"/>
+                        </CheckBox.LayoutTransform>
+                    </CheckBox>
                 </Grid>
             </ScrollViewer>
 

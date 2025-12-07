@@ -14,7 +14,7 @@ public interface IAdmin
 
     // Clock Management
     DateTime GetClock();
-    void ForwardClock(TimeSpan interval);
+    void ForwardClock(BO.TimeUnit interval);
 
     // Configuration Management
     BO.Config GetConfig();

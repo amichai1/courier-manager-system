@@ -45,7 +45,8 @@ internal static class AdminManager
         {
             s_dal.ResetDB();
             AdminManager.UpdateClock(AdminManager.Now);
-            AdminManager.SetConfig(AdminManager.GetConfig());
+            //AdminManager.SetConfig(AdminManager.GetConfig());
+            AdminManager.UpdateConfig(GetConfig());
         }
     }
 
@@ -56,6 +57,7 @@ internal static class AdminManager
             DalTest.Initialization.Do();
             AdminManager.UpdateClock(AdminManager.Now);
             AdminManager.SetConfig(AdminManager.GetConfig());
+
         }
     }
 
@@ -222,6 +224,17 @@ internal static class AdminManager
         //Calling all the observers of configuration update
         if (configChanged)
             ConfigUpdatedObservers?.Invoke();
+    }
+
+    /// <summary>
+    /// Forces a configuration update and notifies observers.
+    /// Use this when the DB has changed significantly (like Reset/Init) and we need to sync the UI.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.Synchronized)]
+    internal static void UpdateConfig(BO.Config config)
+    {
+        SetConfig(config);
+        ConfigUpdatedObservers?.Invoke();
     }
 
     // -----------------------------------------------------------

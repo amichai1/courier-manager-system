@@ -13,6 +13,7 @@ public interface IBICourier : BIApi.IObservable // Stage 5 - Extend IObservable 
     void Create(BO.Courier courier);
     BO.Courier Read(int id);
     IEnumerable<BO.Courier> ReadAll(Func<BO.Courier, bool>? filter = null);
+    IEnumerable<BO.CourierInList> GetCourierList();
     void Update(BO.Courier courier);
     void Delete(int id);
 

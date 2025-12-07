@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PL"
+        xmlns:converters="clr-namespace:PL.Converters"
         mc:Ignorable="d"
         Title="Admin Dashboard" Height="650" Width="1000"
         WindowStartupLocation="CenterScreen"
@@ -12,6 +13,9 @@
         Loaded="Window_Loaded"
         Closed="Window_Closed">
 
+    <Window.Resources>
+        <converters:NullableDoubleToStringConverter x:Key="DoubleToStringKey"/>
+    </Window.Resources>
     <Grid Margin="15">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="300"/>
@@ -36,8 +40,9 @@
                 </StackPanel>
 
                 <Border Grid.Row="1" Background="#ECF0F1" CornerRadius="8" Padding="10" Margin="0,0,0,20">
-                    <Label Content="{Binding CurrentTime, StringFormat='HH:mm:ss \n dd/MM/yyyy'}" 
-                           FontWeight="Bold" FontSize="26" 
+                    <Label Content="{Binding CurrentTime}"
+                           ContentStringFormat='{}{0:HH:mm:ss dd/MM/yyyy}'
+                           FontWeight="Bold" FontSize="20" 
                            Foreground="{StaticResource PrimaryColor}"
                            HorizontalContentAlignment="Center"/>
                 </Border>
@@ -91,7 +96,10 @@
                                 </Grid.ColumnDefinitions>
                                 <Label Grid.Column="0" Content="Max Delivery Range (km):" Style="{StaticResource LabelHeader}" Margin="0,0,10,0"/>
                                 <TextBox Grid.Column="1" 
-                                         Text="{Binding Configuration.MaxRange, UpdateSourceTrigger=PropertyChanged}" 
+                                         Text="{Binding Configuration.MaxDeliveryDistance, 
+                                                        UpdateSourceTrigger=PropertyChanged, 
+                                                        Converter={StaticResource DoubleToStringKey},
+                                                        ValidatesOnExceptions=True}" 
                                          Style="{StaticResource TextBoxRegular}"/>
                                 <Button Grid.Column="2" Content="Update" Click="btnUpdateConfig_Click" 
                                         Style="{StaticResource PrimaryButton}" 
@@ -113,8 +121,9 @@
 
                         <StackPanel Grid.Column="0">
                             <Button Content="Manage Couriers" Click="btnCouriers_Click" Style="{StaticResource PrimaryButton}" Height="50"/>
+                            <Button Content="Manage Orders" Click="btnOrders_Click" Style="{StaticResource PrimaryButton}" Height="50" ToolTip="Coming Soon"/>
+
                             <Button Content="Manage Deliveries" Click="btnDeliveries_Click" Style="{StaticResource PrimaryButton}" Height="50"/>
-                            <Button Content="Manage Orders" Click="btnOrders_Click" Style="{StaticResource PrimaryButton}" Height="50" IsEnabled="False" ToolTip="Coming Soon"/>
                         </StackPanel>
 
                         <StackPanel Grid.Column="2" VerticalAlignment="Bottom">

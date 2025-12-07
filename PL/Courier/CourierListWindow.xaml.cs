@@ -21,11 +21,31 @@ namespace PL.Courier
     {
         static readonly BlApi.IBI s_bl = BL.Factory.Get();
 
-        public CourierListWindow()
+        // --- Singleton Implementation Start ---
+        private static CourierListWindow? _instance = null;
+        // הבנאי הוא פרטי כדי למנוע יצירת מופעים מרובים מבחוץ
+        private CourierListWindow()
         {
             InitializeComponent();
         }
 
+        // פונקציה פומבית סטטית לפתיחת החלון
+        public static void ShowList()
+        {
+            if (_instance == null)
+            {
+                _instance = new CourierListWindow();
+                _instance.Show();
+            }
+            else
+            {
+                // אם החלון כבר קיים - נקפיץ אותו לחזית המשתמש
+                if (_instance.WindowState == WindowState.Minimized)
+                    _instance.WindowState = WindowState.Normal;
+                _instance.Activate();
+            }
+        }
+        // --- Singleton Implementation End ---
         #region Dependency Properties
 
         public IEnumerable<BO.CourierInList>? CourierList
@@ -60,6 +80,8 @@ namespace PL.Courier
         private void Window_Closed(object sender, EventArgs e)
         {
             try { s_bl.Couriers.RemoveObserver(CourierListObserver); } catch { /* ignore */ }
+            // חשוב לסינגלטון: מאפסים את המופע כשהחלון נסגר כדי שנוכל לפתוח אותו שוב בעתיד
+            _instance = null;
         }
 
         private void CourierListObserver()
@@ -73,7 +95,7 @@ namespace PL.Courier
         {
             try
             {
-                var allCouriers = s_bl.Couriers.ReadAll();
+                var allCouriers = s_bl.Couriers.GetCourierList();
 
                 // if delivery type is  Enum - filter by it
                 if (DeliveryTypeFilter is BO.DeliveryType selectedType)
@@ -132,6 +154,32 @@ namespace PL.Courier
                 catch (Exception ex)
                 {
                     MessageBox.Show($"Delete failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        // --- CheckBox Logic Update ---
+        private void CheckBox_Click(object sender, RoutedEventArgs e)
+        {
+            // בדיקה שמי ששלח את האירוע הוא אכן CheckBox ושהוא קשור לשורה בטבלה
+            if (sender is CheckBox cb && cb.DataContext is BO.CourierInList courierInList)
+            {
+                try
+                {
+                    // אם מסומן -> הופכים ל-Available. אחרת -> Inactive
+                    var newStatus = cb.IsChecked == true ? BO.CourierStatus.Available : BO.CourierStatus.Inactive;
+
+                    // קריאה לפונקציה ב-BL שמעדכנת סטטוס
+                    s_bl.Couriers.SetCourierStatus(courierInList.Id, newStatus);
+
+                    // אין צורך לרענן ידנית או להקפיץ הודעה, ה-Observer יעשה את העבודה
+                }
+                catch (Exception ex)
+                {
+                    // במקרה של שגיאה (למשל: אי אפשר להפוך ללא פעיל כי הוא במשלוח)
+                    // נחזיר את הצ'קבוקס למצב הקודם כדי לשקף את המציאות
+                    cb.IsChecked = !cb.IsChecked;
+                    MessageBox.Show($"Status update failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }

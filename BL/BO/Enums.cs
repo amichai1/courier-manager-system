@@ -1,4 +1,4 @@
-﻿namespace BO;
+namespace BO;
 /// <summary>
 /// Types of orders available in the system.
 /// </summary>
@@ -119,4 +119,16 @@ public enum VehicleType
     Motorcycle,
     Bicycle,
     OnFoot
+}
+
+/// <summary>
+/// defined time units for various configurations and calculations.
+/// </summary>
+public enum TimeUnit
+{
+    Minute,
+    Hour,
+    Day,
+    Month,
+    Year
 }
