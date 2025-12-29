@@ -5,139 +5,297 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PL.Courier"
         xmlns:pl="clr-namespace:PL"
-        xmlns:System="clr-namespace:System;assembly=mscorlib"
+        xmlns:converters="clr-namespace:PL.Converters"
         mc:Ignorable="d"
-        Title="Courier Management" Height="580" Width="680"
+        Title="Courier Management" Height="750" Width="1200"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanResize"
         Background="#F5F7FA"
-        DataContext="{Binding RelativeSource={RelativeSource Mode=Self}}">
+        DataContext="{Binding RelativeSource={RelativeSource Mode=Self}}"
+        Loaded="Window_Loaded"
+        Closed="Window_Closed">
 
-    <!-- Window Content -->
-    <Border Background="{StaticResource BackgroundColor}" 
-            CornerRadius="8"
-            Margin="20"
-            Padding="30">
-        <Border.Effect>
-            <DropShadowEffect Color="#000000" 
-                            Opacity="0.1" 
-                            BlurRadius="20" 
-                            ShadowDepth="2"/>
-        </Border.Effect>
+    <Window.Resources>
+        <converters:IsraeliIdConverter x:Key="IsraeliIdConverterKey"/>
+        <converters:PhoneNumberConverter x:Key="PhoneConverterKey"/>
+        <converters:EmailConverter x:Key="EmailConverterKey"/>
+        <converters:MaxDistanceConverter x:Key="MaxDistanceConverterKey"/>
+    </Window.Resources>
 
-        <Grid>
+    <Grid Margin="20">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="20"/>
+            <ColumnDefinition Width="1.2*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Left Panel - Courier Details -->
+        <Border Grid.Column="0" Background="White" CornerRadius="8" Padding="25">
+            <Border.Effect>
+                <DropShadowEffect Color="#000000" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/>
+            </Border.Effect>
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header -->
+                <StackPanel Grid.Row="0" Margin="0,0,0,15">
+                    <TextBlock Text="Courier Details" Style="{StaticResource SectionHeader}"/>
+                    <Rectangle Height="2" Fill="{StaticResource PrimaryColor}" HorizontalAlignment="Left" Width="60"/>
+                </StackPanel>
+
+                <!-- Form Fields -->
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,10,0">
+                    <Grid IsEnabled="{Binding IsFieldsEnabled}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Id -->
+                        <Label Grid.Row="0" Grid.Column="0" Content="Courier ID:" Style="{StaticResource LabelHeader}"/>
+                        <TextBox Grid.Row="0" Grid.Column="1" 
+                                Text="{Binding CurrentCourier.Id, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IsraeliIdConverterKey}}" 
+                                Style="{StaticResource TextBoxRegular}" Margin="0,0,0,10"
+                                ToolTip="Must be 9 digits (Israeli ID)"/>
+
+                        <!-- Name -->
+                        <Label Grid.Row="1" Grid.Column="0" Content="Full Name:" Style="{StaticResource LabelHeader}"/>
+                        <TextBox Grid.Row="1" Grid.Column="1" 
+                                Text="{Binding CurrentCourier.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                Style="{StaticResource TextBoxRegular}" Margin="0,0,0,10"/>
+
+                        <!-- Phone -->
+                        <Label Grid.Row="2" Grid.Column="0" Content="Phone:" Style="{StaticResource LabelHeader}"/>
+                        <TextBox Grid.Row="2" Grid.Column="1" 
+                                Text="{Binding CurrentCourier.Phone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource PhoneConverterKey}}" 
+                                Style="{StaticResource TextBoxRegular}" Margin="0,0,0,10"
+                                ToolTip="Format: 05XXXXXXXX (10 digits)"/>
+
+                        <!-- Email -->
+                        <Label Grid.Row="3" Grid.Column="0" Content="Email:" Style="{StaticResource LabelHeader}"/>
+                        <TextBox Grid.Row="3" Grid.Column="1" 
+                                Text="{Binding CurrentCourier.Email, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource EmailConverterKey}}" 
+                                Style="{StaticResource TextBoxRegular}" Margin="0,0,0,10"/>
+
+                        <!-- Max Distance -->
+                        <Label Grid.Row="4" Grid.Column="0" Content="Max Distance:" Style="{StaticResource LabelHeader}"/>
+                        <TextBox Grid.Row="4" Grid.Column="1" 
+                                Text="{Binding CurrentCourier.MaxDeliveryDistance, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource MaxDistanceConverterKey}}" 
+                                Style="{StaticResource TextBoxRegular}" Margin="0,0,0,10"
+                                ToolTip="Minimum 10 km"/>
+
+                        <!-- Delivery Type -->
+                        <Label Grid.Row="5" Grid.Column="0" Content="Delivery Type:" Style="{StaticResource LabelHeader}"/>
+                        <ComboBox Grid.Row="5" Grid.Column="1" 
+                                  ItemsSource="{StaticResource CourierDeliveryTypesKey}"
+                                  SelectedValue="{Binding CurrentCourier.DeliveryType, Mode=TwoWay}" 
+                                  Style="{StaticResource ComboBoxRegular}" Margin="0,0,0,10"/>
+
+                        <!-- Start Date -->
+                        <Label Grid.Row="6" Grid.Column="0" Content="Start Date:" Style="{StaticResource LabelHeader}"/>
+                        <DatePicker Grid.Row="6" Grid.Column="1" 
+                                   SelectedDate="{Binding CurrentCourier.StartWorkingDate, Mode=TwoWay}" 
+                                   Style="{StaticResource DatePickerRegular}" Margin="0,0,0,10"/>
+
+                        <!-- Is Active -->
+                        <Label Grid.Row="7" Grid.Column="0" Content="Active:" Style="{StaticResource LabelHeader}"/>
+                        <CheckBox Grid.Row="7" Grid.Column="1"
+                                  IsChecked="{Binding CurrentCourier.IsActive, Mode=TwoWay}"
+                                  VerticalAlignment="Center"
+                                  Margin="5,0,0,0">
+                            <CheckBox.LayoutTransform>
+                                <ScaleTransform ScaleX="1.2" ScaleY="1.2"/>
+                            </CheckBox.LayoutTransform>
+                        </CheckBox>
+                    </Grid>
+                </ScrollViewer>
+
+                <!-- Buttons -->
+                <Border Grid.Row="2" BorderBrush="{StaticResource BorderColor}" BorderThickness="0,1,0,0" Padding="0,15,0,0" Margin="0,15,0,0">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="Delete"
+                                Style="{StaticResource DeleteButtonStyle}"
+                                Visibility="{Binding DeleteVisibility}"
+                                Click="btnDelete_Click"
+                                Margin="0,0,10,0"/>
+                        <Button Content="{Binding ButtonText}" 
+                                Style="{StaticResource PrimaryButton}"
+                                Visibility="{Binding SaveButtonVisibility}" 
+                                Click="btnAddUpdate_Click"/>
+                        <Button Content="Cancel" 
+                               Style="{StaticResource SecondaryButton}"
+                               Click="btnClose_Click"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- Right Panel - Current Order & Delivery History -->
+        <Grid Grid.Column="2">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto" MinHeight="200"/>
+                <RowDefinition Height="15"/>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Header -->
-            <StackPanel Grid.Row="0" Margin="0,0,0,10">
-                <TextBlock Text="Courier Details" Style="{StaticResource SectionHeader}"/>
-                <Rectangle Height="2" 
-                          Fill="{StaticResource PrimaryColor}" 
-                          HorizontalAlignment="Left" 
-                          Width="60"
-                          Margin="0,0,0,20"/>
-            </StackPanel>
+            <!-- Current Order Section -->
+            <Border Grid.Row="0" Background="White" CornerRadius="8" Padding="20">
+                <Border.Effect>
+                    <DropShadowEffect Color="#000000" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/>
+                </Border.Effect>
 
-            <!-- Form Fields -->
-            <ScrollViewer Grid.Row="1" 
-                         VerticalScrollBarVisibility="Auto"
-                         Padding="0,0,10,0">
-                <Grid IsEnabled="{Binding IsFieldsEnabled}">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="200"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
+                <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Id -->
-                    <Label Grid.Row="0" Grid.Column="0" Content="Courier ID:" Style="{StaticResource LabelHeader}"/>
-                    <TextBox Grid.Row="0" Grid.Column="1" 
-                            Text="{Binding CurrentCourier.Id}" 
-                            Style="{StaticResource TextBoxRegular}"/>
+                    <!-- Header -->
+                    <StackPanel Grid.Row="0" Margin="0,0,0,15">
+                        <TextBlock Text="Current Order" Style="{StaticResource SectionHeader}"/>
+                        <Rectangle Height="2" Fill="{StaticResource PrimaryColor}" HorizontalAlignment="Left" Width="60"/>
+                    </StackPanel>
 
-                    <!-- Name -->
-                    <Label Grid.Row="1" Grid.Column="0" Content="Full Name:" Style="{StaticResource LabelHeader}"/>
-                    <TextBox Grid.Row="1" Grid.Column="1" 
-                            Text="{Binding CurrentCourier.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                            Style="{StaticResource TextBoxRegular}"/>
+                    <!-- Current Order Content -->
+                    <Grid Grid.Row="1" Visibility="{Binding CurrentOrderVisibility}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
 
-                    <!-- Phone -->
-                    <Label Grid.Row="2" Grid.Column="0" Content="Phone Number:" Style="{StaticResource LabelHeader}"/>
-                    <TextBox Grid.Row="2" Grid.Column="1" 
-                            Text="{Binding CurrentCourier.Phone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                            Style="{StaticResource TextBoxRegular}"/>
+                        <!-- Customer Information -->
+                        <TextBlock Grid.Row="0" Text="Customer Information" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource SecondaryColor}" Margin="0,0,0,8"/>
+                        <Grid Grid.Row="1" Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="15"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
 
-                    <!-- Email -->
-                    <Label Grid.Row="3" Grid.Column="0" Content="Email Address:" Style="{StaticResource LabelHeader}"/>
-                    <TextBox Grid.Row="3" Grid.Column="1" 
-                            Text="{Binding CurrentCourier.Email, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                            Style="{StaticResource TextBoxRegular}"/>
+                            <StackPanel Grid.Column="0">
+                                <Label Content="Customer Name" Style="{StaticResource LabelHeader}" Padding="0,0,0,3"/>
+                                <TextBox Text="{Binding CurrentOrder.CustomerName, Mode=OneWay}" 
+                                         IsReadOnly="True"
+                                         Style="{StaticResource TextBoxRegular}"/>
+                            </StackPanel>
 
-                    <!-- Max Distance -->
-                    <Label Grid.Row="4" Grid.Column="0" Content="Max Distance (km):" Style="{StaticResource LabelHeader}"/>
-                    <TextBox Grid.Row="4" Grid.Column="1" 
-                            Text="{Binding CurrentCourier.MaxDeliveryDistance, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                            Style="{StaticResource TextBoxRegular}"/>
+                            <StackPanel Grid.Column="2">
+                                <Label Content="Phone Number" Style="{StaticResource LabelHeader}" Padding="0,0,0,3"/>
+                                <TextBox Text="{Binding CurrentOrder.CustomerPhone, Mode=OneWay}" 
+                                         IsReadOnly="True"
+                                         Style="{StaticResource TextBoxRegular}"/>
+                            </StackPanel>
+                        </Grid>
 
-                    <!-- Delivery Type -->
-                    <Label Grid.Row="5" Grid.Column="0" Content="Delivery Type:" Style="{StaticResource LabelHeader}"/>
-                    <ComboBox Grid.Row="5" Grid.Column="1" 
-                              ItemsSource="{StaticResource CourierDeliveryTypesKey}"
-                              SelectedValue="{Binding CurrentCourier.DeliveryType, Mode=TwoWay}" 
-                              Style="{StaticResource ComboBoxRegular}"/>
+                        <!-- Delivery Information -->
+                        <TextBlock Grid.Row="2" Text="Delivery Information" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource SecondaryColor}" Margin="0,0,0,8"/>
+                        <Grid Grid.Row="3">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="15"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="15"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
 
-                    <!-- Start Date -->
-                    <Label Grid.Row="6" Grid.Column="0" Content="Start Working Date:" Style="{StaticResource LabelHeader}"/>
-                    <DatePicker Grid.Row="6" Grid.Column="1" 
-                               SelectedDate="{Binding CurrentCourier.StartWorkingDate, Mode=TwoWay}" 
-                               Style="{StaticResource DatePickerRegular}"/>
-                    <!-- Is Active -->
-                    <Label Grid.Row="7" Grid.Column="0" Content="Is Active Courier:" Style="{StaticResource LabelHeader}"/>
-                    <CheckBox Grid.Row="7" Grid.Column="1"
-                              IsChecked="{Binding CurrentCourier.IsActive, Mode=TwoWay}"
-                              VerticalAlignment="Center"
-                              Margin="5,0,0,0">
-                        <CheckBox.LayoutTransform>
-                            <ScaleTransform ScaleX="1.2" ScaleY="1.2"/>
-                        </CheckBox.LayoutTransform>
-                    </CheckBox>
+                            <StackPanel Grid.Column="0">
+                                <Label Content="Address" Style="{StaticResource LabelHeader}" Padding="0,0,0,3"/>
+                                <TextBox Text="{Binding CurrentOrder.Address, Mode=OneWay}" 
+                                         IsReadOnly="True"
+                                         Style="{StaticResource TextBoxRegular}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2">
+                                <Label Content="Status" Style="{StaticResource LabelHeader}" Padding="0,0,0,3"/>
+                                <TextBox Text="{Binding CurrentOrder.OrderStatus, Mode=OneWay}" 
+                                         IsReadOnly="True"
+                                         Style="{StaticResource TextBoxRegular}"
+                                         Width="100"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="4">
+                                <Label Content="Order ID" Style="{StaticResource LabelHeader}" Padding="0,0,0,3"/>
+                                <TextBox Text="{Binding CurrentOrder.Id, Mode=OneWay}" 
+                                         IsReadOnly="True"
+                                         Style="{StaticResource TextBoxRegular}"
+                                         Width="70"/>
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+
+                    <!-- Empty State Message -->
+                    <TextBlock Grid.Row="1" 
+                               Text="No current order assigned"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Foreground="{StaticResource LightTextColor}"
+                               FontSize="14"
+                               Visibility="{Binding NoCurrentOrderVisibility}"/>
                 </Grid>
-            </ScrollViewer>
+            </Border>
 
-            <!-- Buttons -->
-            <Border Grid.Row="2" 
-                   BorderBrush="{StaticResource BorderColor}" 
-                   BorderThickness="0,1,0,0" 
-                   Padding="0,20,0,0"
-                   Margin="0,20,0,0">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="Delete Courier"
-                            Style="{StaticResource DeleteButtonStyle}"
-                            Visibility="{Binding DeleteVisibility}"
-                            Click="btnDelete_Click"
-                            Margin="0,0,20,0"/>
-                    <Button Content="{Binding ButtonText}" 
-                            Style="{StaticResource PrimaryButton}"
-                            Visibility="{Binding SaveButtonVisibility}" 
-                            Click="btnAddUpdate_Click"/>
-                    <Button Content="Cancel" 
-                           Style="{StaticResource SecondaryButton}"
-                           Click="btnClose_Click"/>
-                </StackPanel>
+            <!-- Delivery History Section -->
+            <Border Grid.Row="2" Background="White" CornerRadius="8" Padding="20">
+                <Border.Effect>
+                    <DropShadowEffect Color="#000000" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/>
+                </Border.Effect>
+
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Header -->
+                    <StackPanel Grid.Row="0" Margin="0,0,0,15">
+                        <TextBlock Text="Delivery History" Style="{StaticResource SectionHeader}"/>
+                        <Rectangle Height="2" Fill="{StaticResource PrimaryColor}" HorizontalAlignment="Left" Width="60"/>
+                    </StackPanel>
+
+                    <!-- Delivery History DataGrid -->
+                    <DataGrid Grid.Row="1" 
+                              x:Name="dgDeliveryHistory"
+                              ItemsSource="{Binding DeliveryHistory}" 
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False" 
+                              IsReadOnly="True"
+                              VerticalScrollBarVisibility="Auto">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Order ID" Binding="{Binding OrderId}" Width="70"/>
+                            <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="*"/>
+                            <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90"/>
+                            <DataGridTextColumn Header="Pickup" Binding="{Binding PickupDate, StringFormat='dd/MM/yy HH:mm'}" Width="100"/>
+                            <DataGridTextColumn Header="Delivered" Binding="{Binding DeliveryDate, StringFormat='dd/MM/yy HH:mm'}" Width="100"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <!-- Empty State Message -->
+                    <TextBlock Grid.Row="1" 
+                               Text="No delivery history available"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Foreground="{StaticResource LightTextColor}"
+                               FontSize="14"
+                               Visibility="{Binding NoHistoryVisibility}"/>
+                </Grid>
             </Border>
         </Grid>
-    </Border>
+    </Grid>
 </Window>

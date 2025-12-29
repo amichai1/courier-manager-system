@@ -650,4 +650,62 @@ internal static class OrderManager
             }
         }
     }
+
+    /// <summary>
+    /// Checks and updates orders that have exceeded their max delivery time.
+    /// Called when the system clock is advanced.
+    /// </summary>
+    public static void CheckAndUpdateExpiredOrders()
+    {
+        lock (AdminManager.BlMutex)
+        {
+            try
+            {
+                DateTime now = AdminManager.Now;
+                BO.Config config = AdminManager.GetConfig();
+                bool anyUpdated = false;
+
+                // LINQ Method Syntax - Find orders that exceeded max delivery time
+                var expiredOrders = s_dal.Order.ReadAll()
+                    .Where(order => !order.DeliveryDate.HasValue) // Not yet delivered
+                    .Where(order => order.CreatedAt.Add(config.MaxDeliveryTime) < now) // Exceeded max time
+                    .ToList();
+
+                foreach (var doOrder in expiredOrders)
+                {
+                    // Log the expired order for tracking
+                    System.Diagnostics.Debug.WriteLine($"[EXPIRED] Order {doOrder.Id} exceeded max delivery time. Created: {doOrder.CreatedAt}, Max: {doOrder.CreatedAt.Add(config.MaxDeliveryTime)}, Now: {now}");
+
+                    // If order has a courier assigned but not picked up, release the courier
+                    if (doOrder.CourierId.HasValue && !doOrder.PickupDate.HasValue)
+                    {
+                        try
+                        {
+                            DO.Courier? courier = s_dal.Courier.Read(doOrder.CourierId.Value);
+                            if (courier != null)
+                            {
+                                // Mark courier as available again
+                                System.Diagnostics.Debug.WriteLine($"[INFO] Releasing courier {courier.Id} from expired order {doOrder.Id}");
+                              }
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[ERROR] Failed to process courier for expired order: {ex.Message}");
+                        }
+                    }
+
+                    anyUpdated = true;
+                }
+
+                if (anyUpdated)
+                {
+                    Observers.NotifyListUpdated();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ERROR] Error in CheckAndUpdateExpiredOrders: {ex.Message}");
+            }
+        }
+    }
 }

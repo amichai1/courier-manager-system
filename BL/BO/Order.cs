@@ -1,4 +1,4 @@
-﻿namespace BO;
+namespace BO;
 public class Order
 {
     // strongly typed BO property (no fields)
@@ -29,7 +29,7 @@ public class Order
     public DateTime? CourierAssociatedDate { get; internal set; }
     public DateTime? PickupDate { get; internal set; }
     public DateTime? DeliveryDate { get; internal set; }
-    public int? CourierId { get; internal set; }
+    public int? CourierId { get; set; }
     public string? CourierName { get; internal set; }
 
     public override string ToString()

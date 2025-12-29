@@ -3,35 +3,105 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:PL.Order"
         mc:Ignorable="d"
-        Title="OrderListWindow" Height="640" Width="800">
-    <!--External Grid-->
-    <Grid>
+        Title="Order Management" Height="700" Width="1100"
+        WindowStartupLocation="CenterScreen"
+        Background="#F5F7FA"
+        Loaded="Window_Loaded"
+        Closed="Window_Closed"
+        DataContext="{Binding RelativeSource={RelativeSource Mode=Self}}">
+
+    <Window.Resources>
+    </Window.Resources>
+
+    <Grid Margin="15">
         <Grid.RowDefinitions>
-            <RowDefinition Height="40*"/>
-            <RowDefinition Height="500*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!--Internal, Upper Grid-->
-        <Grid HorizontalAlignment="Stretch" Height="auto" Grid.Row="0" VerticalAlignment="Stretch" Width="auto">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="Order Management" Style="{StaticResource SectionHeader}"/>
+            <Rectangle Height="2" Fill="{StaticResource PrimaryColor}" HorizontalAlignment="Left" Width="60"/>
+        </StackPanel>
 
-            <!-- Filter Label -->
-            <Label Grid.Column="0" Content="Select Order:" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0,0,0"/>
+        <!-- Filter Section -->
+        <Border Grid.Row="1" Background="White" CornerRadius="8" Padding="20" Margin="0,0,0,15">
+            <Border.Effect>
+                <DropShadowEffect Color="#000000" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/>
+            </Border.Effect>
 
-            <!-- Filter ComboBox -->
-            <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="5"/>
-        </Grid>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="200"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
 
-        <!-- List View for Orders -->
-        <ListView Grid.Row="1" Margin="5"/>
+                <Label Grid.Column="0" Content="Filter by Status:" Style="{StaticResource LabelHeader}"/>
+                <ComboBox Grid.Column="1" 
+                          x:Name="cbxStatusFilter"
+                          Style="{StaticResource ComboBoxRegular}"
+                          SelectionChanged="cbxStatusFilter_SelectionChanged">
+                    <ComboBoxItem IsSelected="True">All Statuses</ComboBoxItem>
+                    <ComboBoxItem>Confirmed</ComboBoxItem>
+                    <ComboBoxItem>AssociatedToCourier</ComboBoxItem>
+                    <ComboBoxItem>InProgress</ComboBoxItem>
+                    <ComboBoxItem>Delivered</ComboBoxItem>
+                </ComboBox>
 
-        <!-- Add Button -->
-        <Button Content="add" Grid.Row="2" HorizontalAlignment="Center" Height="50" Width="100"/>
+                <Button Grid.Column="3" 
+                        Content="Add New Order" 
+                        Click="btnAddOrder_Click"
+                        Style="{StaticResource PrimaryButton}"
+                        Margin="20,0,0,0"/>
+
+                <Button Grid.Column="4" 
+                        Content="Refresh" 
+                        Click="btnRefresh_Click"
+                        Style="{StaticResource SecondaryButton}"
+                        HorizontalAlignment="Right"
+                        Margin="0,0,0,0"/>
+            </Grid>
+        </Border>
+
+        <!-- Orders DataGrid -->
+        <Border Grid.Row="2" Background="White" CornerRadius="8" Padding="15">
+            <Border.Effect>
+                <DropShadowEffect Color="#000000" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/>
+            </Border.Effect>
+
+            <DataGrid x:Name="dgOrders"
+                      ItemsSource="{Binding OrderList}"
+                      SelectedItem="{Binding SelectedOrder}"
+                      MouseDoubleClick="dgOrders_MouseDoubleClick"
+                      AutoGenerateColumns="False">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="50"/>
+                    <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="150"/>
+                    <DataGridTextColumn Header="Address" Binding="{Binding Address}" Width="200"/>
+                    <DataGridTextColumn Header="Type" Binding="{Binding OrderType}" Width="80"/>
+                    <DataGridTextColumn Header="Status" Binding="{Binding OrderStatus}" Width="120"/>
+                    <DataGridTextColumn Header="Schedule" Binding="{Binding ScheduleStatus}" Width="100"/>
+                    <DataGridTextColumn Header="Created" Binding="{Binding CreatedAt, StringFormat='yyyy-MM-dd HH:mm'}" Width="150"/>
+                    <DataGridTextColumn Header="Courier" Binding="{Binding CourierName}" Width="120"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+
+        <!-- Footer Info -->
+        <Border Grid.Row="3" Background="White" CornerRadius="8" Padding="15" Margin="0,15,0,0">
+            <Border.Effect>
+                <DropShadowEffect Color="#000000" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/>
+            </Border.Effect>
+            <TextBlock x:Name="lblStatus" 
+                       Foreground="{StaticResource LightTextColor}" 
+                       FontSize="12"/>
+        </Border>
     </Grid>
 </Window>

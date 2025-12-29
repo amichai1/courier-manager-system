@@ -9,11 +9,14 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using BlApi;
+using PL.Converters;
+
 namespace PL
 {
     public partial class MainWindow : Window
     {
         static readonly IBI s_bl = BL.Factory.Get();
+        private double _originalMaxDistance; // Store original value for rollback
 
         public MainWindow()
         {
@@ -62,10 +65,9 @@ namespace PL
             s_bl.Admin.ForwardClock(BO.TimeUnit.Day);
         }
 
-        // קידום בחודש (התיקון שביקשת)
+        // קידום בחודש
         private void btnAddOneMonth_Click(object sender, RoutedEventArgs e)
         {
-            // עכשיו זה יעבוד מושלם גם בפברואר
             s_bl.Admin.ForwardClock(BO.TimeUnit.Month);
         }
 
@@ -83,12 +85,38 @@ namespace PL
         {
             try
             {
+                // Validate MaxDeliveryDistance
+                if (!MaxDistanceConverter.IsValid(Configuration.MaxDeliveryDistance))
+                {
+                    MessageBox.Show(
+                        MaxDistanceConverter.GetErrorMessage() + "\nReverting to original value.",
+                        "Validation Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+
+                    // Revert to original value
+                    Configuration.MaxDeliveryDistance = _originalMaxDistance;
+
+                    // Force UI refresh
+                    var config = Configuration;
+                    Configuration = null!;
+                    Configuration = config;
+                    return;
+                }
+
                 s_bl.Admin.SetConfig(Configuration);
+                _originalMaxDistance = Configuration.MaxDeliveryDistance ?? MaxDistanceConverter.DefaultDistance;
                 MessageBox.Show("Configuration updated successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error updating configuration: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
+                // Revert to original value on error
+                Configuration.MaxDeliveryDistance = _originalMaxDistance;
+                var config = Configuration;
+                Configuration = null!;
+                Configuration = config;
             }
         }
 
@@ -98,12 +126,12 @@ namespace PL
 
         private void btnDeliveries_Click(object sender, RoutedEventArgs e)
         {
-            new Delivery.DeliveryListWindow().Show();
+            PL.Delivery.DeliveryListWindow.ShowList();
         }
 
         private void btnOrders_Click(object sender, RoutedEventArgs e)
         {
-            new Order.OrderListWindow().Show();
+            PL.Order.OrderListWindow.ShowList();
         }
 
         private void btnCouriers_Click(object sender, RoutedEventArgs e)
@@ -122,7 +150,7 @@ namespace PL
             {
                 try
                 {
-                    Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
+                    Mouse.OverrideCursor = Cursors.Wait;
                     CloseAllWindowsExceptMain();
                     s_bl.Admin.InitializeDB();
                     Mouse.OverrideCursor = null;
@@ -143,7 +171,7 @@ namespace PL
             {
                 try
                 {
-                    Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
+                    Mouse.OverrideCursor = Cursors.Wait;
                     CloseAllWindowsExceptMain();
                     s_bl.Admin.ResetDB();
                     Mouse.OverrideCursor = null;
@@ -176,6 +204,7 @@ namespace PL
         {
             CurrentTime = s_bl.Admin.GetClock();
             Configuration = s_bl.Admin.GetConfig();
+            _originalMaxDistance = Configuration.MaxDeliveryDistance ?? MaxDistanceConverter.DefaultDistance;
             s_bl.Admin.AddClockObserver(clockObserver);
             s_bl.Admin.AddConfigObserver(configObserver);
         }
@@ -184,6 +213,7 @@ namespace PL
         {
             s_bl.Admin.RemoveClockObserver(clockObserver);
             s_bl.Admin.RemoveConfigObserver(configObserver);
+            Application.Current.Shutdown();
         }
 
         #endregion
@@ -192,19 +222,23 @@ namespace PL
 
         private void clockObserver()
         {
-            Dispatcher.Invoke(() =>
+            // Use BeginInvoke instead of Invoke to avoid bringing window to front
+            Dispatcher.BeginInvoke(new Action(() =>
             {
                 CurrentTime = s_bl.Admin.GetClock();
-            });
+            }), System.Windows.Threading.DispatcherPriority.Background);
         }
 
         private void configObserver()
         {
-            Dispatcher.Invoke(() =>
+            // Use BeginInvoke instead of Invoke to avoid bringing window to front
+            Dispatcher.BeginInvoke(new Action(() =>
             {
                 Configuration = s_bl.Admin.GetConfig();
-            });
+                _originalMaxDistance = Configuration.MaxDeliveryDistance ?? MaxDistanceConverter.DefaultDistance;
+            }), System.Windows.Threading.DispatcherPriority.Background);
         }
+
         #endregion
     }
 }

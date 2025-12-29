@@ -6,10 +6,7 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-<<<<<<< HEAD
-=======
 using Helpers;
->>>>>>> cdf7c09 (stage 5 steps 1-6)
 
 namespace Helpers;
 
@@ -25,7 +22,6 @@ internal static class AdminManager
     private static volatile Thread? s_thread = null;
     private static volatile bool s_stop = false;
     private static int s_interval = 0;
-    private static Task? _periodicTask = null;
 
     /// <summary>
     /// Property for providing current application's clock value for any BL class that may need it
@@ -54,8 +50,8 @@ internal static class AdminManager
     {
         lock (BlMutex)
         {
-            DalTest.Initialization.Do();
-            AdminManager.UpdateClock(AdminManager.Now);
+            DalTest.Initialization.Do();                          // Creates orders via DAL
+            AdminManager.UpdateClock(AdminManager.Now);           // This calls PeriodicOrderUpdates
             AdminManager.SetConfig(AdminManager.GetConfig());
 
         }
@@ -74,38 +70,12 @@ internal static class AdminManager
     {
         DateTime oldClock = s_dal.Config.Clock;
         s_dal.Config.Clock = newClock;
-
-        // Call periodic update methods implemented for each entity.
-        // Keep calls inside try/catch so one failing manager doesn't stop others.
-        try
-        {
-            CourierManager.PeriodicCourierUpdates(oldClock, newClock);
-        }
-        catch (Exception ex)
-        {
-            // convert/log as needed; don't crash the clock runner
-            System.Diagnostics.Debug.WriteLine($"PeriodicCourierUpdates failed: {ex.Message}");
-        }
-
-        try
-        {
-            OrderManager.PeriodicOrderUpdates(oldClock, newClock);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"PeriodicOrderUpdates failed: {ex.Message}");
-        }
-
-        try
-        {
-            DeliveryManager.PeriodicDeliveryUpdates(oldClock, newClock);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"PeriodicDeliveryUpdates failed: {ex.Message}");
-        }
-
-        //Calling all the observers of clock update
+        BL.Helpers.CourierManager.PeriodicCourierUpdates(oldClock, newClock);
+        BL.Helpers.OrderManager.PeriodicOrderUpdates(oldClock, newClock);
+        BL.Helpers.DeliveryManager.PeriodicDeliveryUpdates(oldClock, newClock); 
+        // Check for expired orders after clock advancement
+        BL.Helpers.OrderManager.CheckAndUpdateExpiredOrders();
+        
         ClockUpdatedObservers?.Invoke();
     }
 
@@ -156,14 +126,14 @@ internal static class AdminManager
         }
         if (s_dal.Config.ManagerPassword != configuration.ManagerPassword)
         {
-            s_dal.Config.ManagerPassword = configuration.ManagerPassword;
+            s_dal.Config.ManagerPassword = configuration.ManagerPassword ?? string.Empty;
             configChanged = true;
         }
 
         // [2] Location and Nullable Properties
         if (s_dal.Config.CompanyAddress != configuration.CompanyAddress)
         {
-            s_dal.Config.CompanyAddress = configuration.CompanyAddress;
+            s_dal.Config.CompanyAddress = configuration.CompanyAddress ?? string.Empty;
             configChanged = true;
         }
         if (s_dal.Config.CompanyLatitude != configuration.CompanyLatitude)
@@ -245,12 +215,7 @@ internal static class AdminManager
     {
         while (!s_stop)
         {
-            UpdateClock(Now.AddMinutes(s_interval));
-
-            // Add calls here to any logic simulation that was required in stage 7
-            // if (_simulateTask is null || _simulateTask.IsCompleted)
-            //     _simulateTask = Task.Run(() => StudentManager.SimulateCourseRegistrationAndGrade()); 
-
+            UpdateClock(Now.AddMinutes(s_interval)); 
             try
             {
                 Thread.Sleep(1000);

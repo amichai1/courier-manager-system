@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:PL"
         xmlns:converters="clr-namespace:PL.Converters"
         mc:Ignorable="d"
-        Title="Admin Dashboard" Height="650" Width="1000"
+        Title="Admin Dashboard" Height="600" Width="900"
         WindowStartupLocation="CenterScreen"
         Background="#F5F7FA"
         DataContext="{Binding RelativeSource={RelativeSource Mode=Self}}"
@@ -14,14 +14,16 @@
         Closed="Window_Closed">
 
     <Window.Resources>
-        <converters:NullableDoubleToStringConverter x:Key="DoubleToStringKey"/>
+        <converters:MaxDistanceConverter x:Key="MaxDistanceConverterKey"/>
     </Window.Resources>
+    
     <Grid Margin="15">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="300"/>
+            <ColumnDefinition Width="280"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
+        <!-- Left Panel - Clock -->
         <Border Grid.Column="0" Background="White" CornerRadius="8" Margin="0,0,10,0" Padding="20">
             <Border.Effect>
                 <DropShadowEffect Color="#000000" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/>
@@ -42,7 +44,7 @@
                 <Border Grid.Row="1" Background="#ECF0F1" CornerRadius="8" Padding="10" Margin="0,0,0,20">
                     <Label Content="{Binding CurrentTime}"
                            ContentStringFormat='{}{0:HH:mm:ss dd/MM/yyyy}'
-                           FontWeight="Bold" FontSize="20" 
+                           FontWeight="Bold" FontSize="18" 
                            Foreground="{StaticResource PrimaryColor}"
                            HorizontalContentAlignment="Center"/>
                 </Border>
@@ -60,6 +62,7 @@
             </Grid>
         </Border>
 
+        <!-- Right Panel - Management -->
         <Border Grid.Column="1" Background="White" CornerRadius="8" Margin="10,0,0,0" Padding="30">
             <Border.Effect>
                 <DropShadowEffect Color="#000000" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/>
@@ -78,6 +81,7 @@
                     <Rectangle Height="2" Fill="{StaticResource PrimaryColor}" HorizontalAlignment="Left" Width="60" Margin="0,0,0,25"/>
                 </StackPanel>
 
+                <!-- Configuration Settings -->
                 <Grid Grid.Row="1" Margin="0,0,0,30">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -87,43 +91,40 @@
                     <Label Content="Configuration Settings" FontWeight="SemiBold" FontSize="14" Foreground="{StaticResource SecondaryColor}" Margin="0,0,0,10"/>
 
                     <Border Grid.Row="1" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="6" Padding="15">
-                        <StackPanel>
-                            <Grid Margin="0,0,0,10">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Label Grid.Column="0" Content="Max Delivery Range (km):" Style="{StaticResource LabelHeader}" Margin="0,0,10,0"/>
-                                <TextBox Grid.Column="1" 
-                                         Text="{Binding Configuration.MaxDeliveryDistance, 
-                                                        UpdateSourceTrigger=PropertyChanged, 
-                                                        Converter={StaticResource DoubleToStringKey},
-                                                        ValidatesOnExceptions=True}" 
-                                         Style="{StaticResource TextBoxRegular}"/>
-                                <Button Grid.Column="2" Content="Update" Click="btnUpdateConfig_Click" 
-                                        Style="{StaticResource PrimaryButton}" 
-                                        Padding="15,5" Margin="10,0,0,0" Height="30" FontSize="12"/>
-                            </Grid>
-                        </StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Label Grid.Column="0" Content="Max Delivery Range (km):" Style="{StaticResource LabelHeader}" Margin="0,0,10,0"/>
+                            <TextBox Grid.Column="1" 
+                                     Text="{Binding Configuration.MaxDeliveryDistance, 
+                                                    UpdateSourceTrigger=PropertyChanged, 
+                                                    Converter={StaticResource MaxDistanceConverterKey}}" 
+                                     Style="{StaticResource TextBoxRegular}"
+                                     ToolTip="Minimum 10 km"/>
+                            <Button Grid.Column="2" Content="Update" Click="btnUpdateConfig_Click" 
+                                    Style="{StaticResource PrimaryButton}" 
+                                    Padding="15,5" Margin="10,0,0,0" Height="30" FontSize="12"/>
+                        </Grid>
                     </Border>
                 </Grid>
 
+                <!-- Management Actions -->
                 <StackPanel Grid.Row="3">
-                    <Label Content="Management Actions" Style="{StaticResource LabelHeader}" Margin="0,0,0,5"/>
+                    <Label Content="Management Actions" Style="{StaticResource LabelHeader}" Margin="0,0,0,10"/>
 
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="15"/>
+                            <ColumnDefinition Width="20"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0">
                             <Button Content="Manage Couriers" Click="btnCouriers_Click" Style="{StaticResource PrimaryButton}" Height="50"/>
-                            <Button Content="Manage Orders" Click="btnOrders_Click" Style="{StaticResource PrimaryButton}" Height="50" ToolTip="Coming Soon"/>
-
-                            <Button Content="Manage Deliveries" Click="btnDeliveries_Click" Style="{StaticResource PrimaryButton}" Height="50"/>
+                            <Button Content="Manage Orders" Click="btnOrders_Click" Style="{StaticResource PrimaryButton}" Height="50"/>
                         </StackPanel>
 
                         <StackPanel Grid.Column="2" VerticalAlignment="Bottom">
