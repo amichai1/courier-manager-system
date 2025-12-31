@@ -7,10 +7,11 @@
         Title="Delivery Management System - Login" 
         Height="400" Width="500"
         WindowStartupLocation="CenterScreen"
-        Background="#F5F7FA"
+        Background="{StaticResource AppBackgroundColor}"
         ResizeMode="NoResize"
         WindowStyle="None"
-        AllowsTransparency="True">
+        AllowsTransparency="True"
+        KeyDown="Window_KeyDown">
     <Border CornerRadius="15" Background="White" Padding="0">
         <Border.Effect>
             <DropShadowEffect Color="#000000" Opacity="0.2" BlurRadius="20" ShadowDepth="5"/>
@@ -28,7 +29,7 @@
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                     <TextBlock Text="📦 Delivery Management System" 
                                FontSize="24" FontWeight="Bold" Foreground="White" TextAlignment="Center"/>
-                    <TextBlock Text="Admin Portal" 
+                    <TextBlock Text="Login Portal" 
                                FontSize="14" Foreground="#ECEFF1" TextAlignment="Center" Margin="0,5,0,0"/>
                 </StackPanel>
             </Border>
@@ -37,23 +38,21 @@
             <StackPanel Grid.Row="1" Margin="40,30,40,20" VerticalAlignment="Top">
                 <Label Content="User ID" Style="{StaticResource LabelHeader}" Margin="0,0,0,5"/>
                 <TextBox x:Name="txtUserId" 
-                         Padding="12,0" 
+                         Style="{StaticResource TextBoxRegular}"
+                         Padding="12,4" 
                          FontSize="14"
                          Height="40"
                          VerticalContentAlignment="Center"
-                         BorderBrush="{StaticResource BorderColor}"
-                         BorderThickness="1"
-                         Background="{StaticResource BackgroundColor}"/>
-
+                         KeyDown="TextBox_KeyDown"/>
+                
                 <Label Content="Password" Style="{StaticResource LabelHeader}" Margin="0,15,0,5"/>
                 <PasswordBox x:Name="txtPassword" 
-                             Padding="12,0" 
+                             Style="{StaticResource PasswordBoxStyle}"
+                             Padding="12,4" 
                              FontSize="14"
                              Height="40"
                              VerticalContentAlignment="Center"
-                             BorderBrush="{StaticResource BorderColor}"
-                             BorderThickness="1"
-                             Background="{StaticResource BackgroundColor}"/>
+                             KeyDown="PasswordBox_KeyDown"/>
 
                 <TextBlock x:Name="lblError" 
                            Text="" 
@@ -79,6 +78,7 @@
                             Height="40"/>
 
                     <Button Grid.Column="2" 
+                            x:Name="btnLogin"
                             Content="Login" 
                             Style="{StaticResource PrimaryButton}"
                             Click="btnLogin_Click"

@@ -21,4 +21,8 @@ public interface IBIOrder : BIApi.IObservable // Stage 5 - Extend IObservable (u
     void AssociateCourierToOrder(int orderId, int courierId);
     void PickUpOrder(int orderId);
     void DeliverOrder(int orderId);
+    /// <summary>
+    /// Get available orders for a specific courier, by distance from courier's location
+    /// </summary>
+    IEnumerable<BO.Order> GetAvailableOrdersForCourier(int courierId);
 }

@@ -27,6 +27,14 @@ internal class CourierImplementation : IBICourier
     public void SetCourierStatus(int courierId, BO.CourierStatus status)
         => CourierManager.SetCourierStatus(courierId, status);
 
+    /// <summary>
+    /// Calculates and returns the average delivery time for a courier based on all completed deliveries.
+    /// </summary>
+    /// <param name="courierId">The ID of the courier.</param>
+    /// <returns>Average delivery time in "HH:mm" format, or "—" if no data is available.</returns>
+    public string CalculateAverageDeliveryTime(int courierId)
+        => CourierManager.CalculateAverageDeliveryTime(courierId);
+
     #region Stage 5 - Observer Pattern Implementation
     public void AddObserver(Action listObserver) =>
         CourierManager.Observers.AddListObserver(listObserver);

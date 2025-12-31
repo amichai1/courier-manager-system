@@ -1,4 +1,4 @@
-﻿namespace BO;
+namespace BO;
 
 /// <summary>
 /// Represents a courier with personal and operational details.
@@ -29,6 +29,13 @@ public class Courier
     public OrderInProgress? CurrentOrder { get; set; }
     public double TotalWeightInDelivery { get; internal set; }
     public int OrdersInDelivery { get; internal set; }
+    
+    /// <summary>
+    /// Average delivery time calculated as the mean of all completed deliveries.
+    /// Format: "HH:mm" (hours:minutes)
+    /// Returns "—" if no completed deliveries exist or data is incomplete.
+    /// </summary>
+    public string AverageDeliveryTime { get; set; } = "—";
 
     public override string ToString()
     {
@@ -44,6 +51,7 @@ public class Courier
             Start Working Date:    {StartWorkingDate:yyyy-MM-dd HH:mm:ss}
             Delivered On Time:     {DeliveredOnTime}
             Delivered Late:        {DeliveredLate}
+            Average Delivery Time: {AverageDeliveryTime}
             Location:              Lat={Location.Latitude}, Lon={Location.Longitude}
             Current Order:         {(CurrentOrder?.OrderId ?? 0)}
             Total Weight:          {TotalWeightInDelivery} kg

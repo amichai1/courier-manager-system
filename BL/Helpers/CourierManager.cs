@@ -552,6 +552,53 @@ internal static class CourierManager
         }
     }
 
+    /// <summary>
+    /// Calculates the average delivery time for a specific courier based on all completed deliveries.
+    /// Average is calculated as the mean time between pickup and delivery dates.
+    /// </summary>
+    /// <param name="courierId">The ID of the courier.</param>
+    /// <returns>Average delivery time formatted as "HH:mm", or "—" if no data available.</returns>
+    public static string CalculateAverageDeliveryTime(int courierId)
+    {
+        lock (AdminManager.BlMutex)
+        {
+            try
+            {
+                // Get all completed orders for this courier with both pickup and delivery dates
+                var completedDeliveries = s_dal.Order.ReadAll()
+                    .Where(o => o.CourierId == courierId && o.DeliveryDate.HasValue && o.PickupDate.HasValue)
+                    .ToList();
+
+                if (completedDeliveries.Count == 0)
+                    return "—";
+
+                // Calculate elapsed time for each delivery
+                var elapsedTimes = completedDeliveries
+                    .Select(o => o.DeliveryDate!.Value - o.PickupDate!.Value)
+                    .ToList();
+
+                // Calculate total time and average
+                TimeSpan totalElapsed = TimeSpan.Zero;
+                foreach (var elapsed in elapsedTimes)
+                {
+                    totalElapsed = totalElapsed.Add(elapsed);
+                }
+
+                TimeSpan averageElapsed = TimeSpan.FromMilliseconds(
+                    totalElapsed.TotalMilliseconds / elapsedTimes.Count
+                );
+
+                // Format as HH:mm
+                return averageElapsed.ToString(@"hh\:mm");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ERROR] Failed to calculate average delivery time for courier {courierId}: {ex.Message}");
+                return "—";
+            }
+        }
+    }
+
     // ------------------------------------
     // --- 4. PERIODIC UPDATES ---
     // ------------------------------------

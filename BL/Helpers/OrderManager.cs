@@ -135,6 +135,7 @@ internal static class OrderManager
                                      where delivery.OrderId == orderId && delivery.CompletionStatus.HasValue
                                      let courierInfo = (delivery.CourierId > 0 ? 
                                          s_dal.Courier.Read(delivery.CourierId) : null)
+                                     let orderInfo = s_dal.Order.Read(orderId)
                                      select new BO.DeliveryPerOrderInList
                                      {
                                          DeliveryId = delivery.Id,
@@ -143,7 +144,8 @@ internal static class OrderManager
                                          DeliveryType = (BO.DeliveryType)courierInfo?.DeliveryType!,
                                          StartTimeDelivery = delivery.StartTime,
                                          EndType = (BO.DeliveryStatus?)delivery.CompletionStatus,
-                                         EndTime = delivery.EndTime
+                                         EndTime = delivery.EndTime,
+                                         DeliveryAddress = orderInfo?.Address ?? "Unknown"
                                      };
 
                 return deliveryHistory.ToList();
@@ -386,6 +388,7 @@ internal static class OrderManager
     /// <summary>
     /// Associates a courier to an order.
     /// Uses LINQ to verify courier availability with lambda expressions.
+    /// Also triggers observer notifications for both Order and Courier observers.
     /// </summary>
     public static void AssociateCourierToOrder(int orderId, int courierId)
     {
@@ -431,8 +434,15 @@ internal static class OrderManager
                 throw new BLOperationFailedException($"Failed to associate courier {courierId} to order {orderId}: {ex.Message}", ex);
             }
 
-            Observers.NotifyItemUpdated(orderId); // Stage 5
-            Observers.NotifyListUpdated(); // Stage 5
+            // Step 4: Notify all observers
+            // ================================
+            // Notify Order observers - all windows observing orders will refresh
+            Observers.NotifyItemUpdated(orderId);      // Specific order changed
+            Observers.NotifyListUpdated();             // Order list changed (available orders for other couriers)
+            
+            // Notify Courier observers - CourierWindow and CourierListWindow will refresh
+            CourierManager.Observers.NotifyItemUpdated(courierId); // This courier's details changed
+            CourierManager.Observers.NotifyListUpdated();          // Courier list changed (status updated)
         }
     }
 
@@ -582,6 +592,59 @@ internal static class OrderManager
             catch (Exception ex)
             {
                 throw new BLOperationFailedException($"Failed to get orders in time range: {ex.Message}", ex);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Find orders available for a courier
+    /// by:
+    /// 1. Orders without CourierId (unassigned)
+    /// 2. Orders without CourierAssociatedDate (not yet associated to any courier)
+    /// 3. Orders within courier's delivery distance
+    /// Sorted by distance (nearest first)
+    /// </summary>
+    public static IEnumerable<BO.Order> GetAvailableOrdersForCourier(int courierId)
+    {
+        lock (AdminManager.BlMutex)
+        {
+            try
+            {
+                // get the courier details
+                BO.Courier courier = CourierManager.ReadCourier(courierId);
+                
+                // LINQ Method Syntax - Filter unassigned, unassociated orders within distance
+                var availableOrders = s_dal.Order.ReadAll()
+                    .Where(o => !o.CourierId.HasValue)  // No courier assigned
+                    .Where(o => !o.CourierAssociatedDate.HasValue)  // Not yet in process
+                    .ToList();
+
+                var withinDistance = new List<BO.Order>();
+
+                foreach (var doOrder in availableOrders)
+                {
+                    double distance = BO.Order.CalculateAirDistance(
+                        courier.Location.Latitude,
+                        courier.Location.Longitude,
+                        doOrder.Latitude,
+                        doOrder.Longitude);
+
+                    // Check if order is within courier's delivery range
+                    if (courier.MaxDeliveryDistance == null || distance <= courier.MaxDeliveryDistance.Value)
+                    {
+                        BO.Order boOrder = ConvertDOToBO(doOrder);
+                        boOrder.ArialDistance = distance;
+                        withinDistance.Add(boOrder);
+                    }
+                }
+
+                // Sort by distance (nearest first) - LINQ Method Syntax with OrderBy
+                return withinDistance.OrderBy(o => o.ArialDistance).ToList();
+            }
+            catch (Exception ex)
+            {
+                throw new BLOperationFailedException(
+                    $"Failed to get available orders for courier {courierId}: {ex.Message}", ex);
             }
         }
     }

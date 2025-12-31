@@ -1,4 +1,4 @@
-﻿namespace Dal;
+namespace Dal;
 
 /// <summary>
 /// Static configuration class containing system-wide environment variables and settings.
@@ -33,7 +33,7 @@ internal static class Config
     /// Manager's credentials - initially set during initialization, can be updated later by manager
     /// </summary>
     internal static int ManagerId { get; set; } = 123456789;
-    internal static string ManagerPassword { get; set; } = "Admin123!";
+    internal static string ManagerPassword { get; set; } = "123456789";
 
     // Company Address and Coordinates
     /// <summary>

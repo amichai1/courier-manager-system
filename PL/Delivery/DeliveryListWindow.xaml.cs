@@ -99,7 +99,8 @@ namespace PL.Delivery
         {
             if (SelectedDelivery != null)
             {
-                new DeliveryWindow(SelectedDelivery.Id).Show();
+                // Open the Order window with the associated order ID
+                new PL.Order.OrderWindow(SelectedDelivery.OrderId).Show();
             }
         }
 

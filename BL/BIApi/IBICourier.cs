@@ -17,7 +17,14 @@ public interface IBICourier : BIApi.IObservable // Stage 5 - Extend IObservable 
     void Update(BO.Courier courier);
     void Delete(int id);
 
-    // Specific Operations (Examples)
+    // Specific Operations
     void UpdateLocation(int courierId, BO.Location newLocation);
     void SetCourierStatus(int courierId, CourierStatus status);
+
+    /// <summary>
+    /// Calculates the average delivery time for a courier based on all completed deliveries.
+    /// </summary>
+    /// <param name="courierId">The ID of the courier.</param>
+    /// <returns>Average delivery time in "HH:mm" format, or "—" if no data is available.</returns>
+    string CalculateAverageDeliveryTime(int courierId);
 }

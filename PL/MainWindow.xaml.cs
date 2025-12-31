@@ -18,9 +18,14 @@ namespace PL
         static readonly IBI s_bl = BL.Factory.Get();
         private double _originalMaxDistance; // Store original value for rollback
 
+        // Static field to track if admin window is open
+        private static MainWindow? s_instance = null;
+        public static bool IsAdminWindowOpen => s_instance != null;
+
         public MainWindow()
         {
             InitializeComponent();
+            s_instance = this;
         }
 
         #region Dependency Properties
@@ -151,7 +156,7 @@ namespace PL
                 try
                 {
                     Mouse.OverrideCursor = Cursors.Wait;
-                    CloseAllWindowsExceptMain();
+                    CloseAllWindowsExceptMainAndLogin();
                     s_bl.Admin.InitializeDB();
                     Mouse.OverrideCursor = null;
                     MessageBox.Show("Database initialized successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -172,7 +177,7 @@ namespace PL
                 try
                 {
                     Mouse.OverrideCursor = Cursors.Wait;
-                    CloseAllWindowsExceptMain();
+                    CloseAllWindowsExceptMainAndLogin();
                     s_bl.Admin.ResetDB();
                     Mouse.OverrideCursor = null;
                     MessageBox.Show("Database reset successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -185,13 +190,18 @@ namespace PL
             }
         }
 
-        private void CloseAllWindowsExceptMain()
+        /// <summary>
+        /// Closes all windows except MainWindow and LoginWindow to preserve the login screen
+        /// </summary>
+        private void CloseAllWindowsExceptMainAndLogin()
         {
             for (int i = Application.Current.Windows.Count - 1; i >= 0; i--)
             {
-                if (Application.Current.Windows[i] != this)
+                var window = Application.Current.Windows[i];
+                // Close only non-admin windows and keep LoginWindow open
+                if (window != this && !(window is LoginWindow))
                 {
-                    Application.Current.Windows[i].Close();
+                    window.Close();
                 }
             }
         }
@@ -211,6 +221,7 @@ namespace PL
 
         private void Window_Closed(object sender, EventArgs e)
         {
+            s_instance = null;
             s_bl.Admin.RemoveClockObserver(clockObserver);
             s_bl.Admin.RemoveConfigObserver(configObserver);
             Application.Current.Shutdown();

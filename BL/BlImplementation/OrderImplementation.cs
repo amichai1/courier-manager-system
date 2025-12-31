@@ -27,6 +27,8 @@ internal class OrderImplementation : IBIOrder
         => OrderManager.PickUpOrder(orderId);
     public void DeliverOrder(int orderId)
         => OrderManager.DeliverOrder(orderId);
+    public IEnumerable<BO.Order> GetAvailableOrdersForCourier(int courierId)
+        => OrderManager.GetAvailableOrdersForCourier(courierId);
 
     #region Stage 5 - Observer Pattern Implementation
     public void AddObserver(Action listObserver) =>
