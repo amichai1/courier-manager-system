@@ -12,8 +12,8 @@ namespace PL.Order
     {
         private static readonly IBI s_bl = BL.Factory.Get();
 
-        // --- Singleton Implementation Start ---
         private static OrderListWindow? _instance = null;
+        private static OrderStatus? _pendingFilter = null;
 
         private OrderListWindow()
         {
@@ -21,6 +21,18 @@ namespace PL.Order
         }
 
         public static void ShowList()
+        {
+            _pendingFilter = null;
+            ShowListInternal();
+        }
+
+        public static void ShowListFiltered(OrderStatus status)
+        {
+            _pendingFilter = status;
+            ShowListInternal();
+        }
+
+        private static void ShowListInternal()
         {
             if (_instance == null)
             {
@@ -30,11 +42,18 @@ namespace PL.Order
             else
             {
                 if (_instance.WindowState == WindowState.Minimized)
+                {
                     _instance.WindowState = WindowState.Normal;
+                }
+
                 _instance.Activate();
+
+                if (_pendingFilter.HasValue)
+                {
+                    _instance.ApplyStatusFilter(_pendingFilter.Value);
+                }
             }
         }
-        // --- Singleton Implementation End ---
 
         #region Dependency Properties
 
@@ -55,35 +74,73 @@ namespace PL.Order
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            QueryOrderList();
-            try { s_bl.Orders.AddObserver(OrderListObserver); } catch { /* ignore */ }
+            if (_pendingFilter.HasValue)
+            {
+                ApplyStatusFilter(_pendingFilter.Value);
+                _pendingFilter = null;
+            }
+            else
+            {
+                QueryOrderList();
+            }
+
+            try { s_bl.Orders.AddObserver(OrderListObserver); } catch { }
         }
 
         private void Window_Closed(object sender, EventArgs e)
         {
-            try { s_bl.Orders.RemoveObserver(OrderListObserver); } catch { /* ignore */ }
+            try { s_bl.Orders.RemoveObserver(OrderListObserver); } catch { }
             _instance = null;
         }
 
-        private void OrderListObserver() => Dispatcher.Invoke(QueryOrderList);
+        private void OrderListObserver()
+        {
+            // Check if window is still valid before invoking
+            if (_instance == null || !_instance.IsLoaded)
+            {
+                return;
+            }
+
+            // Use BeginInvoke with Background priority to avoid bringing window to front
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                // Double-check instance is still valid
+                if (_instance != null && _instance.IsLoaded)
+                {
+                    QueryOrderList();
+                }
+            }), System.Windows.Threading.DispatcherPriority.Background);
+        }
 
         #endregion
 
         #region Query & Actions
 
+        private void ApplyStatusFilter(OrderStatus status)
+        {
+            foreach (ComboBoxItem item in cbxStatusFilter.Items)
+            {
+                if (item.Content.ToString() == status.ToString())
+                {
+                    cbxStatusFilter.SelectedItem = item;
+                    break;
+                }
+            }
+
+            QueryOrderList();
+        }
+
         private void QueryOrderList()
         {
             try
             {
-                // LINQ Query Syntax - demonstrates: from, select
                 var allOrders = from order in s_bl.Orders.ReadAll()
-                               select order;
+                                select order;
 
                 if (cbxStatusFilter?.SelectedItem is ComboBoxItem selectedItem)
                 {
                     string selectedStatus = selectedItem.Content.ToString() ?? "All Statuses";
 
-                    // LINQ Method Syntax - demonstrates: Where, ToList with lambda
                     OrderList = selectedStatus != "All Statuses" && Enum.TryParse<OrderStatus>(selectedStatus, out var statusEnum)
                         ? allOrders.Where(o => o.OrderStatus == statusEnum).ToList()
                         : allOrders.ToList();

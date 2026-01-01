@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:PL"
         xmlns:converters="clr-namespace:PL.Converters"
         mc:Ignorable="d"
-        Title="Order Details" Height="700" Width="750"
+        Title="Order Details" Height="800" Width="750"
         WindowStartupLocation="CenterScreen"
         Background="#F5F7FA"
         Loaded="Window_Loaded"
@@ -91,9 +91,10 @@
 
                         <StackPanel Grid.Column="2">
                             <Label Content="Order Status" Style="{StaticResource LabelHeader}"/>
-                            <ComboBox x:Name="cbxOrderStatus" 
-                                      Style="{StaticResource ComboBoxRegular}"
-                                      SelectionChanged="cbxOrderStatus_SelectionChanged"/>
+                            <TextBox Text="{Binding CurrentOrder.OrderStatus, Mode=OneWay}" 
+                                     IsReadOnly="True"
+                                     Style="{StaticResource TextBoxRegular}"
+                                     Background="#F5F7FA"/>
                         </StackPanel>
                     </Grid>
 
@@ -145,14 +146,29 @@
                         </StackPanel>
                     </Grid>
 
-                    <!-- Courier Assignment -->
-                    <Border x:Name="courierAssignmentPanel" Visibility="Collapsed" Padding="15" Background="#F5F7FA" CornerRadius="6" Margin="0,0,0,15">
+                    <!-- Current Courier Info (Read-Only) -->
+                    <Border x:Name="courierInfoPanel" 
+                            Visibility="{Binding CourierInfoVisibility}"
+                            Padding="15" 
+                            Background="#E8F5E9" 
+                            CornerRadius="6" 
+                            Margin="0,0,0,15">
                         <StackPanel>
-                            <Label Content="Assign Courier" Style="{StaticResource LabelHeader}"/>
-                            <ComboBox x:Name="cbxCourier" 
-                                      Style="{StaticResource ComboBoxRegular}"
-                                      DisplayMemberPath="Name"
-                                      SelectedValuePath="Id"/>
+                            <TextBlock Text="🚚 Assigned Courier" FontWeight="SemiBold" FontSize="13" Foreground="#2E7D32" Margin="0,0,0,8"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Courier Name" FontSize="11" Foreground="{StaticResource LightTextColor}"/>
+                                    <TextBlock Text="{Binding CurrentOrder.CourierName}" FontWeight="Medium" Foreground="{StaticResource TextColor}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="Assigned At" FontSize="11" Foreground="{StaticResource LightTextColor}"/>
+                                    <TextBlock Text="{Binding CurrentOrder.CourierAssociatedDate, StringFormat='dd/MM/yyyy HH:mm'}" FontWeight="Medium" Foreground="{StaticResource TextColor}"/>
+                                </StackPanel>
+                            </Grid>
                         </StackPanel>
                     </Border>
 
@@ -180,7 +196,7 @@
                         </StackPanel>
                     </Grid>
 
-                    <Grid Margin="0,0,0,10">
+                    <Grid Margin="0,0,0,15">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="15"/>
@@ -201,6 +217,111 @@
                                      Style="{StaticResource TextBoxRegular}"/>
                         </StackPanel>
                     </Grid>
+
+                    <!-- Delivery History Section -->
+                    <Border x:Name="deliveryHistoryPanel" 
+                            Visibility="{Binding DeliveryHistoryVisibility, RelativeSource={RelativeSource AncestorType=Window}}"
+                            Background="#FAFBFC" 
+                            CornerRadius="6" 
+                            Padding="15" 
+                            Margin="0,10,0,0"
+                            BorderBrush="{StaticResource BorderColor}"
+                            BorderThickness="1">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <TextBlock Text="📦 Delivery History" 
+                                           FontWeight="SemiBold" 
+                                           FontSize="14" 
+                                           Foreground="{StaticResource SecondaryColor}"/>
+                                <TextBlock Text="{Binding DeliveryHistoryCount, RelativeSource={RelativeSource AncestorType=Window}, StringFormat=' ({0} records)'}" 
+                                           FontSize="12" 
+                                           Foreground="{StaticResource LightTextColor}"
+                                           VerticalAlignment="Center"
+                                           Margin="5,0,0,0"/>
+                            </StackPanel>
+
+                            <!-- Empty State -->
+                            <TextBlock x:Name="tbNoDeliveryHistory"
+                                       Text="No delivery history for this order."
+                                       Foreground="{StaticResource LightTextColor}"
+                                       FontStyle="Italic"
+                                       Visibility="{Binding NoDeliveryHistoryVisibility, RelativeSource={RelativeSource AncestorType=Window}}"
+                                       Margin="0,5,0,5"/>
+
+                            <!-- Delivery History List -->
+                            <ItemsControl ItemsSource="{Binding DeliveryHistory, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                          Visibility="{Binding HasDeliveryHistoryVisibility, RelativeSource={RelativeSource AncestorType=Window}}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="White" 
+                                                CornerRadius="4" 
+                                                Padding="12" 
+                                                Margin="0,0,0,8"
+                                                BorderBrush="#E5E7EB"
+                                                BorderThickness="1">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <!-- Status Icon -->
+                                                <Border Grid.Column="0" 
+                                                        Width="36" Height="36" 
+                                                        CornerRadius="18" 
+                                                        Background="#E8F5E9"
+                                                        Margin="0,0,12,0"
+                                                        VerticalAlignment="Center">
+                                                    <TextBlock Text="🚚" 
+                                                               FontSize="16" 
+                                                               HorizontalAlignment="Center" 
+                                                               VerticalAlignment="Center"/>
+                                                </Border>
+
+                                                <!-- Details -->
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding CourierName}" 
+                                                                   FontWeight="SemiBold" 
+                                                                   Foreground="{StaticResource TextColor}"/>
+                                                        <TextBlock Text=" • " 
+                                                                   Foreground="{StaticResource LightTextColor}"/>
+                                                        <TextBlock Text="{Binding DeliveryType}" 
+                                                                   Foreground="{StaticResource LightTextColor}"
+                                                                   FontSize="12"/>
+                                                    </StackPanel>
+                                                    <TextBlock Text="{Binding StartTimeDelivery, StringFormat='Started: {0:dd/MM/yyyy HH:mm}'}" 
+                                                               FontSize="11" 
+                                                               Foreground="{StaticResource LightTextColor}"
+                                                               Margin="0,2,0,0"/>
+                                                </StackPanel>
+
+                                                <!-- End Status -->
+                                                <StackPanel Grid.Column="2" 
+                                                            VerticalAlignment="Center"
+                                                            HorizontalAlignment="Right">
+                                                    <Border CornerRadius="4" 
+                                                            Padding="8,4" 
+                                                            Background="#F3F4F6">
+                                                        <TextBlock Text="{Binding EndType, TargetNullValue='In Progress'}" 
+                                                                   FontSize="11" 
+                                                                   FontWeight="Medium"
+                                                                   Foreground="{StaticResource SecondaryColor}"/>
+                                                    </Border>
+                                                    <TextBlock Text="{Binding EndTime, StringFormat='{}{0:dd/MM HH:mm}', TargetNullValue='—'}" 
+                                                               FontSize="10" 
+                                                               Foreground="{StaticResource LightTextColor}"
+                                                               HorizontalAlignment="Right"
+                                                               Margin="0,3,0,0"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </ScrollViewer>
 

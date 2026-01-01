@@ -14,7 +14,9 @@ namespace PL.Order
         private static readonly IBI s_bl = BL.Factory.Get();
         private int _orderId = 0;
         private bool _isAddMode = true;
-        private BO.Order? _originalOrder; // Store original for rollback
+        private BO.Order? _originalOrder;
+
+        private const int MaxDeliveryHistoryItems = 5;
 
         public OrderWindow()
             : this(0) { }
@@ -49,6 +51,51 @@ namespace PL.Order
         public static readonly DependencyProperty DeliveryHistoryProperty =
             DependencyProperty.Register("DeliveryHistory", typeof(IEnumerable<BO.DeliveryPerOrderInList>), typeof(OrderWindow), new PropertyMetadata(null));
 
+        public int DeliveryHistoryCount
+        {
+            get => (int)GetValue(DeliveryHistoryCountProperty);
+            set => SetValue(DeliveryHistoryCountProperty, value);
+        }
+
+        public static readonly DependencyProperty DeliveryHistoryCountProperty =
+            DependencyProperty.Register("DeliveryHistoryCount", typeof(int), typeof(OrderWindow), new PropertyMetadata(0));
+
+        public Visibility DeliveryHistoryVisibility
+        {
+            get => (Visibility)GetValue(DeliveryHistoryVisibilityProperty);
+            set => SetValue(DeliveryHistoryVisibilityProperty, value);
+        }
+
+        public static readonly DependencyProperty DeliveryHistoryVisibilityProperty =
+            DependencyProperty.Register("DeliveryHistoryVisibility", typeof(Visibility), typeof(OrderWindow), new PropertyMetadata(Visibility.Collapsed));
+
+        public Visibility NoDeliveryHistoryVisibility
+        {
+            get => (Visibility)GetValue(NoDeliveryHistoryVisibilityProperty);
+            set => SetValue(NoDeliveryHistoryVisibilityProperty, value);
+        }
+
+        public static readonly DependencyProperty NoDeliveryHistoryVisibilityProperty =
+            DependencyProperty.Register("NoDeliveryHistoryVisibility", typeof(Visibility), typeof(OrderWindow), new PropertyMetadata(Visibility.Visible));
+
+        public Visibility HasDeliveryHistoryVisibility
+        {
+            get => (Visibility)GetValue(HasDeliveryHistoryVisibilityProperty);
+            set => SetValue(HasDeliveryHistoryVisibilityProperty, value);
+        }
+
+        public static readonly DependencyProperty HasDeliveryHistoryVisibilityProperty =
+            DependencyProperty.Register("HasDeliveryHistoryVisibility", typeof(Visibility), typeof(OrderWindow), new PropertyMetadata(Visibility.Collapsed));
+
+        public Visibility CourierInfoVisibility
+        {
+            get => (Visibility)GetValue(CourierInfoVisibilityProperty);
+            set => SetValue(CourierInfoVisibilityProperty, value);
+        }
+
+        public static readonly DependencyProperty CourierInfoVisibilityProperty =
+            DependencyProperty.Register("CourierInfoVisibility", typeof(Visibility), typeof(OrderWindow), new PropertyMetadata(Visibility.Collapsed));
+
         #endregion
 
         #region Lifecycle
@@ -57,9 +104,8 @@ namespace PL.Order
         {
             PopulateComboBoxes();
             LoadOrder();
-            LoadCouriersList();
-            LoadDeliveryHistory();
-            UpdateCourierAssignmentVisibility();
+            // LoadDeliveryHistory is now called inside LoadOrder after CurrentOrder is set
+            UpdateCourierInfoVisibility();
         }
 
         #endregion
@@ -68,14 +114,8 @@ namespace PL.Order
 
         private void PopulateComboBoxes()
         {
-            // LINQ Method Syntax - demonstrates: Cast, Select, ToList with lambda
             cbxOrderType.ItemsSource = Enum.GetValues(typeof(OrderType))
                 .Cast<OrderType>()
-                .Select(e => e.ToString())
-                .ToList();
-
-            cbxOrderStatus.ItemsSource = Enum.GetValues(typeof(OrderStatus))
-                .Cast<OrderStatus>()
                 .Select(e => e.ToString())
                 .ToList();
         }
@@ -95,7 +135,7 @@ namespace PL.Order
                         Weight = 0,
                         Volume = 0,
                         OrderType = OrderType.Retail,
-                        OrderStatus = OrderStatus.Confirmed,
+                        OrderStatus = OrderStatus.Open,
                         ScheduleStatus = ScheduleStatus.OnTime,
                         CreatedAt = s_bl.Admin.GetClock(),
                         ExpectedDeliverdTime = s_bl.Admin.GetClock().AddHours(2),
@@ -106,6 +146,9 @@ namespace PL.Order
                         Longitude = 0,
                         ArialDistance = 0
                     };
+
+                    // No delivery history for new orders
+                    DeliveryHistoryVisibility = Visibility.Collapsed;
                 }
                 else
                 {
@@ -116,17 +159,13 @@ namespace PL.Order
                         Close();
                         return;
                     }
+
+                    // Load delivery history after CurrentOrder is set
+                    LoadDeliveryHistory();
                 }
 
                 _originalOrder = CloneOrder(CurrentOrder);
-
                 cbxOrderType.SelectedItem = CurrentOrder.OrderType.ToString();
-                cbxOrderStatus.SelectedItem = CurrentOrder.OrderStatus.ToString();
-
-                if (CurrentOrder.CourierId.HasValue)
-                {
-                    cbxCourier.SelectedValue = CurrentOrder.CourierId.Value;
-                }
             }
             catch (Exception ex)
             {
@@ -160,45 +199,53 @@ namespace PL.Order
             };
         }
 
-        private void LoadCouriersList()
-        {
-            try
-            {
-                // LINQ Method Syntax - demonstrates: Where, ToList with lambda
-                var couriers = s_bl.Couriers.ReadAll()
-                    .Where(c => c.IsActive)
-                    .ToList();
-
-                cbxCourier.ItemsSource = couriers;
-
-                // Set selected courier after ItemsSource is set
-                if (CurrentOrder?.CourierId.HasValue == true)
-                {
-                    cbxCourier.SelectedValue = CurrentOrder.CourierId.Value;
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error loading couriers: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
         private void LoadDeliveryHistory()
         {
             try
             {
-                if (!_isAddMode && CurrentOrder?.Id > 0)
+                if (_isAddMode || CurrentOrder == null || CurrentOrder.Id <= 0)
                 {
-                    // LINQ Query Syntax - demonstrates: where, orderby, select
-                    DeliveryHistory = CurrentOrder.DeliveryHistory?
-                        .OrderByDescending(d => d.EndTime)
-                        .ToList() ?? new List<BO.DeliveryPerOrderInList>();
+                    DeliveryHistoryVisibility = Visibility.Collapsed;
+                    return;
+                }
+
+                // Always show the delivery history section for existing orders
+                DeliveryHistoryVisibility = Visibility.Visible;
+
+                // Get delivery history from CurrentOrder (loaded by BL)
+                var allHistory = CurrentOrder.DeliveryHistory ?? new List<BO.DeliveryPerOrderInList>();
+                
+                // Debug output
+                System.Diagnostics.Debug.WriteLine($"[OrderWindow] Order {CurrentOrder.Id} has {allHistory.Count} delivery history records");
+
+                // Take the most recent items
+                var history = allHistory
+                    .OrderByDescending(d => d.EndTime ?? d.StartTimeDelivery)
+                    .Take(MaxDeliveryHistoryItems)
+                    .ToList();
+
+                DeliveryHistory = history;
+                DeliveryHistoryCount = allHistory.Count;
+
+                if (history.Any())
+                {
+                    NoDeliveryHistoryVisibility = Visibility.Collapsed;
+                    HasDeliveryHistoryVisibility = Visibility.Visible;
+                    System.Diagnostics.Debug.WriteLine($"[OrderWindow] Showing {history.Count} delivery history items");
+                }
+                else
+                {
+                    NoDeliveryHistoryVisibility = Visibility.Visible;
+                    HasDeliveryHistoryVisibility = Visibility.Collapsed;
+                    System.Diagnostics.Debug.WriteLine($"[OrderWindow] No delivery history to show");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error loading delivery history: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[OrderWindow] Error loading delivery history: {ex.Message}");
                 DeliveryHistory = new List<BO.DeliveryPerOrderInList>();
+                NoDeliveryHistoryVisibility = Visibility.Visible;
+                HasDeliveryHistoryVisibility = Visibility.Collapsed;
             }
         }
 
@@ -215,31 +262,26 @@ namespace PL.Order
 
             var errors = new StringBuilder();
 
-            // Validate Customer Name
             if (!CustomerNameConverter.IsValid(CurrentOrder.CustomerName))
             {
                 errors.AppendLine($"• {CustomerNameConverter.GetErrorMessage()}");
             }
 
-            // Validate Phone
             if (!PhoneNumberConverter.IsValid(CurrentOrder.CustomerPhone))
             {
                 errors.AppendLine($"• {PhoneNumberConverter.GetErrorMessage()}");
             }
 
-            // Validate Address
             if (string.IsNullOrWhiteSpace(CurrentOrder.Address))
             {
                 errors.AppendLine("• Address is required.");
             }
 
-            // Validate Weight
             if (!WeightConverter.IsValid(CurrentOrder.Weight))
             {
                 errors.AppendLine($"• {WeightConverter.GetErrorMessage()}");
             }
 
-            // Validate Volume
             if (!VolumeConverter.IsValid(CurrentOrder.Volume))
             {
                 errors.AppendLine($"• {VolumeConverter.GetErrorMessage()}");
@@ -262,22 +304,15 @@ namespace PL.Order
 
         #region UI Logic
 
-        private void cbxOrderStatus_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        private void UpdateCourierInfoVisibility()
         {
-            UpdateCourierAssignmentVisibility();
-        }
-
-        private void UpdateCourierAssignmentVisibility()
-        {
-            if (CurrentOrder != null &&
-                (CurrentOrder.OrderStatus == OrderStatus.Confirmed ||
-                 CurrentOrder.OrderStatus == OrderStatus.AssociatedToCourier))
+            if (CurrentOrder != null && CurrentOrder.CourierId.HasValue && !string.IsNullOrEmpty(CurrentOrder.CourierName))
             {
-                courierAssignmentPanel.Visibility = Visibility.Visible;
+                CourierInfoVisibility = Visibility.Visible;
             }
             else
             {
-                courierAssignmentPanel.Visibility = Visibility.Collapsed;
+                CourierInfoVisibility = Visibility.Collapsed;
             }
         }
 
@@ -295,18 +330,11 @@ namespace PL.Order
                     return;
                 }
 
-                // Update CurrentOrder from ComboBox selections
                 if (cbxOrderType.SelectedItem != null && Enum.TryParse<OrderType>(cbxOrderType.SelectedItem.ToString(), out var orderType))
                 {
                     CurrentOrder.OrderType = orderType;
                 }
 
-                if (cbxOrderStatus.SelectedItem != null && Enum.TryParse<OrderStatus>(cbxOrderStatus.SelectedItem.ToString(), out var orderStatus))
-                {
-                    CurrentOrder.OrderStatus = orderStatus;
-                }
-
-                // Validate all fields
                 if (!ValidateAndShowErrors())
                 {
                     return;
@@ -319,7 +347,7 @@ namespace PL.Order
                 }
                 else
                 {
-                    if (CurrentOrder.OrderStatus != OrderStatus.Confirmed)
+                    if (CurrentOrder.OrderStatus != OrderStatus.Open)
                     {
                         MessageBox.Show($"Cannot update order in {CurrentOrder.OrderStatus} status.", "Operation Not Allowed", MessageBoxButton.OK, MessageBoxImage.Warning);
                         return;

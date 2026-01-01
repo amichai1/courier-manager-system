@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:PL"
         xmlns:converters="clr-namespace:PL.Converters"
         mc:Ignorable="d"
-        Title="Admin Dashboard" Height="600" Width="900"
+        Title="Admin Dashboard" Height="750" Width="1000"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource AppBackgroundColor}"
         DataContext="{Binding RelativeSource={RelativeSource Mode=Self}}"
@@ -16,7 +16,7 @@
     <Window.Resources>
         <converters:MaxDistanceConverter x:Key="MaxDistanceConverterKey"/>
     </Window.Resources>
-    
+
     <Grid Margin="15">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="280"/>
@@ -40,7 +40,7 @@
                 <Border Grid.Row="1" Background="#ECF0F1" CornerRadius="8" Padding="10" Margin="0,0,0,20">
                     <Label Content="{Binding CurrentTime}"
                            ContentStringFormat='{}{0:HH:mm:ss dd/MM/yyyy}'
-                           FontWeight="Bold" FontSize="18" 
+                           FontWeight="Bold" FontSize="18"
                            Foreground="{StaticResource PrimaryColor}"
                            HorizontalContentAlignment="Center"/>
                 </Border>
@@ -64,17 +64,116 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
                 <StackPanel Grid.Row="0">
                     <TextBlock Text="System Management" Style="{StaticResource SectionHeader}"/>
-                    <Rectangle Height="2" Fill="{StaticResource PrimaryColor}" HorizontalAlignment="Left" Width="60" Margin="0,0,0,25"/>
+                    <Rectangle Height="2" Fill="{StaticResource PrimaryColor}" HorizontalAlignment="Left" Width="60" Margin="0,0,0,20"/>
                 </StackPanel>
 
+                <!-- Order Status Summary -->
+                <Grid Grid.Row="1" Margin="0,0,0,20">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Label Content="Order Summary" FontWeight="SemiBold" FontSize="14" Foreground="{StaticResource SecondaryColor}" Margin="0,0,0,10"/>
+
+                    <Border Grid.Row="1" Background="#F8F9FA" CornerRadius="8" Padding="15">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Open Orders -->
+                            <Border Grid.Column="0" Background="#3498DB" CornerRadius="6" Padding="10" Margin="2"
+                                    Cursor="Hand" MouseLeftButtonUp="OpenOrders_Click">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding OrderSummary.OpenCount}" FontSize="24" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="Open" FontSize="11" Foreground="White" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- In Progress Orders -->
+                            <Border Grid.Column="1" Background="#F39C12" CornerRadius="6" Padding="10" Margin="2"
+                                    Cursor="Hand" MouseLeftButtonUp="InProgressOrders_Click">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding OrderSummary.InProgressCount}" FontSize="24" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="In Progress" FontSize="11" Foreground="White" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Delivered Orders -->
+                            <Border Grid.Column="2" Background="#27AE60" CornerRadius="6" Padding="10" Margin="2"
+                                    Cursor="Hand" MouseLeftButtonUp="DeliveredOrders_Click">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding OrderSummary.DeliveredCount}" FontSize="24" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="Delivered" FontSize="11" Foreground="White" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Refused Orders -->
+                            <Border Grid.Column="3" Background="#E74C3C" CornerRadius="6" Padding="10" Margin="2"
+                                    Cursor="Hand" MouseLeftButtonUp="RefusedOrders_Click">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding OrderSummary.OrderRefusedCount}" FontSize="24" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="Refused" FontSize="11" Foreground="White" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Canceled Orders -->
+                            <Border Grid.Column="4" Background="#95A5A6" CornerRadius="6" Padding="10" Margin="2"
+                                    Cursor="Hand" MouseLeftButtonUp="CanceledOrders_Click">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding OrderSummary.CanceledCount}" FontSize="24" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="Canceled" FontSize="11" Foreground="White" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- Schedule Status Summary -->
+                <Grid Grid.Row="2" Margin="0,0,0,20">
+                    <Border Background="#FFF8E7" CornerRadius="8" Padding="12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0" Text="Active Orders:" FontWeight="SemiBold" Foreground="{StaticResource SecondaryColor}" VerticalAlignment="Center" Margin="0,0,15,0"/>
+
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Ellipse Width="12" Height="12" Fill="#27AE60" Margin="0,0,5,0"/>
+                                <TextBlock Text="{Binding OrderSummary.OnTimeCount, StringFormat='On Time: {0}'}" FontSize="12" Foreground="{StaticResource TextColor}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Ellipse Width="12" Height="12" Fill="#F39C12" Margin="0,0,5,0"/>
+                                <TextBlock Text="{Binding OrderSummary.InRiskCount, StringFormat='At Risk: {0}'}" FontSize="12" Foreground="{StaticResource TextColor}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="3" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Ellipse Width="12" Height="12" Fill="#E74C3C" Margin="0,0,5,0"/>
+                                <TextBlock Text="{Binding OrderSummary.LateCount, StringFormat='Late: {0}'}" FontSize="12" Foreground="{StaticResource TextColor}"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+
                 <!-- Configuration Settings -->
-                <Grid Grid.Row="1" Margin="0,0,0,30">
+                <Grid Grid.Row="3" Margin="0,0,0,20">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
@@ -90,21 +189,21 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <Label Grid.Column="0" Content="Max Delivery Range (km):" Style="{StaticResource LabelHeader}" Margin="0,0,10,0"/>
-                            <TextBox Grid.Column="1" 
-                                     Text="{Binding Configuration.MaxDeliveryDistance, 
-                                                    UpdateSourceTrigger=PropertyChanged, 
-                                                    Converter={StaticResource MaxDistanceConverterKey}}" 
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding Configuration.MaxDeliveryDistance,
+                                                    UpdateSourceTrigger=PropertyChanged,
+                                                    Converter={StaticResource MaxDistanceConverterKey}}"
                                      Style="{StaticResource TextBoxRegular}"
                                      ToolTip="Minimum 10 km"/>
-                            <Button Grid.Column="2" Content="Update" Click="btnUpdateConfig_Click" 
-                                    Style="{StaticResource PrimaryButton}" 
+                            <Button Grid.Column="2" Content="Update" Click="btnUpdateConfig_Click"
+                                    Style="{StaticResource PrimaryButton}"
                                     Padding="15,5" Margin="10,0,0,0" Height="30" FontSize="12"/>
                         </Grid>
                     </Border>
                 </Grid>
 
                 <!-- Management Actions -->
-                <StackPanel Grid.Row="3">
+                <StackPanel Grid.Row="4">
                     <Label Content="Management Actions" Style="{StaticResource LabelHeader}" Margin="0,0,0,10"/>
 
                     <Grid>

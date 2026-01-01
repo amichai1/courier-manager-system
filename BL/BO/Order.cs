@@ -25,7 +25,10 @@ public class Order
     public ScheduleStatus ScheduleStatus { get; set; }
 
     public TimeSpan? OrderComplitionTime { get; init; }
-    public List<DeliveryPerOrderInList> DeliveryHistory { get; init; } = new();
+    
+    // Changed from init to set to allow BL to populate delivery history
+    public List<DeliveryPerOrderInList> DeliveryHistory { get; set; } = new();
+    
     public DateTime? CourierAssociatedDate { get; internal set; }
     public DateTime? PickupDate { get; internal set; }
     public DateTime? DeliveryDate { get; internal set; }
@@ -62,7 +65,7 @@ public class Order
             Created At:              {CreatedAt:yyyy-MM-dd HH:mm:ss}
             Expected Delivery Time:  {ExpectedDeliverdTime:yyyy-MM-dd HH:mm:ss}
             Max Delivery Time:       {MaxDeliveredTime:yyyy-MM-dd HH:mm:ss}
-            Courier assigment date:      {(CourierAssociatedDate.HasValue ? CourierAssociatedDate.Value.ToString("yyyy-MM-dd HH:mm:ss") : "[Not assigned]")}
+            Courier assigment date:  {(CourierAssociatedDate.HasValue ? CourierAssociatedDate.Value.ToString("yyyy-MM-dd HH:mm:ss") : "[Not assigned]")}
             Pickup Date:             {(PickupDate.HasValue ? PickupDate.Value.ToString("yyyy-MM-dd HH:mm:ss") : "[Not picked up]")}
             Delivery Date:           {(DeliveryDate.HasValue ? DeliveryDate.Value.ToString("yyyy-MM-dd HH:mm:ss") : "[Not delivered]")}
             Completion Time:         {(OrderComplitionTime.HasValue ? $"{OrderComplitionTime.Value.TotalHours:F2} hours" : "[Not completed]")}
@@ -73,22 +76,39 @@ public class Order
             """;
     }
 
-    // הוסף מתודה סטטית לחישוב מרחק (Haversine)
     /// <summary>
-    /// calculate air distance between 2 points (Haversine formula)
+    /// Calculate air distance between 2 points (Haversine formula)
     /// </summary>
     public static double CalculateAirDistance(double lat1, double lon1, double lat2, double lon2)
     {
         const double EARTH_RADIUS_KM = 6371;
-        
+
         double dLat = (lat2 - lat1) * Math.PI / 180;
         double dLon = (lon2 - lon1) * Math.PI / 180;
-        
+
         double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
                    Math.Cos(lat1 * Math.PI / 180) * Math.Cos(lat2 * Math.PI / 180) *
                    Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
-        
+
         double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
         return EARTH_RADIUS_KM * c;
     }
+}
+
+/// <summary>
+/// Summary of order counts by status for dashboard display.
+/// </summary>
+public class OrderStatusSummary
+{
+    public int OpenCount { get; set; }
+    public int InProgressCount { get; set; }
+    public int DeliveredCount { get; set; }
+    public int OrderRefusedCount { get; set; }
+    public int CanceledCount { get; set; }
+
+    public int OnTimeCount { get; set; }
+    public int InRiskCount { get; set; }
+    public int LateCount { get; set; }
+
+    public int TotalCount => OpenCount + InProgressCount + DeliveredCount + OrderRefusedCount + CanceledCount;
 }

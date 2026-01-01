@@ -112,8 +112,7 @@ public partial class AvailableOrdersWindow : Window
 
                 // Step 2: Check if courier is already associated with another active order
                 var courierCurrentOrder = s_bl.Orders.ReadAll(o => o.CourierId == _courierId)
-                    .Where(o => o.OrderStatus == OrderStatus.AssociatedToCourier ||
-                               o.OrderStatus == OrderStatus.InProgress)
+                    .Where(o => o.OrderStatus == OrderStatus.InProgress)
                     .FirstOrDefault();
 
                 if (courierCurrentOrder != null)

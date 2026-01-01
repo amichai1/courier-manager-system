@@ -12,20 +12,16 @@ public static class Initialization
     private static IDal? s_dal;
     private static readonly Random s_rand = new();
 
-    // Wolt office in Israel - headquarters (Petah Tikva)
     private const double WOLT_LATITUDE = 32.098799;
     private const double WOLT_LONGITUDE = 34.8979087;
     private const string WOLT_ADDRESS = "Yona Green 7, Petah Tikva, Israel";
 
-    // Valid Israeli phone prefixes
     private static readonly string[] validPhonePrefixes = { "050", "051", "052", "053", "054", "055", "058" };
-
-    // Store courier IDs for delivery history assignment
     private static List<int> s_courierIds = new();
 
-    /// <summary>
-    /// Main initialization method - resets and populates all data lists.
-    /// </summary>
+    // Track the next order ID manually
+    private static int s_nextOrderId = 1;
+
     public static void Do()
     {
         s_dal = DalApi.Factory.Get;
@@ -33,27 +29,29 @@ public static class Initialization
         Console.WriteLine("Resetting configuration values and clearing data lists...");
         s_dal.ResetDB();
 
+        // Reset order ID counter
+        s_nextOrderId = 1;
+
         Console.WriteLine("Initializing company configuration...");
         CreateConfig();
 
         Console.WriteLine("Initializing couriers list...");
         CreateCouriers();
 
-        Console.WriteLine("Initializing orders list...");
+        Console.WriteLine("Initializing orders (Open/InProgress only)...");
         CreateOrders();
 
-        Console.WriteLine("Initializing deliveries list...");
-        CreateDeliveries();
+        Console.WriteLine("Creating courier delivery history (completed historical orders)...");
+        CreateCourierDeliveryHistory();
 
-        Console.WriteLine("Creating delivery history for couriers...");
-        CreateDeliveryHistory();
+        // Debug: Check how many deliveries exist after initialization
+        var allDeliveries = s_dal.Delivery.ReadAll().ToList();
+        Console.WriteLine($"[DEBUG] Total deliveries in DAL after initialization: {allDeliveries.Count}");
+        System.Diagnostics.Debug.WriteLine($"[Initialization] Total deliveries created: {allDeliveries.Count}");
 
         Console.WriteLine("Data initialization completed successfully!");
     }
 
-    /// <summary>
-    /// Initializes company configuration settings.
-    /// </summary>
     private static void CreateConfig()
     {
         s_dal!.Config.Clock = new DateTime(2025, 1, 1, 8, 0, 0);
@@ -67,16 +65,11 @@ public static class Initialization
         s_dal.Config.MotorcycleSpeed = 35.0;
         s_dal.Config.BicycleSpeed = 15.0;
         s_dal.Config.OnFootSpeed = 4.0;
-        s_dal.Config.MaxDeliveryTime = TimeSpan.FromHours(2);
-        s_dal.Config.RiskRange = TimeSpan.FromMinutes(90);
+        s_dal.Config.MaxDeliveryTime = TimeSpan.FromHours(4);
+        s_dal.Config.RiskRange = TimeSpan.FromMinutes(120);
         s_dal.Config.InactivityRange = TimeSpan.FromDays(30);
     }
 
-    /// <summary>
-    /// Creates and initializes 22 couriers.
-    /// All couriers start from Wolt office in Petah Tikva.
-    /// Couriers have realistic max delivery distances (10-50 km).
-    /// </summary>
     private static void CreateCouriers()
     {
         s_courierIds.Clear();
@@ -92,46 +85,26 @@ public static class Initialization
         };
 
         string[] emailDomains = { "@delivery.com", "@fastship.co.il", "@express.net" };
+        DeliveryType[] deliveryTypes = { DeliveryType.Car, DeliveryType.Motorcycle, DeliveryType.Bicycle, DeliveryType.OnFoot };
 
-        DeliveryType[] deliveryTypes =
-        {
-            DeliveryType.Car,
-            DeliveryType.Motorcycle,
-            DeliveryType.Bicycle,
-            DeliveryType.OnFoot
-        };
-
-        // Create exactly 22 couriers
         for (int i = 0; i < courierNames.Length; i++)
         {
             int id = GenerateValidIsraeliId();
             string phone = GeneratePhoneNumber();
-
             string emailName = courierNames[i].Replace(" ", ".").ToLower();
             string email = emailName + emailDomains[s_rand.Next(emailDomains.Length)];
-
             string plainPassword = GenerateStrongPassword();
-
-            // All couriers are active
-            bool isActive = true;
-
-            // Realistic max distance: 8-15 km
-            double? maxDistance = s_rand.Next(8, 16);
-
+            double? maxDistance = s_rand.Next(10, 51);
             DeliveryType deliveryType = deliveryTypes[i % deliveryTypes.Length];
+            DateTime startDate = s_dal!.Config.Clock.AddDays(-s_rand.Next(30, 180));
 
-            DateTime startDate = s_dal!.Config.Clock.AddDays(-s_rand.Next(0, 5));
-
-            Courier courier = new Courier(
-                id,
-                startDate
-            )
+            Courier courier = new Courier(id, startDate)
             {
                 Name = courierNames[i],
                 Phone = phone,
                 Email = email,
                 Password = plainPassword,
-                IsActive = isActive,
+                IsActive = true,
                 MaxDeliveryDistance = maxDistance,
                 DeliveryType = deliveryType,
                 AddressLatitude = WOLT_LATITUDE,
@@ -139,96 +112,11 @@ public static class Initialization
             };
 
             s_dal.Courier.Create(courier);
+            s_courierIds.Add(id);
             Console.WriteLine($"  Created: {courierNames[i]}, ID: {id}, Password: {plainPassword}");
         }
     }
 
-    /// <summary>
-    /// Generates a valid Israeli ID number with check digit using Luhn algorithm.
-    /// </summary>
-    private static int GenerateValidIsraeliId()
-    {
-        int id;
-        bool isValid;
-
-        do
-        {
-            string idStr = "";
-            for (int i = 0; i < 8; i++)
-            {
-                idStr += s_rand.Next(0, 10);
-            }
-
-            // Calculate check digit using Luhn algorithm
-            int sum = 0;
-            for (int i = 0; i < 8; i++)
-            {
-                int digit = int.Parse(idStr[i].ToString());
-                int multiplier = (i % 2 == 0) ? 1 : 2;
-                int result = digit * multiplier;
-                sum += (result > 9) ? (result - 9) : result;
-            }
-
-            int checkDigit = (10 - (sum % 10)) % 10;
-            idStr += checkDigit;
-
-            id = int.Parse(idStr);
-
-            // Verify ID doesn't already exist
-            isValid = s_dal?.Courier.Read(id) == null;
-
-        } while (!isValid);
-
-        return id;
-    }
-
-    /// <summary>
-    /// Generates a valid Israeli mobile phone number.
-    /// Format: 05X-XXXXXXX (10 digits with prefix 050-058)
-    /// </summary>
-    private static string GeneratePhoneNumber()
-    {
-        string prefix = validPhonePrefixes[s_rand.Next(validPhonePrefixes.Length)];
-        string rest = s_rand.Next(0, 10000000).ToString("D7");
-
-        // 50% with dash, 50% without
-        return s_rand.Next(0, 2) == 0
-            ? $"{prefix}-{rest}"
-            : $"{prefix}{rest}";
-    }
-
-    /// <summary>
-    /// Generates a strong password with uppercase, lowercase, digit and special character.
-    /// </summary>
-    private static string GenerateStrongPassword()
-    {
-        const string uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        const string lowercase = "abcdefghijklmnopqrstuvwxyz";
-        const string digits = "0123456789";
-        const string special = "!@#$%^&*";
-
-        // Ensure at least one of each required type
-        var password = new StringBuilder();
-        password.Append(uppercase[s_rand.Next(uppercase.Length)]);
-        password.Append(lowercase[s_rand.Next(lowercase.Length)]);
-        password.Append(digits[s_rand.Next(digits.Length)]);
-        password.Append(special[s_rand.Next(special.Length)]);
-
-        // Add 4-8 more random characters
-        string allChars = uppercase + lowercase + digits + special;
-        int additionalLength = s_rand.Next(4, 9);
-        for (int i = 0; i < additionalLength; i++)
-        {
-            password.Append(allChars[s_rand.Next(allChars.Length)]);
-        }
-
-        return new string(password.ToString().OrderBy(c => s_rand.Next()).ToArray());
-    }
-
-    /// <summary>
-    /// Creates and initializes 30 order entities.
-    /// Order IDs are limited to 1-99 as per validation requirements.
-    /// </summary>
     private static void CreateOrders()
     {
         var addressData = new[]
@@ -275,181 +163,181 @@ public static class Initialization
             "Moran Eliyahu", "Itay Ben-David", "Osnat Shavit", "Yuval Saar", "Tal Kaplan"
         };
 
-        OrderType[] orderTypes =
-        {
-            OrderType.RestaurantFood,
-            OrderType.Groceries,
-            OrderType.Retail
-        };
+        OrderType[] orderTypes = { OrderType.RestaurantFood, OrderType.Groceries, OrderType.Retail };
+        var allCouriers = s_dal!.Courier.ReadAll().ToList();
+        var clock = s_dal.Config.Clock;
 
-        // Create exactly 30 orders
+        int openCount = 0, inProgressCount = 0;
+        int onTimeCount = 0, inRiskCount = 0, lateCount = 0;
+        int totalDeliveryHistory = 0;
+        int ordersWithHistory = 0;
+        int currentDeliveryCount = 0;
+
         for (int i = 0; i < 30; i++)
         {
-            OrderType orderType = orderTypes[s_rand.Next(orderTypes.Length)];
-            string? description = $"Order #{i + 1} - {orderType}";
             var (address, lat, lon) = addressData[i % addressData.Length];
+            OrderType orderType = orderTypes[s_rand.Next(orderTypes.Length)];
 
-            string customerName = customerNames[i];
-            string customerPhone = GeneratePhoneNumber();
-
-            double weight;
-            double volume;
-            bool isFragile;
-
-            switch (orderType)
+            double weight = orderType switch
             {
-                case OrderType.RestaurantFood:
-                    weight = s_rand.NextDouble() * 3 + 1.0; // 1-4 kg (minimum 1 kg)
-                    volume = s_rand.NextDouble() * 0.05 + 1.0; // 1-1.05 m³ (minimum 1)
-                    isFragile = s_rand.Next(0, 5) == 0;
-                    break;
-                case OrderType.Groceries:
-                    weight = s_rand.NextDouble() * 15 + 2; // 2-17 kg
-                    volume = s_rand.NextDouble() * 0.15 + 1.0; // 1-1.15 m³
-                    isFragile = s_rand.Next(0, 4) == 0;
-                    break;
-                case OrderType.Retail:
-                default:
-                    weight = s_rand.NextDouble() * 8 + 1.0; // 1-9 kg
-                    volume = s_rand.NextDouble() * 0.1 + 1.0; // 1-1.1 m³
-                    isFragile = s_rand.Next(0, 3) == 0;
-                    break;
+                OrderType.RestaurantFood => s_rand.NextDouble() * 3 + 1.0,
+                OrderType.Groceries => s_rand.NextDouble() * 15 + 2,
+                _ => s_rand.NextDouble() * 8 + 1.0
+            };
+
+            double volume = orderType switch
+            {
+                OrderType.RestaurantFood => s_rand.NextDouble() * 0.05 + 1.0,
+                OrderType.Groceries => s_rand.NextDouble() * 0.15 + 1.0,
+                _ => s_rand.NextDouble() * 0.1 + 1.0
+            };
+
+            bool isInProgress = s_rand.Next(2) == 1;
+            int scheduleStatusRoll = s_rand.Next(3);
+
+            int minutesAgo = scheduleStatusRoll switch
+            {
+                0 => s_rand.Next(0, 119),
+                1 => s_rand.Next(121, 239),
+                _ => s_rand.Next(241, 400)
+            };
+
+            DateTime createdAt = clock.AddMinutes(-minutesAgo);
+            int? courierId = null;
+            DateTime? courierAssociatedDate = null;
+            DateTime? pickupDate = null;
+
+            if (isInProgress)
+            {
+                var courier = allCouriers[s_rand.Next(allCouriers.Count)];
+                courierId = courier.Id;
+                courierAssociatedDate = createdAt.AddMinutes(s_rand.Next(5, 15));
+                pickupDate = courierAssociatedDate.Value.AddMinutes(s_rand.Next(5, 10));
+                inProgressCount++;
+            }
+            else
+            {
+                openCount++;
             }
 
-            DateTime createdAt = s_dal!.Config.Clock.AddDays(-s_rand.Next(0, 2));
+            switch (scheduleStatusRoll)
+            {
+                case 0: onTimeCount++; break;
+                case 1: inRiskCount++; break;
+                default: lateCount++; break;
+            }
 
-            Order order = new Order(
-                Id: 0,
-                CreatedAt: createdAt
-            )
+            Order order = new Order(Id: 0, CreatedAt: createdAt)
             {
                 OrderType = orderType,
-                Description = description,
+                Description = $"Order #{i + 1} - {orderType}",
                 Address = address,
                 Latitude = lat,
                 Longitude = lon,
-                CustomerName = customerName,
-                CustomerPhone = customerPhone,
+                CustomerName = customerNames[i],
+                CustomerPhone = GeneratePhoneNumber(),
                 Weight = weight,
                 Volume = volume,
-                IsFragile = isFragile,
+                IsFragile = s_rand.Next(0, 4) == 0,
+                CourierId = courierId,
+                CourierAssociatedDate = courierAssociatedDate,
+                PickupDate = pickupDate,
+                DeliveryDate = null
             };
 
+            // Create order - DAL assigns the ID automatically
             s_dal.Order.Create(order);
+            
+            // Get the created order ID by reading it back
+            int createdOrderId = s_nextOrderId++;
+            System.Diagnostics.Debug.WriteLine($"[Initialization] Created Order ID: {createdOrderId}");
+
+            // Create current delivery record for InProgress orders
+            if (courierId.HasValue)
+            {
+                var courier = allCouriers.First(c => c.Id == courierId.Value);
+                double distance = CalculateAirDistance(WOLT_LATITUDE, WOLT_LONGITUDE, lat, lon);
+
+                Delivery delivery = new Delivery(
+                    Id: 0,
+                    OrderId: createdOrderId,
+                    CourierId: courier.Id,
+                    DeliveryType: courier.DeliveryType,
+                    StartTime: pickupDate ?? courierAssociatedDate ?? createdAt,
+                    ActualDistance: distance * 1.5
+                )
+                {
+                    CompletionStatus = null,
+                    EndTime = null
+                };
+
+                s_dal.Delivery.Create(delivery);
+                currentDeliveryCount++;
+                System.Diagnostics.Debug.WriteLine($"[Initialization] Created current Delivery for Order: {createdOrderId}");
+            }
+
+            // First 12 orders ALWAYS get delivery history
+            bool shouldHaveHistory = (i < 12) || (s_rand.Next(100) < 30);
+
+            if (shouldHaveHistory)
+            {
+                int historyCount = s_rand.Next(1, 6);
+                int created = CreateDeliveryHistoryForOrder(createdOrderId, createdAt, allCouriers, historyCount);
+                totalDeliveryHistory += created;
+                ordersWithHistory++;
+                System.Diagnostics.Debug.WriteLine($"[Initialization] Created {created} history deliveries for Order: {createdOrderId}");
+            }
         }
 
-        Console.WriteLine($"  Created 30 orders");
+        Console.WriteLine($"  Created 30 orders (Open/InProgress only):");
+        Console.WriteLine($"    OrderStatus: {openCount} Open, {inProgressCount} InProgress");
+        Console.WriteLine($"    ScheduleStatus: {onTimeCount} OnTime, {inRiskCount} InRisk, {lateCount} Late");
+        Console.WriteLine($"  Created {currentDeliveryCount} current delivery records");
+        Console.WriteLine($"  Created {totalDeliveryHistory} delivery history records for {ordersWithHistory} orders");
+
+        // Verify deliveries were created
+        var verifyDeliveries = s_dal.Delivery.ReadAll().ToList();
+        Console.WriteLine($"  [VERIFY] Deliveries in DAL after CreateOrders: {verifyDeliveries.Count}");
+        System.Diagnostics.Debug.WriteLine($"[Initialization] Deliveries in DAL after CreateOrders: {verifyDeliveries.Count}");
     }
 
-    /// <summary>
-    /// Creates and initializes delivery entities with realistic logic.
-    /// </summary>
-    private static void CreateDeliveries()
+    private static int CreateDeliveryHistoryForOrder(int orderId, DateTime orderCreatedAt, List<Courier> allCouriers, int historyCount)
     {
-        var allCouriers = s_dal!.Courier.ReadAll().Where(c => c.IsActive).ToList();
-        var allOrders = s_dal.Order.ReadAll().OrderBy(o => o.CreatedAt).ToList();
+        int created = 0;
 
-        var courierAvailability = new Dictionary<int, DateTime>();
-        var courierDeliveryCount = new Dictionary<int, int>();
-
-        foreach (var courier in allCouriers)
+        for (int i = 0; i < historyCount; i++)
         {
-            courierAvailability[courier.Id] = courier.StartWorkingDate;
-            courierDeliveryCount[courier.Id] = 0;
-        }
+            var courier = allCouriers[s_rand.Next(allCouriers.Count)];
+            DateTime startTime = orderCreatedAt.AddMinutes(s_rand.Next(5, 30) + (i * 60));
 
-        int deliveriesCreated = 0;
-        int maxDeliveries = 8;
+            DeliveryStatus status = s_rand.Next(2) == 0 ? DeliveryStatus.Cancelled : DeliveryStatus.CustomerRefused;
+            DateTime endTime = startTime.AddMinutes(s_rand.Next(10, 45));
 
-        for (int orderIdx = 0; orderIdx < allOrders.Count && deliveriesCreated < maxDeliveries; orderIdx++)
-        {
-            var order = allOrders[orderIdx];
-
-            if (s_dal.Config.CompanyLatitude is null || s_dal.Config.CompanyLongitude is null)
-            {
-                throw new InvalidOperationException("Company location is not configured.");
-            }
-
-            double orderDistance = CalculateAirDistance(
-                s_dal.Config.CompanyLatitude.Value,
-                s_dal.Config.CompanyLongitude.Value,
-                order.Latitude,
-                order.Longitude
-            );
-
-            var eligibleCouriers = allCouriers
-                .Where(c => c.MaxDeliveryDistance == null || orderDistance <= c.MaxDeliveryDistance)
-                .Where(c => c.IsActive)
-                .ToList();
-
-            if (eligibleCouriers.Count == 0)
-            {
-                continue;
-            }
-
-            var courier = eligibleCouriers.OrderBy(c => courierDeliveryCount[c.Id]).First();
-            courierDeliveryCount[courier.Id]++;
-
-            DateTime courierAvailableTime = courierAvailability[courier.Id];
-            DateTime startTime = s_dal.Config.Clock.AddMinutes(-s_rand.Next(10, 120));
-            startTime = startTime > courierAvailableTime ? startTime : courierAvailableTime;
-
-            // Delivery duration: 15-90 minutes (max 2 hours)
-            int durationMinutes = s_rand.Next(15, 91);
-            DateTime endTime = startTime.AddMinutes(durationMinutes);
-
-            // Actual distance based on delivery type
-            double actualDistance = orderDistance * (courier.DeliveryType switch
-            {
-                DeliveryType.Car => 1.5,
-                DeliveryType.Motorcycle => 1.4,
-                DeliveryType.Bicycle => 1.7,
-                DeliveryType.OnFoot => 2.0,
-                _ => 1.5
-            });
-
-            // Create delivery (in progress - Collected but not completed)
             Delivery delivery = new Delivery(
                 Id: 0,
-                OrderId: order.Id,
+                OrderId: orderId,
                 CourierId: courier.Id,
                 DeliveryType: courier.DeliveryType,
                 StartTime: startTime,
-                ActualDistance: actualDistance
+                ActualDistance: s_rand.NextDouble() * 10 + 1
             )
             {
-                CompletionStatus = null, // In progress - Collected
-                EndTime = null           // Still being delivered
+                CompletionStatus = status,
+                EndTime = endTime
             };
 
-            s_dal.Delivery.Create(delivery);
-
-            // ===== UPDATE DO ORDER =====
-            // Update the DO order with pickup information
-            order.CourierId = courier.Id;
-            order.CourierAssociatedDate = startTime;
-            order.PickupDate = startTime;
-            s_dal.Order.Update(order);
-
-            courierAvailability[courier.Id] = endTime;
-            deliveriesCreated++;
+            s_dal!.Delivery.Create(delivery);
+            System.Diagnostics.Debug.WriteLine($"[Initialization] Created history Delivery for Order: {orderId}, Status: {status}");
+            created++;
         }
 
-        Console.WriteLine($"  Created {deliveriesCreated} deliveries (in progress)");
+        return created;
     }
 
-    /// <summary>
-    /// Creates delivery history for 18 couriers with up to 3 completed deliveries each.
-    /// This gives a more realistic view of the system with past deliveries.
-    /// </summary>
-    private static void CreateDeliveryHistory()
+    private static void CreateCourierDeliveryHistory()
     {
         var allCouriers = s_dal!.Courier.ReadAll().ToList();
-        var existingOrders = s_dal.Order.ReadAll().ToList();
-
-        // Select 18 couriers to have delivery history
         var couriersWithHistory = allCouriers.Take(18).ToList();
-        int historyOrderId = 100; // Start from 100 to avoid conflicts
 
         var addressData = new[]
         {
@@ -463,25 +351,36 @@ public static class Initialization
         string[] customerNames = { "History Customer 1", "History Customer 2", "History Customer 3" };
 
         int totalHistoryDeliveries = 0;
+        int onTimeDelivered = 0, inRiskDelivered = 0, lateDelivered = 0;
 
         foreach (var courier in couriersWithHistory)
         {
-            // Each courier gets 1-3 completed deliveries
             int deliveryCount = s_rand.Next(1, 4);
 
             for (int i = 0; i < deliveryCount; i++)
             {
-                // Create a historical order (already delivered)
                 var (address, lat, lon) = addressData[s_rand.Next(addressData.Length)];
                 DateTime historicalDate = s_dal.Config.Clock.AddDays(-s_rand.Next(7, 60));
 
-                Order historicalOrder = new Order(
-                    Id: 0,
-                    CreatedAt: historicalDate
-                )
+                int scheduleRoll = s_rand.Next(3);
+                int deliveryMinutes = scheduleRoll switch
+                {
+                    0 => s_rand.Next(60, 119),
+                    1 => s_rand.Next(121, 239),
+                    _ => s_rand.Next(241, 360)
+                };
+
+                switch (scheduleRoll)
+                {
+                    case 0: onTimeDelivered++; break;
+                    case 1: inRiskDelivered++; break;
+                    default: lateDelivered++; break;
+                }
+
+                Order historicalOrder = new Order(Id: 0, CreatedAt: historicalDate)
                 {
                     OrderType = (OrderType)s_rand.Next(0, 3),
-                    Description = $"Historical Order - Delivered",
+                    Description = $"Historical Order - Delivered by {courier.Name}",
                     Address = address,
                     Latitude = lat,
                     Longitude = lon,
@@ -493,18 +392,17 @@ public static class Initialization
                     CourierId = courier.Id,
                     CourierAssociatedDate = historicalDate.AddMinutes(10),
                     PickupDate = historicalDate.AddMinutes(20),
-                    DeliveryDate = historicalDate.AddMinutes(s_rand.Next(30, 90))
+                    DeliveryDate = historicalDate.AddMinutes(deliveryMinutes)
                 };
 
                 s_dal.Order.Create(historicalOrder);
-                int orderId = historicalOrder.Id;
+                int createdOrderId = s_nextOrderId++;
 
-                // Create completed delivery
                 double distance = CalculateAirDistance(WOLT_LATITUDE, WOLT_LONGITUDE, lat, lon);
 
                 Delivery completedDelivery = new Delivery(
                     Id: 0,
-                    OrderId: orderId,
+                    OrderId: createdOrderId,
                     CourierId: courier.Id,
                     DeliveryType: courier.DeliveryType,
                     StartTime: historicalDate.AddMinutes(20),
@@ -512,24 +410,79 @@ public static class Initialization
                 )
                 {
                     CompletionStatus = DeliveryStatus.Completed,
-                    EndTime = historicalDate.AddMinutes(s_rand.Next(30, 90))
+                    EndTime = historicalDate.AddMinutes(deliveryMinutes)
                 };
 
                 s_dal.Delivery.Create(completedDelivery);
+                System.Diagnostics.Debug.WriteLine($"[Initialization] Created completed Delivery for historical Order: {createdOrderId}");
                 totalHistoryDeliveries++;
             }
         }
 
-        Console.WriteLine($"  Created {totalHistoryDeliveries} historical deliveries for {couriersWithHistory.Count} couriers");
+        Console.WriteLine($"  Created {totalHistoryDeliveries} historical DELIVERED orders for {couriersWithHistory.Count} couriers");
+        Console.WriteLine($"    Delivered ScheduleStatus: {onTimeDelivered} OnTime, {inRiskDelivered} InRisk, {lateDelivered} Late");
     }
 
-    /// <summary>
-    /// Calculates air distance between two coordinates using Haversine formula.
-    /// </summary>
+    private static int GenerateValidIsraeliId()
+    {
+        int id;
+        bool isValid;
+
+        do
+        {
+            string idStr = "";
+            for (int i = 0; i < 8; i++)
+                idStr += s_rand.Next(0, 10);
+
+            int sum = 0;
+            for (int i = 0; i < 8; i++)
+            {
+                int digit = int.Parse(idStr[i].ToString());
+                int multiplier = (i % 2 == 0) ? 1 : 2;
+                int result = digit * multiplier;
+                sum += (result > 9) ? (result - 9) : result;
+            }
+
+            int checkDigit = (10 - (sum % 10)) % 10;
+            idStr += checkDigit;
+            id = int.Parse(idStr);
+            isValid = s_dal?.Courier.Read(id) == null;
+        } while (!isValid);
+
+        return id;
+    }
+
+    private static string GeneratePhoneNumber()
+    {
+        string prefix = validPhonePrefixes[s_rand.Next(validPhonePrefixes.Length)];
+        string rest = s_rand.Next(0, 10000000).ToString("D7");
+        return s_rand.Next(0, 2) == 0 ? $"{prefix}-{rest}" : $"{prefix}{rest}";
+    }
+
+    private static string GenerateStrongPassword()
+    {
+        const string uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        const string lowercase = "abcdefghijklmnopqrstuvwxyz";
+        const string digits = "0123456789";
+        const string special = "!@#$%^&*";
+
+        var password = new StringBuilder();
+        password.Append(uppercase[s_rand.Next(uppercase.Length)]);
+        password.Append(lowercase[s_rand.Next(lowercase.Length)]);
+        password.Append(digits[s_rand.Next(digits.Length)]);
+        password.Append(special[s_rand.Next(special.Length)]);
+
+        string allChars = uppercase + lowercase + digits + special;
+        int additionalLength = s_rand.Next(4, 9);
+        for (int i = 0; i < additionalLength; i++)
+            password.Append(allChars[s_rand.Next(allChars.Length)]);
+
+        return new string(password.ToString().OrderBy(c => s_rand.Next()).ToArray());
+    }
+
     private static double CalculateAirDistance(double lat1, double lon1, double lat2, double lon2)
     {
-        const double R = 6371; // Earth radius in kilometers
-
+        const double R = 6371;
         double dLat = (lat2 - lat1) * Math.PI / 180;
         double dLon = (lon2 - lon1) * Math.PI / 180;
 

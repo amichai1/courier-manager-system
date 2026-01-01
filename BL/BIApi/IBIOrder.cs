@@ -1,6 +1,6 @@
 namespace BlApi;
 
-using BIApi; // Add this using statement
+using BIApi;
 using BO;
 using Helpers;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using System.Collections.Generic;
 /// <summary>
 /// Defines the service contract for managing Order entities.
 /// </summary>
-public interface IBIOrder : BIApi.IObservable // Stage 5 - Extend IObservable (use fully qualified name)
+public interface IBIOrder : BIApi.IObservable
 {
     // CRUD Operations
     void Create(BO.Order order);
@@ -21,8 +21,26 @@ public interface IBIOrder : BIApi.IObservable // Stage 5 - Extend IObservable (u
     void AssociateCourierToOrder(int orderId, int courierId);
     void PickUpOrder(int orderId);
     void DeliverOrder(int orderId);
+
+    /// <summary>
+    /// Cancels an order. If the order is in progress, sends email to courier.
+    /// </summary>
+    /// <param name="orderId">The ID of the order to cancel</param>
+    void CancelOrder(int orderId);
+
     /// <summary>
     /// Get available orders for a specific courier, by distance from courier's location
     /// </summary>
     IEnumerable<BO.Order> GetAvailableOrdersForCourier(int courierId);
+
+    /// <summary>
+    /// Gets a summary of order counts grouped by OrderStatus and ScheduleStatus.
+    /// Used for the main dashboard display.
+    /// </summary>
+    BO.OrderStatusSummary GetOrderStatusSummary();
+
+    /// <summary>
+    /// Gets the delivery history for a specific order.
+    /// </summary>
+    IEnumerable<BO.DeliveryPerOrderInList> GetDeliveryHistoryForOrder(int orderId);
 }

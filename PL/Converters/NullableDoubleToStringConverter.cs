@@ -90,12 +90,13 @@ namespace PL.Converters
 
     /// <summary>
     /// Converter for max delivery distance - allows free input, validation on save.
-    /// Must be >= 10 km.
+    /// Must be between 10-50 km.
     /// </summary>
     public class MaxDistanceConverter : IValueConverter
     {
         public const double MinDistance = 10.0;
-        public const double DefaultDistance = 50.0;
+        public const double MaxDistance = 50.0;
+        public const double DefaultDistance = 30.0;
 
         public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
@@ -109,7 +110,6 @@ namespace PL.Converters
 
         public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
-            // Allow any input - return parsed value or null
             string input = value?.ToString() ?? string.Empty;
 
             if (string.IsNullOrWhiteSpace(input))
@@ -122,16 +122,15 @@ namespace PL.Converters
                 return result;
             }
 
-            // Return null for invalid input (not NaN)
             return null;
         }
 
         /// <summary>
-        /// Validates distance value
+        /// Validates distance value (must be between 10-50 km)
         /// </summary>
         public static bool IsValid(double? value)
         {
-            return value.HasValue && value.Value >= MinDistance;
+            return value.HasValue && value.Value >= MinDistance && value.Value <= MaxDistance;
         }
 
         /// <summary>
@@ -139,7 +138,7 @@ namespace PL.Converters
         /// </summary>
         public static string GetErrorMessage()
         {
-            return $"Max delivery distance must be at least {MinDistance} km.";
+            return $"Max delivery distance must be between {MinDistance}-{MaxDistance} km.";
         }
     }
 

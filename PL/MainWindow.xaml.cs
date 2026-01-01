@@ -16,9 +16,8 @@ namespace PL
     public partial class MainWindow : Window
     {
         static readonly IBI s_bl = BL.Factory.Get();
-        private double _originalMaxDistance; // Store original value for rollback
+        private double _originalMaxDistance;
 
-        // Static field to track if admin window is open
         private static MainWindow? s_instance = null;
         public static bool IsAdminWindowOpen => s_instance != null;
 
@@ -48,35 +47,39 @@ namespace PL
         public static readonly DependencyProperty ConfigurationProperty =
             DependencyProperty.Register("Configuration", typeof(BO.Config), typeof(MainWindow));
 
+        public BO.OrderStatusSummary OrderSummary
+        {
+            get { return (BO.OrderStatusSummary)GetValue(OrderSummaryProperty); }
+            set { SetValue(OrderSummaryProperty, value); }
+        }
+
+        public static readonly DependencyProperty OrderSummaryProperty =
+            DependencyProperty.Register("OrderSummary", typeof(BO.OrderStatusSummary), typeof(MainWindow));
+
         #endregion
 
         #region Clock Buttons
 
-        // קידום בדקה
         private void btnAddOneMinute_Click(object sender, RoutedEventArgs e)
         {
             s_bl.Admin.ForwardClock(BO.TimeUnit.Minute);
         }
 
-        // קידום בשעה
         private void btnAddOneHour_Click(object sender, RoutedEventArgs e)
         {
             s_bl.Admin.ForwardClock(BO.TimeUnit.Hour);
         }
 
-        // קידום ביום
         private void btnAddOneDay_Click(object sender, RoutedEventArgs e)
         {
             s_bl.Admin.ForwardClock(BO.TimeUnit.Day);
         }
 
-        // קידום בחודש
         private void btnAddOneMonth_Click(object sender, RoutedEventArgs e)
         {
             s_bl.Admin.ForwardClock(BO.TimeUnit.Month);
         }
 
-        // קידום בשנה
         private void btnAddOneYear_Click(object sender, RoutedEventArgs e)
         {
             s_bl.Admin.ForwardClock(BO.TimeUnit.Year);
@@ -90,7 +93,6 @@ namespace PL
         {
             try
             {
-                // Validate MaxDeliveryDistance
                 if (!MaxDistanceConverter.IsValid(Configuration.MaxDeliveryDistance))
                 {
                     MessageBox.Show(
@@ -99,10 +101,8 @@ namespace PL
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
 
-                    // Revert to original value
                     Configuration.MaxDeliveryDistance = _originalMaxDistance;
 
-                    // Force UI refresh
                     var config = Configuration;
                     Configuration = null!;
                     Configuration = config;
@@ -117,12 +117,40 @@ namespace PL
             {
                 MessageBox.Show($"Error updating configuration: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
-                // Revert to original value on error
                 Configuration.MaxDeliveryDistance = _originalMaxDistance;
                 var config = Configuration;
                 Configuration = null!;
                 Configuration = config;
             }
+        }
+
+        #endregion
+
+        #region Order Summary Click Handlers
+
+        private void OpenOrders_Click(object sender, MouseButtonEventArgs e)
+        {
+            PL.Order.OrderListWindow.ShowListFiltered(BO.OrderStatus.Open);
+        }
+
+        private void InProgressOrders_Click(object sender, MouseButtonEventArgs e)
+        {
+            PL.Order.OrderListWindow.ShowListFiltered(BO.OrderStatus.InProgress);
+        }
+
+        private void DeliveredOrders_Click(object sender, MouseButtonEventArgs e)
+        {
+            PL.Order.OrderListWindow.ShowListFiltered(BO.OrderStatus.Delivered);
+        }
+
+        private void RefusedOrders_Click(object sender, MouseButtonEventArgs e)
+        {
+            PL.Order.OrderListWindow.ShowListFiltered(BO.OrderStatus.OrderRefused);
+        }
+
+        private void CanceledOrders_Click(object sender, MouseButtonEventArgs e)
+        {
+            PL.Order.OrderListWindow.ShowListFiltered(BO.OrderStatus.Canceled);
         }
 
         #endregion
@@ -158,6 +186,8 @@ namespace PL
                     Mouse.OverrideCursor = Cursors.Wait;
                     CloseAllWindowsExceptMainAndLogin();
                     s_bl.Admin.InitializeDB();
+                    // Refresh data after initialization
+                    RefreshAllData();
                     Mouse.OverrideCursor = null;
                     MessageBox.Show("Database initialized successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
@@ -179,6 +209,8 @@ namespace PL
                     Mouse.OverrideCursor = Cursors.Wait;
                     CloseAllWindowsExceptMainAndLogin();
                     s_bl.Admin.ResetDB();
+                    // Refresh data after reset
+                    RefreshAllData();
                     Mouse.OverrideCursor = null;
                     MessageBox.Show("Database reset successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
@@ -190,15 +222,19 @@ namespace PL
             }
         }
 
-        /// <summary>
-        /// Closes all windows except MainWindow and LoginWindow to preserve the login screen
-        /// </summary>
+        private void RefreshAllData()
+        {
+            CurrentTime = s_bl.Admin.GetClock();
+            Configuration = s_bl.Admin.GetConfig();
+            OrderSummary = s_bl.Orders.GetOrderStatusSummary();
+            _originalMaxDistance = Configuration.MaxDeliveryDistance ?? MaxDistanceConverter.DefaultDistance;
+        }
+
         private void CloseAllWindowsExceptMainAndLogin()
         {
             for (int i = Application.Current.Windows.Count - 1; i >= 0; i--)
             {
                 var window = Application.Current.Windows[i];
-                // Close only non-admin windows and keep LoginWindow open
                 if (window != this && !(window is LoginWindow))
                 {
                     window.Close();
@@ -214,9 +250,11 @@ namespace PL
         {
             CurrentTime = s_bl.Admin.GetClock();
             Configuration = s_bl.Admin.GetConfig();
+            OrderSummary = s_bl.Orders.GetOrderStatusSummary();
             _originalMaxDistance = Configuration.MaxDeliveryDistance ?? MaxDistanceConverter.DefaultDistance;
             s_bl.Admin.AddClockObserver(clockObserver);
             s_bl.Admin.AddConfigObserver(configObserver);
+            s_bl.Orders.AddObserver(orderObserver);
         }
 
         private void Window_Closed(object sender, EventArgs e)
@@ -224,6 +262,7 @@ namespace PL
             s_instance = null;
             s_bl.Admin.RemoveClockObserver(clockObserver);
             s_bl.Admin.RemoveConfigObserver(configObserver);
+            s_bl.Orders.RemoveObserver(orderObserver);
             Application.Current.Shutdown();
         }
 
@@ -233,7 +272,7 @@ namespace PL
 
         private void clockObserver()
         {
-            // Use BeginInvoke instead of Invoke to avoid bringing window to front
+            // Use BeginInvoke with Background priority to avoid bringing window to front
             Dispatcher.BeginInvoke(new Action(() =>
             {
                 CurrentTime = s_bl.Admin.GetClock();
@@ -242,11 +281,18 @@ namespace PL
 
         private void configObserver()
         {
-            // Use BeginInvoke instead of Invoke to avoid bringing window to front
             Dispatcher.BeginInvoke(new Action(() =>
             {
                 Configuration = s_bl.Admin.GetConfig();
                 _originalMaxDistance = Configuration.MaxDeliveryDistance ?? MaxDistanceConverter.DefaultDistance;
+            }), System.Windows.Threading.DispatcherPriority.Background);
+        }
+
+        private void orderObserver()
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                OrderSummary = s_bl.Orders.GetOrderStatusSummary();
             }), System.Windows.Threading.DispatcherPriority.Background);
         }
 

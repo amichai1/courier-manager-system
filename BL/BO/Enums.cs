@@ -38,21 +38,39 @@ public enum DeliveryType
 }
 
 /// <summary>
-/// Open - Not currently being handled by any courier and has not yet been closed for any reason
-/// In Handling - Currently being handled by a courier
-/// Delivered - Order closed, delivered to the orderer, last delivery completion type "Delivered"
-/// Orderer Refused - Order closed, last delivery completion type "Orderer Refused"
-/// Cancelled - Order closed, last delivery completion type "Cancelled"
+/// Order status according to the project requirements:
+/// Open - Not currently being handled by any courier and has not yet been closed
+/// InProgress - Currently being handled by a courier (includes associated and picked up)
+/// Delivered - Order closed, delivered successfully
+/// OrderRefused - Order closed, customer refused to accept
+/// Canceled - Order closed, was cancelled by manager
 /// </summary>
 public enum OrderStatus
 {
+    /// <summary>
+    /// Order is open and waiting for a courier to pick it up
+    /// </summary>
     Open,
+
+    /// <summary>
+    /// Order is being handled by a courier (associated or in delivery)
+    /// </summary>
     InProgress,
+
+    /// <summary>
+    /// Order was delivered successfully
+    /// </summary>
     Delivered,
+
+    /// <summary>
+    /// Customer refused to accept the order
+    /// </summary>
     OrderRefused,
-    Canceled,
-    Confirmed,
-    AssociatedToCourier
+
+    /// <summary>
+    /// Order was cancelled by manager
+    /// </summary>
+    Canceled
 }
 
 public enum DeliveryStatus
@@ -108,12 +126,12 @@ public enum CourierStatus
     Available,
     OnRouteForPickup,
     OnRouteForDelivery,
-    Inactive 
+    Inactive
 }
 /// <summary>
 /// Defines the logical type of the vehicle used by the courier.
 /// </summary>
-public enum VehicleType 
+public enum VehicleType
 {
     Car,
     Motorcycle,

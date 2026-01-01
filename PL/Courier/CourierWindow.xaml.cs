@@ -17,7 +17,7 @@ public partial class CourierWindow : Window
     private BO.Courier? _originalCourier;
     private bool _isNewCourier = false;
     private bool _isClosed = false;
-    private bool _isCourierMode = false; // Track if this window was opened by a courier
+    private bool _isCourierMode = false;
 
     public bool IsClosed => _isClosed;
 
@@ -30,20 +30,14 @@ public partial class CourierWindow : Window
         _courierId = id;
         _isNewCourier = (id == 0);
 
-        // Set button text and visibility based on mode
         SaveButtonVisibility = isReadOnly ? Visibility.Collapsed : Visibility.Visible;
         ButtonText = _isNewCourier ? "Add" : "Update";
         DeleteVisibility = (id > 0 && !isReadOnly) ? Visibility.Visible : Visibility.Collapsed;
         IsFieldsEnabled = !isReadOnly;
-        
-        // Hide password field in ADD mode
-        PasswordFieldVisibility = _isNewCourier ? Visibility.Collapsed : Visibility.Visible;
 
-        // Initialize action buttons as hidden by default (will be shown for courier users)
+        PasswordFieldVisibility = _isNewCourier ? Visibility.Collapsed : Visibility.Visible;
         ActionButtonsVisibility = Visibility.Collapsed;
         SelectOrderButtonEnabled = true;
-
-        // Initialize promote status button as hidden
         PromoteStatusButtonVisibility = Visibility.Collapsed;
         PromoteStatusButtonText = "";
 
@@ -183,7 +177,7 @@ public partial class CourierWindow : Window
         {
             courierIdTextBox.IsReadOnly = true;
         }
-        
+
         if (CurrentCourier != null && !_isNewCourier && !string.IsNullOrEmpty(CurrentCourier.Password))
         {
             CurrentPassword = CurrentCourier.Password;
@@ -225,7 +219,6 @@ public partial class CourierWindow : Window
             }
             else
             {
-                // Load existing courier
                 CurrentCourier = s_bl.Couriers.Read(_courierId);
                 if (CurrentCourier == null)
                 {
@@ -233,10 +226,10 @@ public partial class CourierWindow : Window
                     Close();
                     return;
                 }
-                
+
                 CurrentCourier.AverageDeliveryTime = s_bl.Couriers.CalculateAverageDeliveryTime(_courierId);
                 CurrentPassword = CurrentCourier.Password;
-                
+
                 _originalCourier = CloneCourier(CurrentCourier);
                 try { s_bl.Couriers.AddObserver(CourierObserver); } catch { }
             }
@@ -272,9 +265,9 @@ public partial class CourierWindow : Window
         {
             if (_courierId > 0)
             {
-                // LINQ Method Syntax - Get current active order for this courier
+                // Get current active order - InProgress means both associated and picked up
                 var currentOrder = s_bl.Orders.ReadAll(o => o.CourierId == _courierId)
-                    .Where(o => o.OrderStatus == BO.OrderStatus.InProgress || o.OrderStatus == BO.OrderStatus.AssociatedToCourier)
+                    .Where(o => o.OrderStatus == BO.OrderStatus.InProgress)
                     .OrderByDescending(o => o.CourierAssociatedDate)
                     .FirstOrDefault();
 
@@ -283,19 +276,16 @@ public partial class CourierWindow : Window
                     CurrentOrder = currentOrder;
                     CurrentOrderVisibility = Visibility.Visible;
                     NoCurrentOrderVisibility = Visibility.Collapsed;
-                    SelectOrderButtonEnabled = false; // Disable "Select Order" when there's a current order
+                    SelectOrderButtonEnabled = false;
 
-                    // Register order observer
-                    try
-                    { s_bl.Orders.AddObserver(OrderObserver); }
-                    catch { /* ignore */ }
+                    try { s_bl.Orders.AddObserver(OrderObserver); } catch { }
                 }
                 else
                 {
                     CurrentOrder = null;
                     CurrentOrderVisibility = Visibility.Collapsed;
                     NoCurrentOrderVisibility = Visibility.Visible;
-                    SelectOrderButtonEnabled = true; // Enable "Select Order" when no current order
+                    SelectOrderButtonEnabled = true;
                 }
             }
         }
@@ -321,23 +311,28 @@ public partial class CourierWindow : Window
             return;
         }
 
-        // Determine button text and visibility based on order status
-        switch (CurrentOrder.OrderStatus)
+        // Check if order has been picked up (has PickupDate)
+        bool hasBeenPickedUp = CurrentOrder.PickupDate.HasValue;
+
+        if (CurrentOrder.OrderStatus == BO.OrderStatus.InProgress)
         {
-            case BO.OrderStatus.AssociatedToCourier:
-                PromoteStatusButtonVisibility = Visibility.Visible;
+            PromoteStatusButtonVisibility = Visibility.Visible;
+
+            if (!hasBeenPickedUp)
+            {
+                // Associated but not picked up - show Pick Up button
                 PromoteStatusButtonText = "🔼 Pick Up";
-                break;
-
-            case BO.OrderStatus.InProgress:
-                PromoteStatusButtonVisibility = Visibility.Visible;
+            }
+            else
+            {
+                // Picked up but not delivered - show Complete button
                 PromoteStatusButtonText = "✓ Complete";
-                break;
-
-            default:
-                PromoteStatusButtonVisibility = Visibility.Collapsed;
-                PromoteStatusButtonText = "";
-                break;
+            }
+        }
+        else
+        {
+            PromoteStatusButtonVisibility = Visibility.Collapsed;
+            PromoteStatusButtonText = "";
         }
     }
 
@@ -351,45 +346,31 @@ public partial class CourierWindow : Window
                 return;
             }
 
-            // Store action type for display before clearing order
-            BO.OrderStatus originalStatus = CurrentOrder.OrderStatus;
             int orderId = CurrentOrder.Id;
+            bool hasBeenPickedUp = CurrentOrder.PickupDate.HasValue;
 
             try
             {
-                switch (originalStatus)
+                if (!hasBeenPickedUp)
                 {
-                    case BO.OrderStatus.AssociatedToCourier:
-                        // Promote to InProgress (Pick up)
-                        s_bl.Orders.PickUpOrder(orderId);
-                        MessageBox.Show(
-                            $"Order #{orderId} picked up successfully!",
-                            "Order Picked Up",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Information);
-                        break;
-
-                    case BO.OrderStatus.InProgress:
-                        // Promote to Delivered (Complete)
-                        s_bl.Orders.DeliverOrder(orderId);
-                        MessageBox.Show(
-                            $"Order #{orderId} completed successfully!",
-                            "Order Completed",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Information);
-                        break;
-
-                    default:
-                        MessageBox.Show("Order cannot be promoted from current status.", "Operation Not Allowed", MessageBoxButton.OK, MessageBoxImage.Warning);
-                        return;
+                    // Pick up the order
+                    s_bl.Orders.PickUpOrder(orderId);
+                    MessageBox.Show(
+                        $"Order #{orderId} picked up successfully!",
+                        "Order Picked Up",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
                 }
-
-                // After BL operations, the order observer will automatically trigger LoadCurrentOrder()
-                // This ensures that:
-                // 1. CurrentCourierWindow's order display refreshes
-                // 2. OrderListWindow's list refreshes (via list observer)
-                // 3. CourierListWindow's list refreshes (via list observer)
-                // All via the observer pattern - no need for manual refresh here
+                else
+                {
+                    // Deliver the order
+                    s_bl.Orders.DeliverOrder(orderId);
+                    MessageBox.Show(
+                        $"Order #{orderId} completed successfully!",
+                        "Order Completed",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                }
             }
             catch (BO.BLException ex)
             {
@@ -413,35 +394,28 @@ public partial class CourierWindow : Window
 
         var errors = new StringBuilder();
 
-        // Validate ID (must be exactly 9 digits)
         if (!IsraeliIdConverter.IsValid(CurrentCourier.Id))
             errors.AppendLine($"• {IsraeliIdConverter.GetErrorMessage()}");
 
-        // Validate Name
         if (string.IsNullOrWhiteSpace(CurrentCourier.Name))
             errors.AppendLine("• Name is required.");
 
-        // Validate Phone
         if (!PhoneNumberConverter.IsValid(CurrentCourier.Phone))
             errors.AppendLine($"• {PhoneNumberConverter.GetErrorMessage()}");
 
-        // Validate Email
         if (!EmailConverter.IsValid(CurrentCourier.Email))
             errors.AppendLine($"• {EmailConverter.GetErrorMessage()}");
 
-        // Validate Password strength ONLY in UPDATE mode
         if (!_isNewCourier && !PasswordHelper.IsPasswordStrong(CurrentPassword))
         {
             errors.AppendLine("• Password must be at least 8 characters " +
                               "with uppercase, lowercase, digit, and special character.");
         }
 
-        // Validate MaxDeliveryDistance (if provided)
-        if (CurrentCourier.MaxDeliveryDistance.HasValue && 
+        if (CurrentCourier.MaxDeliveryDistance.HasValue &&
             !MaxDistanceConverter.IsValid(CurrentCourier.MaxDeliveryDistance))
             errors.AppendLine($"• {MaxDistanceConverter.GetErrorMessage()}");
 
-        // Cannot deactivate with active order
         if (!CurrentCourier.IsActive && CurrentOrder != null)
             errors.AppendLine("• Cannot deactivate courier with an active order.");
 
@@ -479,7 +453,6 @@ public partial class CourierWindow : Window
                 throw new Exception("Courier is null.");
             }
 
-            // Validate all fields
             if (!ValidateAndShowErrors())
             {
                 return;
@@ -487,12 +460,10 @@ public partial class CourierWindow : Window
 
             if (ButtonText == "Add")
             {
-                // Generate password if empty
                 CurrentCourier.Password = PasswordHelper.GenerateStrongPassword();
 
                 s_bl.Couriers.Create(CurrentCourier);
 
-                // Show confirmation dialog with generated password
                 MessageBox.Show(
                     $"Courier '{CurrentCourier.Name}' (ID: {CurrentCourier.Id}) added successfully!\n\n" +
                     $"Password: {CurrentCourier.Password}\n\n" +
@@ -592,7 +563,7 @@ public partial class CourierWindow : Window
             {
                 var updated = s_bl.Couriers.Read(CurrentCourier.Id);
                 updated.AverageDeliveryTime = s_bl.Couriers.CalculateAverageDeliveryTime(CurrentCourier.Id);
-                
+
                 Dispatcher.BeginInvoke(new Action(() =>
                 {
                     CurrentCourier = updated;
@@ -632,11 +603,10 @@ public partial class CourierWindow : Window
 
     #endregion
 
-    // Method to set courier mode (called from CourierListWindow when opening for a courier user)
     public void SetCourierMode(bool isCourierMode)
     {
         _isCourierMode = isCourierMode;
         ActionButtonsVisibility = isCourierMode ? Visibility.Visible : Visibility.Collapsed;
-        UpdatePromoteStatusButton(); // Update button visibility when courier mode is set
+        UpdatePromoteStatusButton();
     }
 }

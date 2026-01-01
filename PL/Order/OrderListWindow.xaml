@@ -44,25 +44,26 @@
                 </Grid.ColumnDefinitions>
 
                 <Label Grid.Column="0" Content="Filter by Status:" Style="{StaticResource LabelHeader}"/>
-                <ComboBox Grid.Column="1" 
+                <ComboBox Grid.Column="1"
                           x:Name="cbxStatusFilter"
                           Style="{StaticResource ComboBoxRegular}"
                           SelectionChanged="cbxStatusFilter_SelectionChanged">
                     <ComboBoxItem IsSelected="True">All Statuses</ComboBoxItem>
-                    <ComboBoxItem>Confirmed</ComboBoxItem>
-                    <ComboBoxItem>AssociatedToCourier</ComboBoxItem>
+                    <ComboBoxItem>Open</ComboBoxItem>
                     <ComboBoxItem>InProgress</ComboBoxItem>
                     <ComboBoxItem>Delivered</ComboBoxItem>
+                    <ComboBoxItem>OrderRefused</ComboBoxItem>
+                    <ComboBoxItem>Canceled</ComboBoxItem>
                 </ComboBox>
 
-                <Button Grid.Column="3" 
-                        Content="Add New Order" 
+                <Button Grid.Column="3"
+                        Content="Add New Order"
                         Click="btnAddOrder_Click"
                         Style="{StaticResource PrimaryButton}"
                         Margin="20,0,0,0"/>
 
-                <Button Grid.Column="4" 
-                        Content="Refresh" 
+                <Button Grid.Column="4"
+                        Content="Refresh"
                         Click="btnRefresh_Click"
                         Style="{StaticResource SecondaryButton}"
                         HorizontalAlignment="Right"
@@ -80,14 +81,15 @@
                       ItemsSource="{Binding OrderList}"
                       SelectedItem="{Binding SelectedOrder}"
                       MouseDoubleClick="dgOrders_MouseDoubleClick"
-                      AutoGenerateColumns="False">
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="50"/>
                     <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="150"/>
                     <DataGridTextColumn Header="Address" Binding="{Binding Address}" Width="200"/>
                     <DataGridTextColumn Header="Type" Binding="{Binding OrderType}" Width="80"/>
                     <DataGridTextColumn Header="Status" Binding="{Binding OrderStatus}" Width="120"/>
-                    <DataGridTextColumn Header="Schedule" Binding="{Binding ScheduleStatus}" Width="100"/>
+                    <DataGridTextColumn Header="Schedule" Binding="{Binding ScheduleStatus}" Width="100" IsReadOnly="True"/>
                     <DataGridTextColumn Header="Created" Binding="{Binding CreatedAt, StringFormat='yyyy-MM-dd HH:mm'}" Width="150"/>
                     <DataGridTextColumn Header="Courier" Binding="{Binding CourierName}" Width="120"/>
                 </DataGrid.Columns>
@@ -99,8 +101,8 @@
             <Border.Effect>
                 <DropShadowEffect Color="#000000" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/>
             </Border.Effect>
-            <TextBlock x:Name="lblStatus" 
-                       Foreground="{StaticResource LightTextColor}" 
+            <TextBlock x:Name="lblStatus"
+                       Foreground="{StaticResource LightTextColor}"
                        FontSize="12"/>
         </Border>
     </Grid>

@@ -17,8 +17,6 @@ namespace PL.Converters
                 return status switch
                 {
                     BO.OrderStatus.Open => new SolidColorBrush(Color.FromRgb(127, 140, 141)),
-                    BO.OrderStatus.Confirmed => new SolidColorBrush(Color.FromRgb(52, 152, 219)),
-                    BO.OrderStatus.AssociatedToCourier => new SolidColorBrush(Color.FromRgb(155, 89, 182)),
                     BO.OrderStatus.InProgress => new SolidColorBrush(Color.FromRgb(241, 196, 15)),
                     BO.OrderStatus.Delivered => new SolidColorBrush(Color.FromRgb(46, 204, 113)),
                     BO.OrderStatus.OrderRefused => new SolidColorBrush(Color.FromRgb(231, 76, 60)),

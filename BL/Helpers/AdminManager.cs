@@ -23,6 +23,9 @@ internal static class AdminManager
     private static volatile bool s_stop = false;
     private static int s_interval = 0;
 
+    // Flag to suppress observer notifications during DB operations
+    internal static bool SuppressObservers { get; set; } = false;
+
     /// <summary>
     /// Property for providing current application's clock value for any BL class that may need it
     /// </summary>
@@ -39,10 +42,22 @@ internal static class AdminManager
     {
         lock (BlMutex)
         {
-            s_dal.ResetDB();
-            AdminManager.UpdateClock(AdminManager.Now);
-            //AdminManager.SetConfig(AdminManager.GetConfig());
-            AdminManager.UpdateConfig(GetConfig());
+            SuppressObservers = true;
+            try
+            {
+                s_dal.ResetDB();
+                s_dal.Config.Clock = DateTime.Now; // Reset clock without triggering observers
+            }
+            finally
+            {
+                SuppressObservers = false;
+            }
+
+            // Notify observers once after reset is complete
+            ClockUpdatedObservers?.Invoke();
+            ConfigUpdatedObservers?.Invoke();
+            CourierManager.Observers.NotifyListUpdated();
+            OrderManager.Observers.NotifyListUpdated();
         }
     }
 
@@ -50,10 +65,23 @@ internal static class AdminManager
     {
         lock (BlMutex)
         {
-            DalTest.Initialization.Do();                          // Creates orders via DAL
-            AdminManager.UpdateClock(AdminManager.Now);           // This calls PeriodicOrderUpdates
-            AdminManager.SetConfig(AdminManager.GetConfig());
+            SuppressObservers = true;
+            try
+            {
+                DalTest.Initialization.Do();
+                // Don't reset clock - keep the clock set by Initialization.Do()
+                // The initialization creates orders relative to the configured clock
+            }
+            finally
+            {
+                SuppressObservers = false;
+            }
 
+            // Notify observers once after initialization is complete
+            ClockUpdatedObservers?.Invoke();
+            ConfigUpdatedObservers?.Invoke();
+            CourierManager.Observers.NotifyListUpdated();
+            OrderManager.Observers.NotifyListUpdated();
         }
     }
 
@@ -70,13 +98,16 @@ internal static class AdminManager
     {
         DateTime oldClock = s_dal.Config.Clock;
         s_dal.Config.Clock = newClock;
-        BL.Helpers.CourierManager.PeriodicCourierUpdates(oldClock, newClock);
-        BL.Helpers.OrderManager.PeriodicOrderUpdates(oldClock, newClock);
-        BL.Helpers.DeliveryManager.PeriodicDeliveryUpdates(oldClock, newClock); 
-        // Check for expired orders after clock advancement
-        BL.Helpers.OrderManager.CheckAndUpdateExpiredOrders();
-        
-        ClockUpdatedObservers?.Invoke();
+
+        if (!SuppressObservers)
+        {
+            BL.Helpers.CourierManager.PeriodicCourierUpdates(oldClock, newClock);
+            BL.Helpers.OrderManager.PeriodicOrderUpdates(oldClock, newClock);
+            BL.Helpers.DeliveryManager.PeriodicDeliveryUpdates(oldClock, newClock);
+            BL.Helpers.OrderManager.CheckAndUpdateExpiredOrders();
+
+            ClockUpdatedObservers?.Invoke();
+        }
     }
 
     /// <summary>
@@ -191,9 +222,11 @@ internal static class AdminManager
             configChanged = true;
         }
 
-        //Calling all the observers of configuration update
-        if (configChanged)
+        // Calling all the observers of configuration update
+        if (configChanged && !SuppressObservers)
+        {
             ConfigUpdatedObservers?.Invoke();
+        }
     }
 
     /// <summary>
@@ -204,7 +237,10 @@ internal static class AdminManager
     internal static void UpdateConfig(BO.Config config)
     {
         SetConfig(config);
-        ConfigUpdatedObservers?.Invoke();
+        if (!SuppressObservers)
+        {
+            ConfigUpdatedObservers?.Invoke();
+        }
     }
 
     // -----------------------------------------------------------
@@ -215,7 +251,7 @@ internal static class AdminManager
     {
         while (!s_stop)
         {
-            UpdateClock(Now.AddMinutes(s_interval)); 
+            UpdateClock(Now.AddMinutes(s_interval));
             try
             {
                 Thread.Sleep(1000);

@@ -82,7 +82,7 @@ namespace PL.Delivery
             {
                 // LINQ Method Syntax - demonstrates: Where, ToList with lambda
                 var allDeliveries = s_bl.Deliveries.ReadAll()
-                    .Where(d => !d.Status.Equals(BO.OrderStatus.Confirmed))
+                    .Where(d => !d.Status.Equals(BO.OrderStatus.Delivered))
                     .ToList();
 
                 DeliveryList = allDeliveries;

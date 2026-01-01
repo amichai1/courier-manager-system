@@ -14,22 +14,17 @@ using System.Windows.Shapes;
 
 namespace PL.Courier
 {
-    /// <summary>
-    /// Interaction logic for CourierListWindow.xaml
-    /// </summary>
     public partial class CourierListWindow : Window
     {
         static readonly BlApi.IBI s_bl = BL.Factory.Get();
 
-        // --- Singleton Implementation Start ---
         private static CourierListWindow? _instance = null;
-        // הבנאי הוא פרטי כדי למנוע יצירת מופעים מרובים מבחוץ
+
         private CourierListWindow()
         {
             InitializeComponent();
         }
 
-        // פונקציה פומבית סטטית לפתיחת החלון
         public static void ShowList()
         {
             if (_instance == null)
@@ -39,13 +34,15 @@ namespace PL.Courier
             }
             else
             {
-                // אם החלון כבר קיים - נקפיץ אותו לחזית המשתמש
                 if (_instance.WindowState == WindowState.Minimized)
+                {
                     _instance.WindowState = WindowState.Normal;
+                }
+
                 _instance.Activate();
             }
         }
-        // --- Singleton Implementation End ---
+
         #region Dependency Properties
 
         public IEnumerable<BO.CourierInList>? CourierList
@@ -59,9 +56,8 @@ namespace PL.Courier
 
         #endregion
 
-        #region Bound normal properties (used for selection/filter)
+        #region Bound normal properties
 
-        // Filter enum property (bound to ComboBox). Use a 'None' value in the enum for no-filter if available.
         public Object DeliveryTypeFilter { get; set; } = "All";
 
         public BO.CourierInList? SelectedCourier { get; set; }
@@ -73,19 +69,33 @@ namespace PL.Courier
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             QueryCourierList();
-            // register observer on couriers in BL (assumes BL exposes AddObserver on Courier service)
-            try { s_bl.Couriers.AddObserver(CourierListObserver); } catch { /* ignore if signature differs */ }
+            try { s_bl.Couriers.AddObserver(CourierListObserver); } catch { }
         }
 
         private void Window_Closed(object sender, EventArgs e)
         {
-            try { s_bl.Couriers.RemoveObserver(CourierListObserver); } catch { /* ignore */ }
-            // חשוב לסינגלטון: מאפסים את המופע כשהחלון נסגר כדי שנוכל לפתוח אותו שוב בעתיד
+            try { s_bl.Couriers.RemoveObserver(CourierListObserver); } catch { }
             _instance = null;
         }
 
         private void CourierListObserver()
-            => Dispatcher.Invoke(QueryCourierList);
+        {
+            // Check if window is still valid before invoking
+            if (_instance == null || !_instance.IsLoaded)
+            {
+                return;
+            }
+
+            // Use BeginInvoke with Background priority to avoid bringing window to front
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                // Double-check instance is still valid
+                if (_instance != null && _instance.IsLoaded)
+                {
+                    QueryCourierList();
+                }
+            }), System.Windows.Threading.DispatcherPriority.Background);
+        }
 
         #endregion
 
@@ -97,15 +107,13 @@ namespace PL.Courier
             {
                 var allCouriers = s_bl.Couriers.GetCourierList();
 
-                // if delivery type is  Enum - filter by it
                 if (DeliveryTypeFilter is BO.DeliveryType selectedType)
                 {
-                    CourierList = (IEnumerable<BO.CourierInList>?)allCouriers.Where(c => c.DeliveryType == selectedType).ToList();
+                    CourierList = allCouriers.Where(c => c.DeliveryType == selectedType).ToList();
                 }
                 else
                 {
-                    // If DeliveryTypeFilter is a special 'All' show all
-                    CourierList = (IEnumerable<BO.CourierInList>?)allCouriers;
+                    CourierList = allCouriers;
                 }
             }
             catch (Exception ex)
@@ -142,13 +150,15 @@ namespace PL.Courier
             if (sender is Button btn && btn.DataContext is BO.CourierInList item)
             {
                 var res = MessageBox.Show($"Are you sure you want to delete this courier?", "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-                if (res != MessageBoxResult.Yes) return;
+                if (res != MessageBoxResult.Yes)
+                {
+                    return;
+                }
 
                 try
                 {
                     s_bl.Couriers.Delete(item.Id);
                     MessageBox.Show("Courier deleted.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                    // BL should notify observers; still refresh just in case
                     QueryCourierList();
                 }
                 catch (Exception ex)
@@ -158,26 +168,17 @@ namespace PL.Courier
             }
         }
 
-        // --- CheckBox Logic Update ---
         private void CheckBox_Click(object sender, RoutedEventArgs e)
         {
-            // בדיקה שמי ששלח את האירוע הוא אכן CheckBox ושהוא קשור לשורה בטבלה
             if (sender is CheckBox cb && cb.DataContext is BO.CourierInList courierInList)
             {
                 try
                 {
-                    // אם מסומן -> הופכים ל-Available. אחרת -> Inactive
                     var newStatus = cb.IsChecked == true ? BO.CourierStatus.Available : BO.CourierStatus.Inactive;
-
-                    // קריאה לפונקציה ב-BL שמעדכנת סטטוס
                     s_bl.Couriers.SetCourierStatus(courierInList.Id, newStatus);
-
-                    // אין צורך לרענן ידנית או להקפיץ הודעה, ה-Observer יעשה את העבודה
                 }
                 catch (Exception ex)
                 {
-                    // במקרה של שגיאה (למשל: אי אפשר להפוך ללא פעיל כי הוא במשלוח)
-                    // נחזיר את הצ'קבוקס למצב הקודם כדי לשקף את המציאות
                     cb.IsChecked = !cb.IsChecked;
                     MessageBox.Show($"Status update failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }

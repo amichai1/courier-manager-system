@@ -94,7 +94,7 @@ internal static class DeliveryManager
         );
 
         // --- Determine Status ---
-        BO.OrderStatus logicalStatus = BO.OrderStatus.Confirmed;
+        BO.OrderStatus logicalStatus = BO.OrderStatus.Delivered;
 
         // --- Calculate Estimated Time WITHOUT calling CalculateEstimatedCompletionTime (avoid recursion) ---
         TimeSpan estimatedTime = CalculateEstimatedTimeInternal(
