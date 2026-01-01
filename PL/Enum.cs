@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Markup;
 using BO;
+using PL.Converters;
 
 namespace PL
 {
@@ -34,5 +35,13 @@ namespace PL
         public IEnumerator GetEnumerator() => s_enums.GetEnumerator();
 
         public override object ProvideValue(IServiceProvider serviceProvider) => s_enums;
+    }
+
+    /// <summary>
+    /// Static class to hold converter instances for XAML binding.
+    /// </summary>
+    public static class Converter
+    {
+        public static GreaterThanZeroConverter GreaterThanZeroConverter { get; } = new GreaterThanZeroConverter();
     }
 }

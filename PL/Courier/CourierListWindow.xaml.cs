@@ -1,16 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 
 namespace PL.Courier
 {
@@ -32,15 +25,34 @@ namespace PL.Courier
                 _instance = new CourierListWindow();
                 _instance.Show();
             }
-            else
-            {
-                if (_instance.WindowState == WindowState.Minimized)
-                {
-                    _instance.WindowState = WindowState.Normal;
-                }
+            
+            BringToFront();
+        }
 
-                _instance.Activate();
+        /// <summary>
+        /// Forces the window to appear above all other windows including Login
+        /// </summary>
+        private static void BringToFront()
+        {
+            if (_instance == null) return;
+
+            if (_instance.WindowState == WindowState.Minimized)
+            {
+                _instance.WindowState = WindowState.Normal;
             }
+
+            _instance.Activate();
+            _instance.Topmost = true;
+            _instance.Focus();
+
+            // Delay reset of Topmost to ensure it stays on top
+            _instance.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (_instance != null)
+                {
+                    _instance.Topmost = false;
+                }
+            }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
 
         #region Dependency Properties
@@ -80,16 +92,13 @@ namespace PL.Courier
 
         private void CourierListObserver()
         {
-            // Check if window is still valid before invoking
             if (_instance == null || !_instance.IsLoaded)
             {
                 return;
             }
 
-            // Use BeginInvoke with Background priority to avoid bringing window to front
             Dispatcher.BeginInvoke(new Action(() =>
             {
-                // Double-check instance is still valid
                 if (_instance != null && _instance.IsLoaded)
                 {
                     QueryCourierList();
@@ -127,11 +136,11 @@ namespace PL.Courier
             QueryCourierList();
         }
 
-        private void DataGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        private void CourierCard_Click(object sender, MouseButtonEventArgs e)
         {
-            if (SelectedCourier != null)
+            if (sender is FrameworkElement element && element.DataContext is BO.CourierInList courier)
             {
-                new CourierWindow(SelectedCourier.Id).Show();
+                new CourierWindow(courier.Id).Show();
             }
         }
 
@@ -147,6 +156,8 @@ namespace PL.Courier
 
         private void DeleteButton_Click(object sender, RoutedEventArgs e)
         {
+            e.Handled = true;
+
             if (sender is Button btn && btn.DataContext is BO.CourierInList item)
             {
                 var res = MessageBox.Show($"Are you sure you want to delete this courier?", "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Warning);
@@ -170,6 +181,8 @@ namespace PL.Courier
 
         private void CheckBox_Click(object sender, RoutedEventArgs e)
         {
+            e.Handled = true;
+
             if (sender is CheckBox cb && cb.DataContext is BO.CourierInList courierInList)
             {
                 try

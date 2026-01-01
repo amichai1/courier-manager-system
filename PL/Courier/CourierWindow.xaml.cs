@@ -159,6 +159,14 @@ public partial class CourierWindow : Window
     public static readonly DependencyProperty PromoteStatusButtonTextProperty =
         DependencyProperty.Register("PromoteStatusButtonText", typeof(string), typeof(CourierWindow), new PropertyMetadata(""));
 
+    public bool IsDeliveryTypeEnabled
+    {
+        get => (bool)GetValue(IsDeliveryTypeEnabledProperty);
+        set => SetValue(IsDeliveryTypeEnabledProperty, value);
+    }
+    public static readonly DependencyProperty IsDeliveryTypeEnabledProperty =
+        DependencyProperty.Register("IsDeliveryTypeEnabled", typeof(bool), typeof(CourierWindow), new PropertyMetadata(true));
+
     #endregion
 
     #region Lifecycle
@@ -277,6 +285,7 @@ public partial class CourierWindow : Window
                     CurrentOrderVisibility = Visibility.Visible;
                     NoCurrentOrderVisibility = Visibility.Collapsed;
                     SelectOrderButtonEnabled = false;
+                    IsDeliveryTypeEnabled = false; // ❌ לא ניתן לשנות סוג משלוח כשיש הזמנה פעילה
 
                     try { s_bl.Orders.AddObserver(OrderObserver); } catch { }
                 }
@@ -286,6 +295,7 @@ public partial class CourierWindow : Window
                     CurrentOrderVisibility = Visibility.Collapsed;
                     NoCurrentOrderVisibility = Visibility.Visible;
                     SelectOrderButtonEnabled = true;
+                    IsDeliveryTypeEnabled = true; // ✅ ניתן לשנות סוג משלוח כשאין הזמנה פעילה
                 }
             }
         }
@@ -295,6 +305,7 @@ public partial class CourierWindow : Window
             CurrentOrder = null;
             CurrentOrderVisibility = Visibility.Collapsed;
             NoCurrentOrderVisibility = Visibility.Visible;
+            IsDeliveryTypeEnabled = true;
         }
     }
 

@@ -246,7 +246,15 @@
                         </Grid>
                     </Grid>
 
-
+                    <!-- Delivery Type -->
+                    <Label Grid.Row="6" Grid.Column="0" Content="Delivery Type:" Style="{StaticResource LabelHeader}"/>
+                    <ComboBox Grid.Row="6" Grid.Column="1" 
+                                  ItemsSource="{StaticResource CourierDeliveryTypesKey}"
+                                  SelectedValue="{Binding CurrentCourier.DeliveryType, Mode=TwoWay}" 
+                                  Style="{StaticResource ComboBoxRegular}" Margin="0,0,0,10"
+                                  IsEnabled="{Binding IsDeliveryTypeEnabled, RelativeSource={RelativeSource AncestorType=Window}}"
+                                  ToolTip="Cannot change delivery type while handling an order"/>
+                    
                     <!-- Empty State Message - No Current Order -->
                     <TextBlock Grid.Row="1" 
                                Text="No current order assigned"

@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 namespace Helpers;
@@ -71,5 +72,46 @@ public static class PasswordHelper
         var regex = new Regex(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$");
 
         return regex.IsMatch(password);
+    }
+
+    /// <summary>
+    /// Encrypts a password using SHA256 hashing algorithm.
+    /// The password is stored encrypted in the database for security.
+    /// </summary>
+    /// <param name="password">The plain text password to encrypt.</param>
+    /// <returns>The SHA256 hashed password as a hex string.</returns>
+    public static string EncryptPassword(string password)
+    {
+        if (string.IsNullOrEmpty(password))
+            return string.Empty;
+
+        using (SHA256 sha256 = SHA256.Create())
+        {
+            byte[] bytes = Encoding.UTF8.GetBytes(password);
+            byte[] hash = sha256.ComputeHash(bytes);
+
+            // Convert to hex string
+            StringBuilder builder = new StringBuilder();
+            for (int i = 0; i < hash.Length; i++)
+            {
+                builder.Append(hash[i].ToString("x2"));
+            }
+            return builder.ToString();
+        }
+    }
+
+    /// <summary>
+    /// Verifies if a plain text password matches an encrypted password.
+    /// </summary>
+    /// <param name="plainPassword">The plain text password to verify.</param>
+    /// <param name="encryptedPassword">The stored encrypted password.</param>
+    /// <returns>True if passwords match; otherwise, false.</returns>
+    public static bool VerifyPassword(string plainPassword, string encryptedPassword)
+    {
+        if (string.IsNullOrEmpty(plainPassword) || string.IsNullOrEmpty(encryptedPassword))
+            return false;
+
+        string hashedInput = EncryptPassword(plainPassword);
+        return hashedInput.Equals(encryptedPassword, StringComparison.OrdinalIgnoreCase);
     }
 }

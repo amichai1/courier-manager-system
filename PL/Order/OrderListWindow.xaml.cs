@@ -3,56 +3,74 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using BlApi;
-using BO;
+using System.Windows.Input;
 
 namespace PL.Order
 {
     public partial class OrderListWindow : Window
     {
-        private static readonly IBI s_bl = BL.Factory.Get();
+        static readonly BlApi.IBI s_bl = BL.Factory.Get();
 
         private static OrderListWindow? _instance = null;
-        private static OrderStatus? _pendingFilter = null;
+        private BO.OrderStatus? _initialFilter = null;
 
-        private OrderListWindow()
+        private OrderListWindow(BO.OrderStatus? filterStatus = null)
         {
             InitializeComponent();
+            _initialFilter = filterStatus;
         }
 
         public static void ShowList()
-        {
-            _pendingFilter = null;
-            ShowListInternal();
-        }
-
-        public static void ShowListFiltered(OrderStatus status)
-        {
-            _pendingFilter = status;
-            ShowListInternal();
-        }
-
-        private static void ShowListInternal()
         {
             if (_instance == null)
             {
                 _instance = new OrderListWindow();
                 _instance.Show();
             }
+
+            BringToFront();
+        }
+
+        public static void ShowListFiltered(BO.OrderStatus status)
+        {
+            if (_instance == null)
+            {
+                _instance = new OrderListWindow(status);
+                _instance.Show();
+            }
             else
             {
-                if (_instance.WindowState == WindowState.Minimized)
-                {
-                    _instance.WindowState = WindowState.Normal;
-                }
-
-                _instance.Activate();
-
-                if (_pendingFilter.HasValue)
-                {
-                    _instance.ApplyStatusFilter(_pendingFilter.Value);
-                }
+                _instance._initialFilter = status;
+                _instance.ApplyFilter(status);
             }
+
+            BringToFront();
+        }
+
+        /// <summary>
+        /// Forces the window to appear above all other windows including Login
+        /// </summary>
+        private static void BringToFront()
+        {
+            if (_instance == null) return;
+
+            if (_instance.WindowState == WindowState.Minimized)
+            {
+                _instance.WindowState = WindowState.Normal;
+            }
+
+            _instance.Activate();
+            _instance.Topmost = true;
+            _instance.Focus();
+
+            // Delay reset of Topmost to ensure it stays on top
+            _instance.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (_instance != null)
+                {
+                    _instance.Topmost = false;
+                }
+            }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
 
         #region Dependency Properties
@@ -66,18 +84,24 @@ namespace PL.Order
         public static readonly DependencyProperty OrderListProperty =
             DependencyProperty.Register("OrderList", typeof(IEnumerable<BO.Order>), typeof(OrderListWindow), new PropertyMetadata(null));
 
-        public BO.Order? SelectedOrder { get; set; }
+        public BO.Order? SelectedOrder
+        {
+            get => (BO.Order?)GetValue(SelectedOrderProperty);
+            set => SetValue(SelectedOrderProperty, value);
+        }
+
+        public static readonly DependencyProperty SelectedOrderProperty =
+            DependencyProperty.Register("SelectedOrder", typeof(BO.Order), typeof(OrderListWindow), new PropertyMetadata(null));
 
         #endregion
 
-        #region Lifecycle
+        #region Lifecycle & Observers
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            if (_pendingFilter.HasValue)
+            if (_initialFilter.HasValue)
             {
-                ApplyStatusFilter(_pendingFilter.Value);
-                _pendingFilter = null;
+                ApplyFilter(_initialFilter.Value);
             }
             else
             {
@@ -95,16 +119,13 @@ namespace PL.Order
 
         private void OrderListObserver()
         {
-            // Check if window is still valid before invoking
             if (_instance == null || !_instance.IsLoaded)
             {
                 return;
             }
 
-            // Use BeginInvoke with Background priority to avoid bringing window to front
             Dispatcher.BeginInvoke(new Action(() =>
             {
-                // Double-check instance is still valid
                 if (_instance != null && _instance.IsLoaded)
                 {
                     QueryOrderList();
@@ -116,14 +137,18 @@ namespace PL.Order
 
         #region Query & Actions
 
-        private void ApplyStatusFilter(OrderStatus status)
+        private void ApplyFilter(BO.OrderStatus status)
         {
-            foreach (ComboBoxItem item in cbxStatusFilter.Items)
+            for (int i = 0; i < cbxStatusFilter.Items.Count; i++)
             {
-                if (item.Content.ToString() == status.ToString())
+                if (cbxStatusFilter.Items[i] is ComboBoxItem item)
                 {
-                    cbxStatusFilter.SelectedItem = item;
-                    break;
+                    string content = item.Content?.ToString() ?? "";
+                    if (content == status.ToString())
+                    {
+                        cbxStatusFilter.SelectedIndex = i;
+                        break;
+                    }
                 }
             }
 
@@ -134,23 +159,25 @@ namespace PL.Order
         {
             try
             {
-                var allOrders = from order in s_bl.Orders.ReadAll()
-                                select order;
+                var allOrders = s_bl.Orders.ReadAll();
 
-                if (cbxStatusFilter?.SelectedItem is ComboBoxItem selectedItem)
+                if (cbxStatusFilter.SelectedItem is ComboBoxItem selectedItem)
                 {
-                    string selectedStatus = selectedItem.Content.ToString() ?? "All Statuses";
+                    string filterText = selectedItem.Content?.ToString() ?? "All Statuses";
 
-                    OrderList = selectedStatus != "All Statuses" && Enum.TryParse<OrderStatus>(selectedStatus, out var statusEnum)
-                        ? allOrders.Where(o => o.OrderStatus == statusEnum).ToList()
-                        : allOrders.ToList();
+                    if (filterText != "All Statuses" && Enum.TryParse<BO.OrderStatus>(filterText, out var status))
+                    {
+                        OrderList = allOrders.Where(o => o.OrderStatus == status).ToList();
+                    }
+                    else
+                    {
+                        OrderList = allOrders.ToList();
+                    }
                 }
                 else
                 {
                     OrderList = allOrders.ToList();
                 }
-
-                lblStatus.Text = $"Total Orders: {OrderList?.Count() ?? 0}";
             }
             catch (Exception ex)
             {
@@ -166,11 +193,11 @@ namespace PL.Order
             }
         }
 
-        private void dgOrders_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        private void OrderCard_Click(object sender, MouseButtonEventArgs e)
         {
-            if (SelectedOrder != null)
+            if (sender is FrameworkElement element && element.DataContext is BO.Order order)
             {
-                new OrderWindow(SelectedOrder.Id).Show();
+                new OrderWindow(order.Id).Show();
             }
         }
 
@@ -182,6 +209,14 @@ namespace PL.Order
         private void btnRefresh_Click(object sender, RoutedEventArgs e)
         {
             QueryOrderList();
+        }
+
+        private void dgOrders_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (SelectedOrder != null)
+            {
+                new OrderWindow(SelectedOrder.Id).Show();
+            }
         }
 
         #endregion

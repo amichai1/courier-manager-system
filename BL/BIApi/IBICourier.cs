@@ -27,4 +27,13 @@ public interface IBICourier : BIApi.IObservable // Stage 5 - Extend IObservable 
     /// <param name="courierId">The ID of the courier.</param>
     /// <returns>Average delivery time in "HH:mm" format, or "—" if no data is available.</returns>
     string CalculateAverageDeliveryTime(int courierId);
+
+    /// <summary>
+    /// Calculates the salary for a courier for a specific time period.
+    /// </summary>
+    /// <param name="courierId">The ID of the courier.</param>
+    /// <param name="periodStart">Start date of the salary period.</param>
+    /// <param name="periodEnd">End date of the salary period.</param>
+    /// <returns>CourierSalary object with detailed salary breakdown.</returns>
+    BO.CourierSalary CalculateSalary(int courierId, DateTime periodStart, DateTime periodEnd);
 }

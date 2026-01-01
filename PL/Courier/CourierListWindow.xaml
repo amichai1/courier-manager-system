@@ -5,96 +5,220 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PL.Courier"
         xmlns:pl="clr-namespace:PL"
+        xmlns:converters="clr-namespace:PL.Converters"
         mc:Ignorable="d"
-        Title="Courier List" Height="640" Width="1000"
+        Title="WPF Manage" Height="700" Width="1200"
         WindowStartupLocation="CenterScreen"
         Background="#F5F7FA"
         DataContext="{Binding RelativeSource={RelativeSource Mode=Self}}"
         Loaded="Window_Loaded"
         Closed="Window_Closed">
 
-    <Border Background="{StaticResource BackgroundColor}" 
-            CornerRadius="8"
-            Margin="10" 
-            Padding="15">
-        <Border.Effect>
-            <DropShadowEffect Color="#000000" Opacity="0.1" BlurRadius="20" ShadowDepth="2"/>
-        </Border.Effect>
+    <Window.Resources>
+        <converters:StatusToColorConverter x:Key="StatusToColorConverter"/>
+        <converters:BoolToAvailabilityConverter x:Key="BoolToAvailabilityConverter"/>
+        
+        <!-- Toggle Switch Style -->
+        <Style x:Key="ToggleSwitchStyle" TargetType="CheckBox">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Grid>
+                            <Border x:Name="Background" Width="50" Height="26" CornerRadius="13" Background="#E0E0E0" Cursor="Hand"/>
+                            <Border x:Name="Thumb" Width="22" Height="22" CornerRadius="11" Background="White" HorizontalAlignment="Left" Margin="2,0,0,0">
+                                <Border.Effect>
+                                    <DropShadowEffect ShadowDepth="1" BlurRadius="3" Opacity="0.3"/>
+                                </Border.Effect>
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Background" Property="Background" Value="#4CAF50"/>
+                                <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right"/>
+                                <Setter TargetName="Thumb" Property="Margin" Value="0,0,2,0"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
+        <!-- Status Badge Style -->
+        <Style x:Key="StatusBadgeStyle" TargetType="Border">
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
 
-            <StackPanel Grid.Row="0" Margin="0,0,0,10">
-                <TextBlock Text="Couriers List" Style="{StaticResource SectionHeader}"/>
-                <Rectangle Height="2" Fill="{StaticResource PrimaryColor}" HorizontalAlignment="Left" Width="60"/>
-            </StackPanel>
+        <!-- Courier Card Style -->
+        <Style x:Key="CourierCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Margin" Value="10,5"/>
+            <Setter Property="Padding" Value="15"/>
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="BorderBrush" Value="{StaticResource PrimaryColor}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
 
-            <Grid Grid.Row="1" Margin="0,0,0,10">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <Label Grid.Column="0" Content="Filter by Delivery Type:" Style="{StaticResource LabelHeader}"/>
-                <ComboBox Grid.Column="1" Width="200" 
-                          Style="{StaticResource ComboBoxRegular}"
-                          ItemsSource="{Binding Source={StaticResource DeliveryTypesCollectionKey}}"
-                          SelectedValue="{Binding DeliveryTypeFilter, Mode=TwoWay}"
-                          SelectionChanged="ComboBox_SelectionChanged"/>
-            </Grid>
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
-            <DataGrid Grid.Row="2" 
-                      ItemsSource="{Binding CourierList}" 
-                      AutoGenerateColumns="False"
-                      CanUserAddRows="False" 
-                      IsReadOnly="True" 
-                      SelectedItem="{Binding SelectedCourier}"
-                      MouseDoubleClick="DataGrid_MouseDoubleClick">
+        <!-- Header -->
+        <Grid Grid.Row="0" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="*" MinWidth="40"/>
+            <!-- Add New Courier Button -->
+            <Button Grid.Column="0" 
+                    Content="+ Add New Courier" 
+                    Click="btnAdd_Click"
+                    Background="{StaticResource PrimaryColor}"
+                    Foreground="White"
+                    FontSize="14"
+                    FontWeight="SemiBold"
+                    Padding="20,12"
+                    Cursor="Hand">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{StaticResource PrimaryHoverColor}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
 
-                    <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
-
-                    <DataGridTextColumn Header="Type" Binding="{Binding DeliveryType}" Width="*" />
-
-                    <DataGridTextColumn Header="On Time" Binding="{Binding DeliveredOnTime}" Width="*" />
-                    <DataGridTextColumn Header="Late" Binding="{Binding DeliveredLate}" Width="*" />
-
-                    <DataGridTextColumn Header="Current Order" Binding="{Binding CurrentIdOrder, TargetNullValue='-'}" Width="*" />
-
-                    <DataGridTemplateColumn Header="Active" Width="Auto">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <CheckBox IsChecked="{Binding IsActive, Mode=OneWay}" 
-                                          HorizontalAlignment="Center"
-                                          VerticalAlignment="Center"
-                                          Click="CheckBox_Click"/>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-
-                    <DataGridTemplateColumn Header="Actions" Width="*">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <Button Content="Delete" 
-                                        Style="{StaticResource DeleteButtonStyle}"
-                                        Click="DeleteButton_Click"/>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                </DataGrid.Columns>
-            </DataGrid>
-
-            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-                <Button Content="Refresh List" Click="btnRefresh_Click" Style="{StaticResource SecondaryButton}" Width="120"/>
-                <Button Content="Add New Courier" Click="btnAdd_Click" Style="{StaticResource PrimaryButton}" Width="160"/>
+            <!-- Title and Filter -->
+            <StackPanel Grid.Column="2" HorizontalAlignment="Right">
+                <TextBlock Text="Courier Management" FontSize="28" FontWeight="Bold" HorizontalAlignment="Right" Foreground="{StaticResource SecondaryColor}"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                    <TextBlock Text="Filter by Status" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{StaticResource LightTextColor}"/>
+                    <ComboBox Width="200" 
+                              Style="{StaticResource ComboBoxRegular}"
+                              ItemsSource="{Binding Source={StaticResource DeliveryTypesCollectionKey}}"
+                              SelectedValue="{Binding DeliveryTypeFilter, Mode=TwoWay}"
+                              SelectionChanged="ComboBox_SelectionChanged"/>
+                </StackPanel>
             </StackPanel>
         </Grid>
-    </Border>
+
+        <!-- Courier Cards List -->
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding CourierList}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource CourierCardStyle}" MouseLeftButtonDown="CourierCard_Click">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Delete Button -->
+                                <Button Grid.Column="0" 
+                                        Content="🗑 Delete" 
+                                        Click="DeleteButton_Click"
+                                        Background="#E74C3C"
+                                        Foreground="White"
+                                        FontSize="12"
+                                        Padding="12,8"
+                                        Margin="0,0,20,0"
+                                        Cursor="Hand"
+                                        VerticalAlignment="Center">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="#C0392B"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+
+                                <!-- Availability Toggle -->
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,30,0">
+                                    <TextBlock Text="Availability" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <CheckBox IsChecked="{Binding IsActive, Mode=OneWay}" 
+                                                  Style="{StaticResource ToggleSwitchStyle}"
+                                                  Click="CheckBox_Click"
+                                                  VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding IsActive, Mode=OneWay, Converter={StaticResource BoolToAvailabilityConverter}}" 
+                                                   VerticalAlignment="Center" Margin="8,0,0,0"
+                                                   Foreground="{StaticResource LightTextColor}"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Order Statistics -->
+                                <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <TextBlock HorizontalAlignment="Center">
+                                        <Run Text="Current Order ID: " FontWeight="SemiBold"/>
+                                        <Run Text="{Binding CurrentIdOrder, Mode=OneWay, TargetNullValue='-'}"/>
+                                    </TextBlock>
+                                    <TextBlock HorizontalAlignment="Center">
+                                        <Run Text="On-Time Deliveries: "/>
+                                        <Run Text="{Binding DeliveredOnTime, Mode=OneWay}"/>
+                                    </TextBlock>
+                                    <TextBlock HorizontalAlignment="Center">
+                                        <Run Text="Late Deliveries: "/>
+                                        <Run Text="{Binding DeliveredLate, Mode=OneWay}"/>
+                                    </TextBlock>
+                                </StackPanel>
+
+                                <!-- Status and Location -->
+                                <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="20,0" HorizontalAlignment="Center">
+                                    <!-- Status Badge -->
+                                    <Border Style="{StaticResource StatusBadgeStyle}" 
+                                            Background="{Binding IsActive, Mode=OneWay, Converter={StaticResource StatusToColorConverter}, ConverterParameter=CourierStatus}"
+                                            Margin="0,0,0,8">
+                                        <TextBlock Text="{Binding IsActive, Mode=OneWay, Converter={StaticResource BoolToAvailabilityConverter}}" 
+                                                   Foreground="White" FontWeight="SemiBold" FontSize="12"/>
+                                    </Border>
+                                    <!-- Location -->
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <TextBlock Text="📍" FontSize="14" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding DeliveryType, Mode=OneWay}" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Courier Info -->
+                                <StackPanel Grid.Column="4" VerticalAlignment="Center" HorizontalAlignment="Right" MinWidth="180">
+                                    <TextBlock HorizontalAlignment="Right" FontWeight="SemiBold">
+                                        <Run Text="ID: "/>
+                                        <Run Text="{Binding Id, Mode=OneWay}"/>
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding Name, Mode=OneWay}" HorizontalAlignment="Right" FontSize="14"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
 </Window>

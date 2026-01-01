@@ -4,227 +4,281 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PL"
+        xmlns:helpers="clr-namespace:PL.Helpers"
         xmlns:converters="clr-namespace:PL.Converters"
         mc:Ignorable="d"
-        Title="Admin Dashboard" Height="750" Width="1000"
+        Title="Wolt Delivery System - Admin Dashboard" 
+        Height="750" Width="1100"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource AppBackgroundColor}"
-        DataContext="{Binding RelativeSource={RelativeSource Mode=Self}}"
         Loaded="Window_Loaded"
         Closed="Window_Closed">
 
     <Window.Resources>
-        <converters:MaxDistanceConverter x:Key="MaxDistanceConverterKey"/>
+        <!-- Local Converters -->
+        <converters:StatusToColorConverter x:Key="StatusToColor"/>
+        <converters:ScheduleStatusToColorConverter x:Key="ScheduleStatusToColor"/>
+        <converters:GreaterThanZeroConverter x:Key="GreaterThanZeroConverter"/>
+        
+        <!-- DataTrigger Style for Status Cards (תוספת DataTrigger) -->
+        <Style x:Key="StatusCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource BackgroundColor}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="15"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <ScaleTransform ScaleX="1" ScaleY="1"/>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="#000000" Opacity="0.08" BlurRadius="10" ShadowDepth="2"/>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <!-- EventTrigger - Hover Animation (תוספת טריגר אירועים) -->
+                <EventTrigger RoutedEvent="MouseEnter">
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                             To="1.03" Duration="0:0:0.15"/>
+                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                             To="1.03" Duration="0:0:0.15"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+                <EventTrigger RoutedEvent="MouseLeave">
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                             To="1" Duration="0:0:0.15"/>
+                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                             To="1" Duration="0:0:0.15"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+            </Style.Triggers>
+        </Style>
+        
+        <!-- Status Card Style with DataTrigger for Open Orders -->
+        <Style x:Key="OpenOrdersCardStyle" TargetType="Border" BasedOn="{StaticResource StatusCardStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding OrderSummary.OpenCount, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource GreaterThanZeroConverter}}" Value="True">
+                    <Setter Property="BorderBrush" Value="{StaticResource InfoColor}"/>
+                    <Setter Property="BorderThickness" Value="2"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        
+        <!-- Status Card Style with MultiDataTrigger for In Risk -->
+        <Style x:Key="InRiskCardStyle" TargetType="Border" BasedOn="{StaticResource StatusCardStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding OrderSummary.InRiskCount, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource GreaterThanZeroConverter}}" Value="True">
+                    <Setter Property="Background" Value="#FFF8E1"/>
+                    <Setter Property="BorderBrush" Value="{StaticResource WarningColor}"/>
+                    <Setter Property="BorderThickness" Value="2"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
     </Window.Resources>
 
-    <Grid Margin="15">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="280"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
-        <!-- Left Panel - Clock -->
-        <Border Grid.Column="0" Style="{StaticResource RoundedBorderWithShadow}" Margin="0,0,10,0" Padding="20">
+        <!-- Header with Logo/Icon  -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
+            <!-- Logo Shape -->
+            <Canvas Width="40" Height="40" Margin="0,0,15,0">
+                <Ellipse Width="40" Height="40" Fill="{StaticResource PrimaryColor}"/>
+                <Path Data="M20,8 L28,20 L20,32 L12,20 Z" Fill="White" Canvas.Left="0" Canvas.Top="0"/>
+                <Ellipse Width="10" Height="10" Fill="White" Canvas.Left="15" Canvas.Top="15"/>
+            </Canvas>
+            <TextBlock Text="JCT Delivery System" Style="{StaticResource SectionHeader}" 
+                       VerticalAlignment="Center" FontSize="28"/>
+        </StackPanel>
+
+        <!-- Clock and Time Controls -->
+        <Border Grid.Row="1" Style="{StaticResource RoundedBorderWithShadow}" Padding="20" Margin="0,0,0,20">
             <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Row="0">
-                    <TextBlock Text="System Clock" Style="{StaticResource SectionHeader}"/>
-                    <Rectangle Height="2" Fill="{StaticResource PrimaryColor}" HorizontalAlignment="Left" Width="40" Margin="0,0,0,20"/>
+                <!-- Current Time Display with Rotation Transform (תוספת טרנספורמציה) -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="🕐" FontSize="24" VerticalAlignment="Center" Margin="0,0,10,0"
+                               RenderTransformOrigin="0.5,0.5">
+                        <TextBlock.RenderTransform>
+                            <RotateTransform x:Name="ClockRotation" Angle="0"/>
+                        </TextBlock.RenderTransform>
+                        <TextBlock.Triggers>
+                            <EventTrigger RoutedEvent="Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard RepeatBehavior="Forever">
+                                        <DoubleAnimation Storyboard.TargetName="ClockRotation"
+                                                         Storyboard.TargetProperty="Angle"
+                                                         From="0" To="360" Duration="0:1:0"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </TextBlock.Triggers>
+                    </TextBlock>
+                    <TextBlock Text="{Binding CurrentTime, RelativeSource={RelativeSource AncestorType=Window}, StringFormat='yyyy-MM-dd HH:mm:ss'}" 
+                               FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"
+                               Foreground="{StaticResource SecondaryColor}"/>
                 </StackPanel>
 
-                <Border Grid.Row="1" Background="#ECF0F1" CornerRadius="8" Padding="10" Margin="0,0,0,20">
-                    <Label Content="{Binding CurrentTime}"
-                           ContentStringFormat='{}{0:HH:mm:ss dd/MM/yyyy}'
-                           FontWeight="Bold" FontSize="18"
-                           Foreground="{StaticResource PrimaryColor}"
-                           HorizontalContentAlignment="Center"/>
-                </Border>
-
-                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
-                    <StackPanel>
-                        <Label Content="Advance Time:" Style="{StaticResource LabelHeader}" Margin="0,0,0,5"/>
-                        <Button Content="+ 1 Minute" Click="btnAddOneMinute_Click" Style="{StaticResource SecondaryButton}"/>
-                        <Button Content="+ 1 Hour" Click="btnAddOneHour_Click" Style="{StaticResource SecondaryButton}"/>
-                        <Button Content="+ 1 Day" Click="btnAddOneDay_Click" Style="{StaticResource SecondaryButton}"/>
-                        <Button Content="+ 1 Month" Click="btnAddOneMonth_Click" Style="{StaticResource SecondaryButton}"/>
-                        <Button Content="+ 1 Year" Click="btnAddOneYear_Click" Style="{StaticResource SecondaryButton}"/>
-                    </StackPanel>
-                </ScrollViewer>
+                <!-- Time Control Buttons -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Button Content="+1 Min" Click="btnAddOneMinute_Click" Style="{StaticResource SecondaryButton}" Padding="10,5"/>
+                    <Button Content="+1 Hour" Click="btnAddOneHour_Click" Style="{StaticResource SecondaryButton}" Padding="10,5"/>
+                    <Button Content="+1 Day" Click="btnAddOneDay_Click" Style="{StaticResource SecondaryButton}" Padding="10,5"/>
+                    <Button Content="+1 Month" Click="btnAddOneMonth_Click" Style="{StaticResource SecondaryButton}" Padding="10,5"/>
+                    <Button Content="+1 Year" Click="btnAddOneYear_Click" Style="{StaticResource SecondaryButton}" Padding="10,5"/>
+                </StackPanel>
             </Grid>
         </Border>
 
-        <!-- Right Panel - Management -->
-        <Border Grid.Column="1" Style="{StaticResource RoundedBorderWithShadow}" Margin="10,0,0,0" Padding="30">
-            <Grid>
+        <!-- Main Content Area -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="350"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Order Status Summary Cards -->
+            <Border Grid.Column="0" Style="{StaticResource RoundedBorderWithShadow}" Padding="20" Margin="0,0,15,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="📊 Order Status Overview" Style="{StaticResource SectionHeader}" Grid.Row="0"/>
+
+                    <!-- Status Cards Grid -->
+                    <UniformGrid Grid.Row="1" Rows="2" Columns="3" Margin="0,10,0,0">
+                        
+                        <!-- Open Orders Card with DataTrigger -->
+                        <Border Style="{StaticResource OpenOrdersCardStyle}" MouseLeftButtonDown="OpenOrders_Click">
+                            <StackPanel>
+                                <TextBlock Text="📦 Open" FontWeight="SemiBold" Foreground="{StaticResource LightTextColor}"/>
+                                <TextBlock Text="{Binding OrderSummary.OpenCount, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                           FontSize="32" FontWeight="Bold" Foreground="{StaticResource InfoColor}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- In Progress Card -->
+                        <Border Style="{StaticResource StatusCardStyle}" MouseLeftButtonDown="InProgressOrders_Click">
+                            <StackPanel>
+                                <TextBlock Text="🚚 In Progress" FontWeight="SemiBold" Foreground="{StaticResource LightTextColor}"/>
+                                <TextBlock Text="{Binding OrderSummary.InProgressCount, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                           FontSize="32" FontWeight="Bold" Foreground="{StaticResource WarningColor}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Delivered Card -->
+                        <Border Style="{StaticResource StatusCardStyle}" MouseLeftButtonDown="DeliveredOrders_Click">
+                            <StackPanel>
+                                <TextBlock Text="✅ Delivered" FontWeight="SemiBold" Foreground="{StaticResource LightTextColor}"/>
+                                <TextBlock Text="{Binding OrderSummary.DeliveredCount, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                           FontSize="32" FontWeight="Bold" Foreground="{StaticResource SuccessColor}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- On Time Card -->
+                        <Border Style="{StaticResource StatusCardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="⏰ On Time" FontWeight="SemiBold" Foreground="{StaticResource LightTextColor}"/>
+                                <TextBlock Text="{Binding OrderSummary.OnTimeCount, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                           FontSize="32" FontWeight="Bold" Foreground="{StaticResource SuccessColor}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- In Risk Card with DataTrigger -->
+                        <Border Style="{StaticResource InRiskCardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="⚠️ In Risk" FontWeight="SemiBold" Foreground="{StaticResource LightTextColor}"/>
+                                <TextBlock Text="{Binding OrderSummary.InRiskCount, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                           FontSize="32" FontWeight="Bold" Foreground="{StaticResource WarningColor}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Late Card -->
+                        <Border Style="{StaticResource StatusCardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="❌ Late" FontWeight="SemiBold" Foreground="{StaticResource LightTextColor}"/>
+                                <TextBlock Text="{Binding OrderSummary.LateCount, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                           FontSize="32" FontWeight="Bold" Foreground="{StaticResource DangerColor}"/>
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
+                </Grid>
+            </Border>
+
+            <!-- Right Panel - Configuration & Actions -->
+            <Grid Grid.Column="1">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <StackPanel Grid.Row="0">
-                    <TextBlock Text="System Management" Style="{StaticResource SectionHeader}"/>
-                    <Rectangle Height="2" Fill="{StaticResource PrimaryColor}" HorizontalAlignment="Left" Width="60" Margin="0,0,0,20"/>
-                </StackPanel>
+                <!-- Quick Actions with Graphics -->
+                <Border Grid.Row="0" Style="{StaticResource RoundedBorderWithShadow}" Padding="20" Margin="0,0,0,15">
+                    <StackPanel>
+                        <TextBlock Text="⚡ Quick Actions" Style="{StaticResource SubtitleHeader}"/>
+                        <Button Content="📦 Manage Orders" Click="btnOrders_Click" Style="{StaticResource PrimaryButton}" Margin="0,5"/>
+                        <Button Content="🚚 Manage Couriers" Click="btnCouriers_Click" Style="{StaticResource PrimaryButton}" Margin="0,5"/>
+                    </StackPanel>
+                </Border>
 
-                <!-- Order Status Summary -->
-                <Grid Grid.Row="1" Margin="0,0,0,20">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+                <!-- Configuration Panel -->
+                <Border Grid.Row="1" Style="{StaticResource RoundedBorderWithShadow}" Padding="20" Margin="0,0,0,15">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <TextBlock Text="⚙️ Configuration" Style="{StaticResource SubtitleHeader}"/>
 
-                    <Label Content="Order Summary" FontWeight="SemiBold" FontSize="14" Foreground="{StaticResource SecondaryColor}" Margin="0,0,0,10"/>
+                            <Label Content="Max Delivery Distance (km):" Style="{StaticResource LabelHeader}"/>
+                            <TextBox Text="{Binding Configuration.MaxDeliveryDistance, RelativeSource={RelativeSource AncestorType=Window}, UpdateSourceTrigger=PropertyChanged}" 
+                                     Style="{StaticResource TextBoxRegular}"/>
 
-                    <Border Grid.Row="1" Background="#F8F9FA" CornerRadius="8" Padding="15">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-
-                            <!-- Open Orders -->
-                            <Border Grid.Column="0" Background="#3498DB" CornerRadius="6" Padding="10" Margin="2"
-                                    Cursor="Hand" MouseLeftButtonUp="OpenOrders_Click">
-                                <StackPanel HorizontalAlignment="Center">
-                                    <TextBlock Text="{Binding OrderSummary.OpenCount}" FontSize="24" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
-                                    <TextBlock Text="Open" FontSize="11" Foreground="White" HorizontalAlignment="Center"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- In Progress Orders -->
-                            <Border Grid.Column="1" Background="#F39C12" CornerRadius="6" Padding="10" Margin="2"
-                                    Cursor="Hand" MouseLeftButtonUp="InProgressOrders_Click">
-                                <StackPanel HorizontalAlignment="Center">
-                                    <TextBlock Text="{Binding OrderSummary.InProgressCount}" FontSize="24" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
-                                    <TextBlock Text="In Progress" FontSize="11" Foreground="White" HorizontalAlignment="Center"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Delivered Orders -->
-                            <Border Grid.Column="2" Background="#27AE60" CornerRadius="6" Padding="10" Margin="2"
-                                    Cursor="Hand" MouseLeftButtonUp="DeliveredOrders_Click">
-                                <StackPanel HorizontalAlignment="Center">
-                                    <TextBlock Text="{Binding OrderSummary.DeliveredCount}" FontSize="24" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
-                                    <TextBlock Text="Delivered" FontSize="11" Foreground="White" HorizontalAlignment="Center"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Refused Orders -->
-                            <Border Grid.Column="3" Background="#E74C3C" CornerRadius="6" Padding="10" Margin="2"
-                                    Cursor="Hand" MouseLeftButtonUp="RefusedOrders_Click">
-                                <StackPanel HorizontalAlignment="Center">
-                                    <TextBlock Text="{Binding OrderSummary.OrderRefusedCount}" FontSize="24" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
-                                    <TextBlock Text="Refused" FontSize="11" Foreground="White" HorizontalAlignment="Center"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Canceled Orders -->
-                            <Border Grid.Column="4" Background="#95A5A6" CornerRadius="6" Padding="10" Margin="2"
-                                    Cursor="Hand" MouseLeftButtonUp="CanceledOrders_Click">
-                                <StackPanel HorizontalAlignment="Center">
-                                    <TextBlock Text="{Binding OrderSummary.CanceledCount}" FontSize="24" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
-                                    <TextBlock Text="Canceled" FontSize="11" Foreground="White" HorizontalAlignment="Center"/>
-                                </StackPanel>
-                            </Border>
-                        </Grid>
-                    </Border>
-                </Grid>
-
-                <!-- Schedule Status Summary -->
-                <Grid Grid.Row="2" Margin="0,0,0,20">
-                    <Border Background="#FFF8E7" CornerRadius="8" Padding="12">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-
-                            <TextBlock Grid.Column="0" Text="Active Orders:" FontWeight="SemiBold" Foreground="{StaticResource SecondaryColor}" VerticalAlignment="Center" Margin="0,0,15,0"/>
-
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <Ellipse Width="12" Height="12" Fill="#27AE60" Margin="0,0,5,0"/>
-                                <TextBlock Text="{Binding OrderSummary.OnTimeCount, StringFormat='On Time: {0}'}" FontSize="12" Foreground="{StaticResource TextColor}"/>
-                            </StackPanel>
-
-                            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <Ellipse Width="12" Height="12" Fill="#F39C12" Margin="0,0,5,0"/>
-                                <TextBlock Text="{Binding OrderSummary.InRiskCount, StringFormat='At Risk: {0}'}" FontSize="12" Foreground="{StaticResource TextColor}"/>
-                            </StackPanel>
-
-                            <StackPanel Grid.Column="3" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <Ellipse Width="12" Height="12" Fill="#E74C3C" Margin="0,0,5,0"/>
-                                <TextBlock Text="{Binding OrderSummary.LateCount, StringFormat='Late: {0}'}" FontSize="12" Foreground="{StaticResource TextColor}"/>
-                            </StackPanel>
-                        </Grid>
-                    </Border>
-                </Grid>
-
-                <!-- Configuration Settings -->
-                <Grid Grid.Row="3" Margin="0,0,0,20">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <Label Content="Configuration Settings" FontWeight="SemiBold" FontSize="14" Foreground="{StaticResource SecondaryColor}" Margin="0,0,0,10"/>
-
-                    <Border Grid.Row="1" Style="{StaticResource ConfigurationBoxBorder}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Label Grid.Column="0" Content="Max Delivery Range (km):" Style="{StaticResource LabelHeader}" Margin="0,0,10,0"/>
-                            <TextBox Grid.Column="1"
-                                     Text="{Binding Configuration.MaxDeliveryDistance,
-                                                    UpdateSourceTrigger=PropertyChanged,
-                                                    Converter={StaticResource MaxDistanceConverterKey}}"
-                                     Style="{StaticResource TextBoxRegular}"
-                                     ToolTip="Minimum 10 km"/>
-                            <Button Grid.Column="2" Content="Update" Click="btnUpdateConfig_Click"
-                                    Style="{StaticResource PrimaryButton}"
-                                    Padding="15,5" Margin="10,0,0,0" Height="30" FontSize="12"/>
-                        </Grid>
-                    </Border>
-                </Grid>
-
-                <!-- Management Actions -->
-                <StackPanel Grid.Row="4">
-                    <Label Content="Management Actions" Style="{StaticResource LabelHeader}" Margin="0,0,0,10"/>
-
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="20"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel Grid.Column="0">
-                            <Button Content="Manage Couriers" Click="btnCouriers_Click" Style="{StaticResource PrimaryButton}" Height="50"/>
-                            <Button Content="Manage Orders" Click="btnOrders_Click" Style="{StaticResource PrimaryButton}" Height="50"/>
+                            <Button Content="💾 Update Config" Click="btnUpdateConfig_Click" 
+                                    Style="{StaticResource SecondaryButton}" Margin="0,15,0,0"/>
                         </StackPanel>
+                    </ScrollViewer>
+                </Border>
 
-                        <StackPanel Grid.Column="2" VerticalAlignment="Bottom">
-                            <Label Content="Database Maintenance" FontSize="11" Foreground="{StaticResource LightTextColor}" Margin="0,0,0,5"/>
-                            <Button Content="Initialize Database" Click="btnInitializeDB_Click" Style="{StaticResource SecondaryButton}"/>
-                            <Button Content="Reset Database" Click="btnResetDB_Click" Style="{StaticResource SecondaryButton}" Foreground="{StaticResource AccentColor}"/>
+                <!-- Database Actions -->
+                <Border Grid.Row="2" Style="{StaticResource RoundedBorderWithShadow}" Padding="15">
+                    <StackPanel>
+                        <TextBlock Text="🗄️ Database" Style="{StaticResource SubtitleHeader}"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Button Content="🔄 Initialize" Click="btnInitializeDB_Click" Style="{StaticResource SecondaryButton}" Width="100"/>
+                            <Button Content="🗑️ Reset" Click="btnResetDB_Click" Style="{StaticResource DeleteButtonStyle}" Width="100" Margin="10,0,0,0"/>
                         </StackPanel>
-                    </Grid>
-                </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- Footer with Loading Indicator -->
+        <Border Grid.Row="3" Margin="0,15,0,0">
+            <Grid>
+                <TextBlock Text="© 2025 Wolt Delivery System" 
+                           HorizontalAlignment="Center" 
+                           Foreground="{StaticResource LightTextColor}"
+                           FontSize="11"/>
             </Grid>
         </Border>
     </Grid>

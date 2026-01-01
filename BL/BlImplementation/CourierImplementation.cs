@@ -35,6 +35,9 @@ internal class CourierImplementation : IBICourier
     public string CalculateAverageDeliveryTime(int courierId)
         => CourierManager.CalculateAverageDeliveryTime(courierId);
 
+    public BO.CourierSalary CalculateSalary(int courierId, DateTime periodStart, DateTime periodEnd)
+        => CourierManager.CalculateSalary(courierId, periodStart, periodEnd);
+
     #region Stage 5 - Observer Pattern Implementation
     public void AddObserver(Action listObserver) =>
         CourierManager.Observers.AddListObserver(listObserver);

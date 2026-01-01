@@ -3,8 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:converters="clr-namespace:PL.Converters"
         mc:Ignorable="d"
-        Title="Order Management" Height="700" Width="1100"
+        Title="WPF Manage" Height="700" Width="1300"
         WindowStartupLocation="CenterScreen"
         Background="#F5F7FA"
         Loaded="Window_Loaded"
@@ -12,98 +13,176 @@
         DataContext="{Binding RelativeSource={RelativeSource Mode=Self}}">
 
     <Window.Resources>
+        <converters:StatusToColorConverter x:Key="StatusToColorConverter"/>
+        <converters:ScheduleStatusToColorConverter x:Key="ScheduleStatusToColorConverter"/>
+        <converters:DeliveryTypeToIconConverter x:Key="DeliveryTypeToIconConverter"/>
+        
+        <!-- Status Badge Style -->
+        <Style x:Key="StatusBadgeStyle" TargetType="Border">
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Order Card Style -->
+        <Style x:Key="OrderCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Margin" Value="10,5"/>
+            <Setter Property="Padding" Value="15"/>
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="BorderBrush" Value="{StaticResource PrimaryColor}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </Window.Resources>
 
-    <Grid Margin="15">
+    <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,20">
-            <TextBlock Text="Order Management" Style="{StaticResource SectionHeader}"/>
-            <Rectangle Height="2" Fill="{StaticResource PrimaryColor}" HorizontalAlignment="Left" Width="60"/>
-        </StackPanel>
+        <Grid Grid.Row="0" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
-        <!-- Filter Section -->
-        <Border Grid.Row="1" Background="White" CornerRadius="8" Padding="20" Margin="0,0,0,15">
-            <Border.Effect>
-                <DropShadowEffect Color="#000000" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/>
-            </Border.Effect>
+            <!-- Add New Order Button -->
+            <Button Grid.Column="0" 
+                    Content="+ Add New Order" 
+                    Click="btnAddOrder_Click"
+                    Background="{StaticResource PrimaryColor}"
+                    Foreground="White"
+                    FontSize="14"
+                    FontWeight="SemiBold"
+                    Padding="20,12"
+                    Cursor="Hand">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{StaticResource PrimaryHoverColor}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
 
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="200"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
+            <!-- Title and Filter -->
+            <StackPanel Grid.Column="2" HorizontalAlignment="Right">
+                <TextBlock Text="Order Management" FontSize="28" FontWeight="Bold" HorizontalAlignment="Right" Foreground="{StaticResource SecondaryColor}"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                    <TextBlock Text="Filter by Status" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{StaticResource LightTextColor}"/>
+                    <ComboBox x:Name="cbxStatusFilter"
+                              Width="200" 
+                              Style="{StaticResource ComboBoxRegular}"
+                              SelectionChanged="cbxStatusFilter_SelectionChanged">
+                        <ComboBoxItem IsSelected="True">All Statuses</ComboBoxItem>
+                        <ComboBoxItem>Open</ComboBoxItem>
+                        <ComboBoxItem>InProgress</ComboBoxItem>
+                        <ComboBoxItem>Delivered</ComboBoxItem>
+                        <ComboBoxItem>OrderRefused</ComboBoxItem>
+                        <ComboBoxItem>Canceled</ComboBoxItem>
+                    </ComboBox>
+                </StackPanel>
+            </StackPanel>
+        </Grid>
 
-                <Label Grid.Column="0" Content="Filter by Status:" Style="{StaticResource LabelHeader}"/>
-                <ComboBox Grid.Column="1"
-                          x:Name="cbxStatusFilter"
-                          Style="{StaticResource ComboBoxRegular}"
-                          SelectionChanged="cbxStatusFilter_SelectionChanged">
-                    <ComboBoxItem IsSelected="True">All Statuses</ComboBoxItem>
-                    <ComboBoxItem>Open</ComboBoxItem>
-                    <ComboBoxItem>InProgress</ComboBoxItem>
-                    <ComboBoxItem>Delivered</ComboBoxItem>
-                    <ComboBoxItem>OrderRefused</ComboBoxItem>
-                    <ComboBoxItem>Canceled</ComboBoxItem>
-                </ComboBox>
+        <!-- Order Cards List -->
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding OrderList}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource OrderCardStyle}" MouseLeftButtonDown="OrderCard_Click">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
 
-                <Button Grid.Column="3"
-                        Content="Add New Order"
-                        Click="btnAddOrder_Click"
-                        Style="{StaticResource PrimaryButton}"
-                        Margin="20,0,0,0"/>
+                                <!-- Status Badge -->
+                                <Border Grid.Column="0" 
+                                        Style="{StaticResource StatusBadgeStyle}" 
+                                        Background="{Binding OrderStatus, Converter={StaticResource StatusToColorConverter}}"
+                                        MinWidth="90"
+                                        Margin="0,0,20,0">
+                                    <TextBlock Text="{Binding OrderStatus, Mode=OneWay}" 
+                                               Foreground="White" 
+                                               FontWeight="SemiBold" 
+                                               FontSize="12"
+                                               HorizontalAlignment="Center"/>
+                                </Border>
 
-                <Button Grid.Column="4"
-                        Content="Refresh"
-                        Click="btnRefresh_Click"
-                        Style="{StaticResource SecondaryButton}"
-                        HorizontalAlignment="Right"
-                        Margin="0,0,0,0"/>
-            </Grid>
-        </Border>
+                                <!-- Courier Info -->
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,20,0">
+                                    <TextBlock FontWeight="SemiBold">
+                                        <Run Text="Courier: "/>
+                                        <Run Text="{Binding CourierName, Mode=OneWay, TargetNullValue='Unassigned'}"/>
+                                    </TextBlock>
+                                    <TextBlock Foreground="{StaticResource LightTextColor}">
+                                        <Run Text="Time: "/>
+                                        <Run Text="{Binding CreatedAt, Mode=OneWay, StringFormat='HH:mm'}"/>
+                                    </TextBlock>
+                                </StackPanel>
 
-        <!-- Orders DataGrid -->
-        <Border Grid.Row="2" Background="White" CornerRadius="8" Padding="15">
-            <Border.Effect>
-                <DropShadowEffect Color="#000000" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/>
-            </Border.Effect>
+                                <!-- delivery type -->
+                                <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="0,0,20,0" HorizontalAlignment="Center">
+                                    <TextBlock Text="Order type:" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <TextBlock Text="{Binding OrderType, Mode=OneWay, Converter={StaticResource DeliveryTypeToIconConverter}}" FontSize="20" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding OrderType, Mode=OneWay}" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                                    </StackPanel>
+                                </StackPanel>
 
-            <DataGrid x:Name="dgOrders"
-                      ItemsSource="{Binding OrderList}"
-                      SelectedItem="{Binding SelectedOrder}"
-                      MouseDoubleClick="dgOrders_MouseDoubleClick"
-                      AutoGenerateColumns="False"
-                      IsReadOnly="True">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="50"/>
-                    <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="150"/>
-                    <DataGridTextColumn Header="Address" Binding="{Binding Address}" Width="200"/>
-                    <DataGridTextColumn Header="Type" Binding="{Binding OrderType}" Width="80"/>
-                    <DataGridTextColumn Header="Status" Binding="{Binding OrderStatus}" Width="120"/>
-                    <DataGridTextColumn Header="Schedule" Binding="{Binding ScheduleStatus}" Width="100" IsReadOnly="True"/>
-                    <DataGridTextColumn Header="Created" Binding="{Binding CreatedAt, StringFormat='yyyy-MM-dd HH:mm'}" Width="150"/>
-                    <DataGridTextColumn Header="Courier" Binding="{Binding CourierName}" Width="120"/>
-                </DataGrid.Columns>
-            </DataGrid>
-        </Border>
+                                <!-- Schedule Status -->
+                                <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="0,0,20,0" HorizontalAlignment="Center">
+                                    <TextBlock Text="Schedule" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding ScheduleStatus, Mode=OneWay}" 
+                                               Foreground="{Binding ScheduleStatus, Converter={StaticResource ScheduleStatusToColorConverter}}"
+                                               FontWeight="SemiBold"
+                                               HorizontalAlignment="Center"/>
+                                </StackPanel>
 
-        <!-- Footer Info -->
-        <Border Grid.Row="3" Background="White" CornerRadius="8" Padding="15" Margin="0,15,0,0">
-            <Border.Effect>
-                <DropShadowEffect Color="#000000" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/>
-            </Border.Effect>
-            <TextBlock x:Name="lblStatus"
-                       Foreground="{StaticResource LightTextColor}"
-                       FontSize="12"/>
-        </Border>
+                                <!-- Address Info -->
+                                <StackPanel Grid.Column="4" VerticalAlignment="Center" Margin="0,0,20,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="👤" FontSize="14" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Address, Mode=OneWay}" VerticalAlignment="Center" Margin="5,0,0,0" MaxWidth="200" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="📍" FontSize="14" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Order Info -->
+                                <StackPanel Grid.Column="5" VerticalAlignment="Center" HorizontalAlignment="Right" MinWidth="150">
+                                    <TextBlock HorizontalAlignment="Right" FontWeight="SemiBold">
+                                        <Run Text="Order ID: "/>
+                                        <Run Text="{Binding Id, Mode=OneWay}"/>
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding CustomerName, Mode=OneWay}" HorizontalAlignment="Right"/>
+                                    <TextBlock Text="{Binding CustomerPhone, Mode=OneWay}" HorizontalAlignment="Right" Foreground="{StaticResource LightTextColor}"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
     </Grid>
 </Window>

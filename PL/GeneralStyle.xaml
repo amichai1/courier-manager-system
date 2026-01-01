@@ -22,6 +22,14 @@
     <SolidColorBrush x:Key="DataGridAlternatingColor" Color="#FAFAFA"/>
     <SolidColorBrush x:Key="DataGridLineColor" Color="#EEEEEE"/>
     <SolidColorBrush x:Key="DeleteHoverColor" Color="#FFF0F0"/>
+    
+    <!-- Status Colors for DataTriggers -->
+    <SolidColorBrush x:Key="SuccessColor" Color="#27AE60"/>
+    <SolidColorBrush x:Key="WarningColor" Color="#F39C12"/>
+    <SolidColorBrush x:Key="DangerColor" Color="#E74C3C"/>
+    <SolidColorBrush x:Key="InfoColor" Color="#3498DB"/>
+    <SolidColorBrush x:Key="ValidationErrorColor" Color="#E74C3C"/>
+    <SolidColorBrush x:Key="ValidationErrorBackgroundColor" Color="#FFEBEE"/>
 
     <!-- ================================ -->
     <!-- TEXT STYLES                     -->
@@ -64,7 +72,7 @@
     <!-- INPUT CONTROL STYLES            -->
     <!-- ================================ -->
     
-    <!-- TextBox Regular -->
+    <!-- TextBox Regular with Validation Visual Feedback -->
     <Style x:Key="TextBoxRegular" TargetType="TextBox">
         <Setter Property="Padding" Value="6,4"/>
         <Setter Property="FontSize" Value="13"/>
@@ -74,6 +82,21 @@
         <Setter Property="BorderBrush" Value="{StaticResource BorderColor}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Validation.ErrorTemplate">
+            <Setter.Value>
+                <ControlTemplate>
+                    <DockPanel>
+                        <Border DockPanel.Dock="Right" Background="{StaticResource ValidationErrorColor}" 
+                                CornerRadius="10" Width="20" Height="20" Margin="4,0,0,0"
+                                ToolTip="{Binding ElementName=adorner, Path=AdornedElement.(Validation.Errors)[0].ErrorContent}">
+                            <TextBlock Text="!" Foreground="White" FontWeight="Bold" 
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <AdornedElementPlaceholder x:Name="adorner"/>
+                    </DockPanel>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
@@ -96,6 +119,11 @@
                         </Trigger>
                         <Trigger Property="IsReadOnly" Value="True">
                             <Setter TargetName="border" Property="Background" Value="{StaticResource AppBackgroundColor}"/>
+                        </Trigger>
+                        <Trigger Property="Validation.HasError" Value="True">
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource ValidationErrorColor}"/>
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource ValidationErrorBackgroundColor}"/>
+                            <Setter TargetName="border" Property="BorderThickness" Value="2"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -167,7 +195,7 @@
     <!-- BUTTON STYLES                   -->
     <!-- ================================ -->
     
-    <!-- Primary Button -->
+    <!-- Primary Button with Animation -->
     <Style x:Key="PrimaryButton" TargetType="Button">
         <Setter Property="Background" Value="{StaticResource PrimaryColor}"/>
         <Setter Property="Foreground" Value="White"/>
@@ -176,10 +204,20 @@
         <Setter Property="Padding" Value="15,10"/>
         <Setter Property="Margin" Value="4"/>
         <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <ScaleTransform ScaleX="1" ScaleY="1"/>
+            </Setter.Value>
+        </Setter>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                    <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}"
+                            RenderTransformOrigin="0.5,0.5">
+                        <Border.RenderTransform>
+                            <ScaleTransform x:Name="borderScale" ScaleX="1" ScaleY="1"/>
+                        </Border.RenderTransform>
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -192,6 +230,42 @@
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="border" Property="Background" Value="{StaticResource DisabledColor}"/>
                         </Trigger>
+                        <EventTrigger RoutedEvent="Button.Click">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation Storyboard.TargetName="borderScale" 
+                                                     Storyboard.TargetProperty="ScaleX"
+                                                     From="1" To="0.95" Duration="0:0:0.05" AutoReverse="True"/>
+                                    <DoubleAnimation Storyboard.TargetName="borderScale" 
+                                                     Storyboard.TargetProperty="ScaleY"
+                                                     From="1" To="0.95" Duration="0:0:0.05" AutoReverse="True"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                        <EventTrigger RoutedEvent="MouseEnter">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation Storyboard.TargetName="borderScale" 
+                                                     Storyboard.TargetProperty="ScaleX"
+                                                     To="1.02" Duration="0:0:0.1"/>
+                                    <DoubleAnimation Storyboard.TargetName="borderScale" 
+                                                     Storyboard.TargetProperty="ScaleY"
+                                                     To="1.02" Duration="0:0:0.1"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                        <EventTrigger RoutedEvent="MouseLeave">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation Storyboard.TargetName="borderScale" 
+                                                     Storyboard.TargetProperty="ScaleX"
+                                                     To="1" Duration="0:0:0.1"/>
+                                    <DoubleAnimation Storyboard.TargetName="borderScale" 
+                                                     Storyboard.TargetProperty="ScaleY"
+                                                     To="1" Duration="0:0:0.1"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
@@ -281,7 +355,7 @@
     <!-- ================================ -->
     
     <!-- Data Grid -->
-    <Style TargetType="DataGrid">
+    <Style TargetType="DataGrid" x:Key="DataGridStyle">
         <Setter Property="Background" Value="{StaticResource BackgroundColor}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="BorderBrush" Value="{StaticResource BorderColor}"/>
@@ -295,7 +369,7 @@
     </Style>
 
     <!-- Data Grid Column Header -->
-    <Style TargetType="DataGridColumnHeader">
+    <Style TargetType="DataGridColumnHeader" x:Key="DataGridColumnHeaderStyle">
         <Setter Property="Background" Value="{StaticResource PrimaryColor}"/>
         <Setter Property="Foreground" Value="White"/>
         <Setter Property="Padding" Value="8,8"/>
@@ -307,7 +381,7 @@
     </Style>
 
     <!-- Data Grid Cell -->
-    <Style TargetType="DataGridCell">
+    <Style TargetType="DataGridCell" x:Key="DataGridCellStyle">
         <Setter Property="Padding" Value="6,3"/>
         <Setter Property="FontSize" Value="12"/>
         <Setter Property="Foreground" Value="{StaticResource TextColor}"/>
@@ -327,5 +401,5 @@
             </Trigger>
         </Style.Triggers>
     </Style>
-    
+
 </ResourceDictionary>

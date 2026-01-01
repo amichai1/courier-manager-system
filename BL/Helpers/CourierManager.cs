@@ -599,6 +599,105 @@ internal static class CourierManager
         }
     }
 
+    /// <summary>
+    /// Calculates the salary for a courier for a specific time period.
+    /// Uses LINQ to aggregate delivery data for salary calculation.
+    /// </summary>
+    public static BO.CourierSalary CalculateSalary(int courierId, DateTime periodStart, DateTime periodEnd)
+    {
+        lock (AdminManager.BlMutex)
+        {
+            try
+            {
+                // Read courier info
+                BO.Courier courier = ReadCourier(courierId);
+                BO.Config config = AdminManager.GetConfig();
+
+                // Salary rates based on delivery type
+                double baseHourlyRate = courier.DeliveryType switch
+                {
+                    BO.DeliveryType.Car => 45.0,
+                    BO.DeliveryType.Motorcycle => 42.0,
+                    BO.DeliveryType.Bicycle => 38.0,
+                    BO.DeliveryType.OnFoot => 35.0,
+                    _ => 40.0
+                };
+
+                double perDeliveryBonus = courier.DeliveryType switch
+                {
+                    BO.DeliveryType.Car => 8.0,
+                    BO.DeliveryType.Motorcycle => 7.0,
+                    BO.DeliveryType.Bicycle => 10.0,
+                    BO.DeliveryType.OnFoot => 12.0,
+                    _ => 8.0
+                };
+
+                // LINQ Query Syntax - get all completed deliveries in period
+                var deliveriesInPeriod = from order in s_dal.Order.ReadAll()
+                                         where order.CourierId == courierId
+                                         where order.DeliveryDate.HasValue
+                                         where order.DeliveryDate.Value >= periodStart
+                                         where order.DeliveryDate.Value <= periodEnd
+                                         select order;
+
+                var deliveryList = deliveriesInPeriod.ToList();
+
+                // Calculate on-time vs late deliveries
+                int onTimeCount = 0;
+                int lateCount = 0;
+                double totalDistance = 0;
+
+                foreach (var order in deliveryList)
+                {
+                    if (order.PickupDate.HasValue && order.DeliveryDate.HasValue)
+                    {
+                        TimeSpan deliveryTime = order.DeliveryDate.Value - order.PickupDate.Value;
+                        if (deliveryTime <= config.MaxDeliveryTime)
+                            onTimeCount++;
+                        else
+                            lateCount++;
+                    }
+
+                    // Calculate distance for this delivery
+                    if (config.CompanyLatitude.HasValue && config.CompanyLongitude.HasValue)
+                    {
+                        double distance = BO.Order.CalculateAirDistance(
+                            config.CompanyLatitude.Value, config.CompanyLongitude.Value,
+                            order.Latitude, order.Longitude);
+                        totalDistance += distance * 1.3; // Actual road distance estimate
+                    }
+                }
+
+                // Calculate working hours (estimate based on deliveries)
+                double hoursWorked = deliveryList.Count * 0.75; // Average 45 min per delivery
+                if (hoursWorked < 20) hoursWorked = 20; // Minimum hours
+
+                return new BO.CourierSalary
+                {
+                    CourierId = courierId,
+                    CourierName = courier.Name,
+                    BaseHourlyRate = baseHourlyRate,
+                    HoursWorked = hoursWorked,
+                    TotalDeliveries = deliveryList.Count,
+                    OnTimeDeliveries = onTimeCount,
+                    LateDeliveries = lateCount,
+                    PerDeliveryBonus = perDeliveryBonus,
+                    OnTimeBonusRate = 5.0, // ₪5 bonus per on-time delivery
+                    TotalDistanceKm = totalDistance,
+                    PerKmRate = 1.5, // ₪1.5 per km
+                    LatePenaltyRate = 3.0, // ₪3 penalty per late delivery
+                    TaxRate = 0.25,
+                    PeriodStart = periodStart,
+                    PeriodEnd = periodEnd
+                };
+            }
+            catch (Exception ex)
+            {
+                throw new BLOperationFailedException($"Failed to calculate salary for courier {courierId}: {ex.Message}", ex);
+            }
+        }
+    }
+
     // ------------------------------------
     // --- 4. PERIODIC UPDATES ---
     // ------------------------------------
