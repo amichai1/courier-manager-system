@@ -20,6 +20,9 @@ internal class OrderImplementation : IBIOrder
     public void Update(BO.Order order) => OrderManager.UpdateOrder(order);
     public void Delete(int id) => OrderManager.DeleteOrder(id);
 
+    // --- List Operations ---
+    public IEnumerable<BO.OrderInList> GetOrderList() => OrderManager.GetOrderList();
+
     // --- Specific Operations ---
     public void AssociateCourierToOrder(int orderId, int courierId)
         => OrderManager.AssociateCourierToOrder(orderId, courierId);

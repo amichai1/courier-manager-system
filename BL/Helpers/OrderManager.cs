@@ -909,4 +909,59 @@ internal static class OrderManager
             }
         }
     }
+
+    /// <summary>
+    /// Gets all orders as a lightweight list for display purposes.
+    /// LINQ Query Syntax - demonstrates: from, let, select
+    /// </summary>
+    public static IEnumerable<BO.OrderInList> GetOrderList()
+    {
+        lock (AdminManager.BlMutex)
+        {
+            try
+            {
+                var orderList = from doOrder in s_dal.Order.ReadAll()
+                                let courier = doOrder.CourierId.HasValue
+                                    ? s_dal.Courier.Read(doOrder.CourierId.Value)
+                                    : null
+                                let deliveryHistory = GetDeliveryHistoryForOrder(doOrder.Id)
+                                let currentDelivery = deliveryHistory.FirstOrDefault(d => d.EndTime == null)
+                                let airDistance = CalculateAirDistance(doOrder)
+                                let orderStatus = doOrder.DeliveryDate.HasValue
+                                    ? BO.OrderStatus.Delivered
+                                    : (doOrder.PickupDate.HasValue || doOrder.CourierAssociatedDate.HasValue)
+                                        ? BO.OrderStatus.InProgress
+                                        : BO.OrderStatus.Open
+                                let completionTime = doOrder.DeliveryDate.HasValue
+                                    ? doOrder.DeliveryDate.Value - doOrder.CreatedAt
+                                    : TimeSpan.Zero
+                                let handlingTime = doOrder.CourierAssociatedDate.HasValue
+                                    ? (doOrder.DeliveryDate ?? AdminManager.Now) - doOrder.CourierAssociatedDate.Value
+                                    : TimeSpan.Zero
+                                select new BO.OrderInList
+                                {
+                                    OrderId = doOrder.Id,
+                                    DeliveryId = currentDelivery?.DeliveryId,
+                                    OrderType = (BO.OrderType)doOrder.OrderType,
+                                    Distance = airDistance,
+                                    OrderStatus = orderStatus,
+                                    ScheduleStatus = CalculateScheduleStatus(doOrder),
+                                    OrderCompletionTime = completionTime,
+                                    HandlingTime = handlingTime,
+                                    TotalDeliveries = deliveryHistory.Count(),
+                                    CustomerName = doOrder.CustomerName,
+                                    CustomerPhone = doOrder.CustomerPhone,
+                                    Address = doOrder.Address,
+                                    CourierName = courier?.Name,
+                                    CreatedAt = doOrder.CreatedAt
+                                };
+
+                return orderList.ToList();
+            }
+            catch (Exception ex)
+            {
+                throw new BLOperationFailedException($"Failed to get order list: {ex.Message}", ex);
+            }
+        }
+    }
 }

@@ -354,6 +354,40 @@ namespace PL.Converters
     }
 
     /// <summary>
+    /// Converter for displaying Israeli ID with leading zeros (always 9 digits).
+    /// Used for display purposes in lists.
+    /// </summary>
+    public class IsraeliIdDisplayConverter : IValueConverter
+    {
+        public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            if (value is int id && id > 0)
+            {
+                return id.ToString().PadLeft(9, '0');
+            }
+
+            return string.Empty;
+        }
+
+        public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            string input = value?.ToString()?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                return 0;
+            }
+
+            if (int.TryParse(input, out int result))
+            {
+                return result;
+            }
+
+            return 0;
+        }
+    }
+
+    /// <summary>
     /// Converter for customer name - allows free input, validation on save.
     /// Must contain only letters (Hebrew/English) and spaces.
     /// </summary>

@@ -27,8 +27,10 @@ namespace PL.Order
                 _instance = new OrderListWindow();
                 _instance.Show();
             }
-
-            BringToFront();
+            else
+            {
+                BringToFront();
+            }
         }
 
         public static void ShowListFiltered(BO.OrderStatus status)
@@ -42,13 +44,12 @@ namespace PL.Order
             {
                 _instance._initialFilter = status;
                 _instance.ApplyFilter(status);
+                BringToFront();
             }
-
-            BringToFront();
         }
 
         /// <summary>
-        /// Forces the window to appear above all other windows including Login
+        /// Forces the window to appear above other windows (but not above newly opened windows)
         /// </summary>
         private static void BringToFront()
         {
@@ -60,38 +61,36 @@ namespace PL.Order
             }
 
             _instance.Activate();
-            _instance.Topmost = true;
             _instance.Focus();
-
-            // Delay reset of Topmost to ensure it stays on top
-            _instance.Dispatcher.BeginInvoke(new Action(() =>
-            {
-                if (_instance != null)
-                {
-                    _instance.Topmost = false;
-                }
-            }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
 
         #region Dependency Properties
 
-        public IEnumerable<BO.Order>? OrderList
+        public IEnumerable<BO.OrderInList>? OrderList
         {
-            get => (IEnumerable<BO.Order>?)GetValue(OrderListProperty);
+            get => (IEnumerable<BO.OrderInList>?)GetValue(OrderListProperty);
             set => SetValue(OrderListProperty, value);
         }
 
         public static readonly DependencyProperty OrderListProperty =
-            DependencyProperty.Register("OrderList", typeof(IEnumerable<BO.Order>), typeof(OrderListWindow), new PropertyMetadata(null));
+            DependencyProperty.Register("OrderList", typeof(IEnumerable<BO.OrderInList>), typeof(OrderListWindow), new PropertyMetadata(null));
 
-        public BO.Order? SelectedOrder
+        public BO.OrderInList? SelectedOrder
         {
-            get => (BO.Order?)GetValue(SelectedOrderProperty);
+            get => (BO.OrderInList?)GetValue(SelectedOrderProperty);
             set => SetValue(SelectedOrderProperty, value);
         }
 
         public static readonly DependencyProperty SelectedOrderProperty =
-            DependencyProperty.Register("SelectedOrder", typeof(BO.Order), typeof(OrderListWindow), new PropertyMetadata(null));
+            DependencyProperty.Register("SelectedOrder", typeof(BO.OrderInList), typeof(OrderListWindow), new PropertyMetadata(null));
+
+        #endregion
+
+        #region Bound Properties for Sorting
+
+        public BO.OrderSortBy SelectedSortBy { get; set; } = BO.OrderSortBy.OrderId;
+
+        public BO.SortOrder SelectedSortOrder { get; set; } = BO.SortOrder.Ascending;
 
         #endregion
 
@@ -159,30 +158,75 @@ namespace PL.Order
         {
             try
             {
-                var allOrders = s_bl.Orders.ReadAll();
+                IEnumerable<BO.OrderInList> orders = s_bl.Orders.GetOrderList();
 
+                // Apply filter
                 if (cbxStatusFilter.SelectedItem is ComboBoxItem selectedItem)
                 {
                     string filterText = selectedItem.Content?.ToString() ?? "All Statuses";
 
                     if (filterText != "All Statuses" && Enum.TryParse<BO.OrderStatus>(filterText, out var status))
                     {
-                        OrderList = allOrders.Where(o => o.OrderStatus == status).ToList();
-                    }
-                    else
-                    {
-                        OrderList = allOrders.ToList();
+                        orders = orders.Where(o => o.OrderStatus == status);
                     }
                 }
-                else
-                {
-                    OrderList = allOrders.ToList();
-                }
+
+                // Apply sorting
+                orders = ApplySorting(orders);
+
+                OrderList = orders.ToList();
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error loading orders: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        /// <summary>
+        /// Applies sorting to the order list based on selected sort criteria and order.
+        /// </summary>
+        private IEnumerable<BO.OrderInList> ApplySorting(IEnumerable<BO.OrderInList> orders)
+        {
+            bool ascending = SelectedSortOrder == BO.SortOrder.Ascending;
+
+            IOrderedEnumerable<BO.OrderInList> sortedOrders = SelectedSortBy switch
+            {
+                BO.OrderSortBy.OrderId => ascending
+                    ? orders.OrderBy(o => o.OrderId)
+                    : orders.OrderByDescending(o => o.OrderId),
+
+                BO.OrderSortBy.DeliveryId => ascending
+                    ? orders.OrderBy(o => o.DeliveryId ?? int.MaxValue)
+                    : orders.OrderByDescending(o => o.DeliveryId ?? int.MinValue),
+
+                BO.OrderSortBy.OrderType => ascending
+                    ? orders.OrderBy(o => o.OrderType)
+                    : orders.OrderByDescending(o => o.OrderType),
+
+                BO.OrderSortBy.Distance => ascending
+                    ? orders.OrderBy(o => o.Distance)
+                    : orders.OrderByDescending(o => o.Distance),
+
+                BO.OrderSortBy.OrderStatus => ascending
+                    ? orders.OrderBy(o => o.OrderStatus)
+                    : orders.OrderByDescending(o => o.OrderStatus),
+
+                BO.OrderSortBy.ScheduleStatus => ascending
+                    ? orders.OrderBy(o => o.ScheduleStatus)
+                    : orders.OrderByDescending(o => o.ScheduleStatus),
+
+                BO.OrderSortBy.CompletionTime => ascending
+                    ? orders.OrderBy(o => o.OrderCompletionTime)
+                    : orders.OrderByDescending(o => o.OrderCompletionTime),
+
+                BO.OrderSortBy.TotalDeliveries => ascending
+                    ? orders.OrderBy(o => o.TotalDeliveries)
+                    : orders.OrderByDescending(o => o.TotalDeliveries),
+
+                _ => orders.OrderBy(o => o.OrderId)
+            };
+
+            return sortedOrders;
         }
 
         private void cbxStatusFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -193,17 +237,44 @@ namespace PL.Order
             }
         }
 
+        private void SortComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (IsLoaded)
+            {
+                QueryOrderList();
+            }
+        }
+
         private void OrderCard_Click(object sender, MouseButtonEventArgs e)
         {
-            if (sender is FrameworkElement element && element.DataContext is BO.Order order)
+            // Prevent opening window if click came from interactive elements inside the card
+            if (e.OriginalSource is DependencyObject source)
             {
-                new OrderWindow(order.Id).Show();
+                // Check if click originated from a Button or other interactive control
+                DependencyObject? current = source;
+                while (current != null && current != sender)
+                {
+                    if (current is Button || current is CheckBox)
+                    {
+                        return; // Don't open window - click was on internal control
+                    }
+                    current = System.Windows.Media.VisualTreeHelper.GetParent(current);
+                }
+            }
+
+            if (sender is FrameworkElement element && element.DataContext is BO.OrderInList order)
+            {
+                var window = new OrderWindow(order.OrderId);
+                window.Owner = this;
+                window.ShowDialog();
             }
         }
 
         private void btnAddOrder_Click(object sender, RoutedEventArgs e)
         {
-            new OrderWindow().Show();
+            var window = new OrderWindow();
+            window.Owner = this;
+            window.ShowDialog();
         }
 
         private void btnRefresh_Click(object sender, RoutedEventArgs e)
@@ -215,7 +286,9 @@ namespace PL.Order
         {
             if (SelectedOrder != null)
             {
-                new OrderWindow(SelectedOrder.Id).Show();
+                var window = new OrderWindow(SelectedOrder.OrderId);
+                window.Owner = this;
+                window.ShowDialog();
             }
         }
 

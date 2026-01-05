@@ -17,6 +17,7 @@
     <Window.Resources>
         <converters:StatusToColorConverter x:Key="StatusToColorConverter"/>
         <converters:BoolToAvailabilityConverter x:Key="BoolToAvailabilityConverter"/>
+        <converters:IsraeliIdDisplayConverter x:Key="IsraeliIdDisplayConverter"/>
         
         <!-- Toggle Switch Style -->
         <Style x:Key="ToggleSwitchStyle" TargetType="CheckBox">
@@ -106,16 +107,37 @@
                 </Button.Template>
             </Button>
 
-            <!-- Title and Filter -->
+            <!-- Title and Filter/Sort -->
             <StackPanel Grid.Column="2" HorizontalAlignment="Right">
                 <TextBlock Text="Courier Management" FontSize="28" FontWeight="Bold" HorizontalAlignment="Right" Foreground="{StaticResource SecondaryColor}"/>
+                
+                <!-- Filter and Sort Controls -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                    <!-- Filter by Status -->
                     <TextBlock Text="Filter by Status" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{StaticResource LightTextColor}"/>
-                    <ComboBox Width="200" 
+                    <ComboBox Width="150" 
                               Style="{StaticResource ComboBoxRegular}"
                               ItemsSource="{Binding Source={StaticResource DeliveryTypesCollectionKey}}"
                               SelectedValue="{Binding DeliveryTypeFilter, Mode=TwoWay}"
                               SelectionChanged="ComboBox_SelectionChanged"/>
+
+                    <!-- Sort By -->
+                    <TextBlock Text="Sort By" VerticalAlignment="Center" Margin="20,0,10,0" Foreground="{StaticResource LightTextColor}"/>
+                    <ComboBox x:Name="cmbSortBy"
+                              Width="150" 
+                              Style="{StaticResource ComboBoxRegular}"
+                              ItemsSource="{pl:CourierSortByCollection}"
+                              SelectedValue="{Binding SelectedSortBy, Mode=TwoWay}"
+                              SelectionChanged="SortComboBox_SelectionChanged"/>
+
+                    <!-- Sort Order -->
+                    <TextBlock Text="Order" VerticalAlignment="Center" Margin="20,0,10,0" Foreground="{StaticResource LightTextColor}"/>
+                    <ComboBox x:Name="cmbSortOrder"
+                              Width="120" 
+                              Style="{StaticResource ComboBoxRegular}"
+                              ItemsSource="{pl:SortOrderCollection}"
+                              SelectedValue="{Binding SelectedSortOrder, Mode=TwoWay}"
+                              SelectionChanged="SortComboBox_SelectionChanged"/>
                 </StackPanel>
             </StackPanel>
         </Grid>
@@ -206,11 +228,11 @@
                                     </StackPanel>
                                 </StackPanel>
 
-                                <!-- Courier Info -->
+                                <!-- Courier Info - Updated with converter -->
                                 <StackPanel Grid.Column="4" VerticalAlignment="Center" HorizontalAlignment="Right" MinWidth="180">
                                     <TextBlock HorizontalAlignment="Right" FontWeight="SemiBold">
                                         <Run Text="ID: "/>
-                                        <Run Text="{Binding Id, Mode=OneWay}"/>
+                                        <Run Text="{Binding Id, Mode=OneWay, Converter={StaticResource IsraeliIdDisplayConverter}}"/>
                                     </TextBlock>
                                     <TextBlock Text="{Binding Name, Mode=OneWay}" HorizontalAlignment="Right" FontSize="14"/>
                                 </StackPanel>

@@ -38,6 +38,48 @@ namespace PL
     }
 
     /// <summary>
+    /// Collection of courier sorting criteria for ComboBox binding.
+    /// </summary>
+    [MarkupExtensionReturnType(typeof(IEnumerable<CourierSortBy>))]
+    public class CourierSortByCollection : MarkupExtension, IEnumerable
+    {
+        static readonly IEnumerable<CourierSortBy> s_enums =
+            Enum.GetValues(typeof(CourierSortBy)).Cast<CourierSortBy>();
+
+        public IEnumerator GetEnumerator() => s_enums.GetEnumerator();
+
+        public override object ProvideValue(IServiceProvider serviceProvider) => s_enums;
+    }
+
+    /// <summary>
+    /// Collection of order sorting criteria for ComboBox binding.
+    /// </summary>
+    [MarkupExtensionReturnType(typeof(IEnumerable<OrderSortBy>))]
+    public class OrderSortByCollection : MarkupExtension, IEnumerable
+    {
+        static readonly IEnumerable<OrderSortBy> s_enums =
+            Enum.GetValues(typeof(OrderSortBy)).Cast<OrderSortBy>();
+
+        public IEnumerator GetEnumerator() => s_enums.GetEnumerator();
+
+        public override object ProvideValue(IServiceProvider serviceProvider) => s_enums;
+    }
+
+    /// <summary>
+    /// Collection of sort order directions for ComboBox binding.
+    /// </summary>
+    [MarkupExtensionReturnType(typeof(IEnumerable<SortOrder>))]
+    public class SortOrderCollection : MarkupExtension, IEnumerable
+    {
+        static readonly IEnumerable<SortOrder> s_enums =
+            Enum.GetValues(typeof(SortOrder)).Cast<SortOrder>();
+
+        public IEnumerator GetEnumerator() => s_enums.GetEnumerator();
+
+        public override object ProvideValue(IServiceProvider serviceProvider) => s_enums;
+    }
+
+    /// <summary>
     /// Static class to hold converter instances for XAML binding.
     /// </summary>
     public static class Converter

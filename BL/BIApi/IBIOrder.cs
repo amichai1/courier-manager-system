@@ -17,6 +17,12 @@ public interface IBIOrder : BIApi.IObservable
     void Update(BO.Order order);
     void Delete(int id);
 
+    // List Operations
+    /// <summary>
+    /// Gets all orders as a lightweight list for display purposes.
+    /// </summary>
+    IEnumerable<BO.OrderInList> GetOrderList();
+
     // Specific Operations
     void AssociateCourierToOrder(int orderId, int courierId);
     void PickUpOrder(int orderId);

@@ -25,12 +25,14 @@ namespace PL.Courier
                 _instance = new CourierListWindow();
                 _instance.Show();
             }
-            
-            BringToFront();
+            else
+            {
+                BringToFront();
+            }
         }
 
         /// <summary>
-        /// Forces the window to appear above all other windows including Login
+        /// Forces the window to appear above other windows (but not above newly opened windows)
         /// </summary>
         private static void BringToFront()
         {
@@ -42,17 +44,7 @@ namespace PL.Courier
             }
 
             _instance.Activate();
-            _instance.Topmost = true;
             _instance.Focus();
-
-            // Delay reset of Topmost to ensure it stays on top
-            _instance.Dispatcher.BeginInvoke(new Action(() =>
-            {
-                if (_instance != null)
-                {
-                    _instance.Topmost = false;
-                }
-            }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
 
         #region Dependency Properties
@@ -73,6 +65,10 @@ namespace PL.Courier
         public Object DeliveryTypeFilter { get; set; } = "All";
 
         public BO.CourierInList? SelectedCourier { get; set; }
+
+        public BO.CourierSortBy SelectedSortBy { get; set; } = BO.CourierSortBy.Id;
+
+        public BO.SortOrder SelectedSortOrder { get; set; } = BO.SortOrder.Ascending;
 
         #endregion
 
@@ -114,16 +110,18 @@ namespace PL.Courier
         {
             try
             {
-                var allCouriers = s_bl.Couriers.GetCourierList();
+                IEnumerable<BO.CourierInList> couriers = s_bl.Couriers.GetCourierList();
 
+                // Apply filter
                 if (DeliveryTypeFilter is BO.DeliveryType selectedType)
                 {
-                    CourierList = allCouriers.Where(c => c.DeliveryType == selectedType).ToList();
+                    couriers = couriers.Where(c => c.DeliveryType == selectedType);
                 }
-                else
-                {
-                    CourierList = allCouriers;
-                }
+
+                // Apply sorting
+                couriers = ApplySorting(couriers);
+
+                CourierList = couriers.ToList();
             }
             catch (Exception ex)
             {
@@ -131,22 +129,98 @@ namespace PL.Courier
             }
         }
 
+        /// <summary>
+        /// Applies sorting to the courier list based on selected sort criteria and order.
+        /// </summary>
+        private IEnumerable<BO.CourierInList> ApplySorting(IEnumerable<BO.CourierInList> couriers)
+        {
+            bool ascending = SelectedSortOrder == BO.SortOrder.Ascending;
+
+            IOrderedEnumerable<BO.CourierInList> sortedCouriers = SelectedSortBy switch
+            {
+                BO.CourierSortBy.Availability => ascending
+                    ? couriers.OrderBy(c => c.IsActive)
+                    : couriers.OrderByDescending(c => c.IsActive),
+
+                BO.CourierSortBy.Id => ascending
+                    ? couriers.OrderBy(c => c.Id)
+                    : couriers.OrderByDescending(c => c.Id),
+
+                BO.CourierSortBy.Name => ascending
+                    ? couriers.OrderBy(c => c.Name)
+                    : couriers.OrderByDescending(c => c.Name),
+
+                BO.CourierSortBy.StartDate => ascending
+                    ? couriers.OrderBy(c => c.StartWorkingDate)
+                    : couriers.OrderByDescending(c => c.StartWorkingDate),
+
+                BO.CourierSortBy.HasOrder => ascending
+                    ? couriers.OrderBy(c => c.CurrentIdOrder.HasValue)
+                    : couriers.OrderByDescending(c => c.CurrentIdOrder.HasValue),
+
+                BO.CourierSortBy.DeliveryType => ascending
+                    ? couriers.OrderBy(c => c.DeliveryType)
+                    : couriers.OrderByDescending(c => c.DeliveryType),
+
+                BO.CourierSortBy.LateDeliveries => ascending
+                    ? couriers.OrderBy(c => c.DeliveredLate)
+                    : couriers.OrderByDescending(c => c.DeliveredLate),
+
+                BO.CourierSortBy.OnTimeDeliveries => ascending
+                    ? couriers.OrderBy(c => c.DeliveredOnTime)
+                    : couriers.OrderByDescending(c => c.DeliveredOnTime),
+
+                _ => couriers.OrderBy(c => c.Id)
+            };
+
+            return sortedCouriers;
+        }
+
         private void ComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            QueryCourierList();
+            if (IsLoaded)
+            {
+                QueryCourierList();
+            }
+        }
+
+        private void SortComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (IsLoaded)
+            {
+                QueryCourierList();
+            }
         }
 
         private void CourierCard_Click(object sender, MouseButtonEventArgs e)
         {
+            // Prevent opening window if click came from interactive elements inside the card
+            if (e.OriginalSource is DependencyObject source)
+            {
+                DependencyObject? current = source;
+                while (current != null && current != sender)
+                {
+                    if (current is Button || current is CheckBox)
+                    {
+                        return;
+                    }
+                    current = System.Windows.Media.VisualTreeHelper.GetParent(current);
+                }
+            }
+
             if (sender is FrameworkElement element && element.DataContext is BO.CourierInList courier)
             {
-                new CourierWindow(courier.Id).Show();
+                var window = new CourierWindow(courier.Id);
+                window.Owner = this;
+                window.ShowDialog();
             }
         }
 
         private void btnAdd_Click(object sender, RoutedEventArgs e)
         {
-            new CourierWindow().Show();
+            var window = new CourierWindow();
+            window.Owner = this;
+            window.ShowDialog();
         }
 
         private void btnRefresh_Click(object sender, RoutedEventArgs e)

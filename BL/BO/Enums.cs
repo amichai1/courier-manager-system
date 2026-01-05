@@ -150,3 +150,111 @@ public enum TimeUnit
     Month,
     Year
 }
+
+/// <summary>
+/// Defines sorting criteria for courier list.
+/// </summary>
+public enum CourierSortBy
+{
+    /// <summary>
+    /// Sort by courier availability status
+    /// </summary>
+    Availability,
+
+    /// <summary>
+    /// Sort by courier ID
+    /// </summary>
+    Id,
+
+    /// <summary>
+    /// Sort by courier name
+    /// </summary>
+    Name,
+
+    /// <summary>
+    /// Sort by courier start working date
+    /// </summary>
+    StartDate,
+
+    /// <summary>
+    /// Sort by whether courier has an active order
+    /// </summary>
+    HasOrder,
+
+    /// <summary>
+    /// Sort by delivery type (transportation method)
+    /// </summary>
+    DeliveryType,
+
+    /// <summary>
+    /// Sort by number of late deliveries
+    /// </summary>
+    LateDeliveries,
+
+    /// <summary>
+    /// Sort by number of on-time deliveries
+    /// </summary>
+    OnTimeDeliveries
+}
+
+/// <summary>
+/// Defines sorting criteria for order list.
+/// </summary>
+public enum OrderSortBy
+{
+    /// <summary>
+    /// Sort by order ID
+    /// </summary>
+    OrderId,
+
+    /// <summary>
+    /// Sort by delivery ID
+    /// </summary>
+    DeliveryId,
+
+    /// <summary>
+    /// Sort by order type (RestaurantFood, Groceries, Retail)
+    /// </summary>
+    OrderType,
+
+    /// <summary>
+    /// Sort by delivery distance
+    /// </summary>
+    Distance,
+
+    /// <summary>
+    /// Sort by order status
+    /// </summary>
+    OrderStatus,
+
+    /// <summary>
+    /// Sort by schedule status (OnTime, InRisk, Late)
+    /// </summary>
+    ScheduleStatus,
+
+    /// <summary>
+    /// Sort by order completion time
+    /// </summary>
+    CompletionTime,
+
+    /// <summary>
+    /// Sort by total number of past deliveries
+    /// </summary>
+    TotalDeliveries
+}
+
+/// <summary>
+/// Defines sorting order direction.
+/// </summary>
+public enum SortOrder
+{
+    /// <summary>
+    /// Sort in ascending order (A-Z, 0-9, earliest first)
+    /// </summary>
+    Ascending,
+
+    /// <summary>
+    /// Sort in descending order (Z-A, 9-0, latest first)
+    /// </summary>
+    Descending
+}

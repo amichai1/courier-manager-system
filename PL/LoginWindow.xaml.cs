@@ -122,6 +122,10 @@ namespace PL
             MainWindow mainWindow = new();
             mainWindow.Show();
             
+            // Bring MainWindow to front and send Login to back
+            mainWindow.Activate();
+            this.WindowState = WindowState.Minimized;
+            
             // Clear login form for next user
             ClearLoginForm();
         }
@@ -171,7 +175,6 @@ namespace PL
 
                 courierWindow.SetCourierMode(true);
 
-
                 // Register window closed event to clean up dictionary
                 courierWindow.Closed += (sender, e) =>
                 {
@@ -179,6 +182,10 @@ namespace PL
                 };
 
                 courierWindow.Show();
+                
+                // Bring CourierWindow to front and send Login to back
+                courierWindow.Activate();
+                this.WindowState = WindowState.Minimized;
                 
                 // Clear login form for next user
                 ClearLoginForm();
