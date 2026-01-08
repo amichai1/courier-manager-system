@@ -5,6 +5,7 @@ using BO;
 using BL.Helpers;
 using System.Collections.Generic;
 using System;
+using System.Threading.Tasks;
 using global::Helpers;
 
 /// <summary>
@@ -40,6 +41,7 @@ internal class OrderImplementation : IBIOrder
         => OrderManager.GetDeliveryHistoryForOrderPublic(orderId);
 
     #region Stage 5 - Observer Pattern Implementation
+
     public void AddObserver(Action listObserver) =>
         OrderManager.Observers.AddListObserver(listObserver);
 
@@ -51,5 +53,32 @@ internal class OrderImplementation : IBIOrder
 
     public void RemoveObserver(int id, Action observer) =>
         OrderManager.Observers.RemoveObserver(id, observer);
+
     #endregion Stage 5
+
+    #region Stage 7 - Async Network Operations
+
+    public async Task<(bool success, string? errorMessage, int geocodeStatus)> CreateOrderAsync(BO.Order order)
+    {
+        var (success, error, status) = await OrderManager.CreateOrderAsync(order);
+        return (success, error, (int)status);
+    }
+
+    public async Task<(bool success, string? errorMessage, int geocodeStatus)> UpdateOrderAsync(BO.Order order, string? originalAddress)
+    {
+        var (success, error, status) = await OrderManager.UpdateOrderAsync(order, originalAddress);
+        return (success, error, (int)status);
+    }
+
+    public async Task<IEnumerable<BO.Order>> GetAvailableOrdersWithDistanceAsync(int courierId)
+    {
+        return await OrderManager.GetAvailableOrdersWithRouteDistanceAsync(courierId);
+    }
+
+    public async Task<IEnumerable<BO.OrderInList>> GetOrderListWithDistancesAsync()
+    {
+        return await OrderManager.GetOrderListWithRouteDistancesAsync();
+    }
+
+    #endregion Stage 7
 }

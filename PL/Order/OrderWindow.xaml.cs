@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Windows;
+using System.Windows.Input;
 using BlApi;
 using BO;
 using PL.Converters;
@@ -15,6 +16,7 @@ namespace PL.Order
         private int _orderId = 0;
         private bool _isAddMode = true;
         private BO.Order? _originalOrder;
+        private string? _originalAddress;
 
         private const int MaxDeliveryHistoryItems = 5;
 
@@ -105,6 +107,25 @@ namespace PL.Order
         public static readonly DependencyProperty CancelOrderVisibilityProperty =
             DependencyProperty.Register("CancelOrderVisibility", typeof(Visibility), typeof(OrderWindow), new PropertyMetadata(Visibility.Collapsed));
 
+        // Stage 7 - Loading indicator
+        public bool IsLoading
+        {
+            get => (bool)GetValue(IsLoadingProperty);
+            set => SetValue(IsLoadingProperty, value);
+        }
+
+        public static readonly DependencyProperty IsLoadingProperty =
+            DependencyProperty.Register("IsLoading", typeof(bool), typeof(OrderWindow), new PropertyMetadata(false));
+
+        public string LoadingMessage
+        {
+            get => (string)GetValue(LoadingMessageProperty);
+            set => SetValue(LoadingMessageProperty, value);
+        }
+
+        public static readonly DependencyProperty LoadingMessageProperty =
+            DependencyProperty.Register("LoadingMessage", typeof(string), typeof(OrderWindow), new PropertyMetadata("Processing..."));
+
         #endregion
 
         #region Lifecycle
@@ -157,6 +178,7 @@ namespace PL.Order
                     };
 
                     DeliveryHistoryVisibility = Visibility.Collapsed;
+                    _originalAddress = null;
                 }
                 else
                 {
@@ -168,6 +190,7 @@ namespace PL.Order
                         return;
                     }
 
+                    _originalAddress = CurrentOrder.Address;
                     LoadDeliveryHistory();
                 }
 
@@ -330,11 +353,22 @@ namespace PL.Order
             }
         }
 
+        private string GetGeocodingStatusMessage(int status)
+        {
+            return status switch
+            {
+                0 => "✓ Address verified",           // Success
+                2 => "⚠️ Network error - using estimated location", // NetworkError
+                3 => "❌ Address not found - please verify",        // InvalidAddress
+                _ => ""
+            };
+        }
+
         #endregion
 
-        #region Actions
+        #region Actions - Stage 7 Async
 
-        private void btnActionOrSave_Click(object sender, RoutedEventArgs e)
+        private async void btnActionOrSave_Click(object sender, RoutedEventArgs e)
         {
             try
             {
@@ -354,24 +388,75 @@ namespace PL.Order
                     return;
                 }
 
-                if (_isAddMode)
+                // Show loading indicator
+                IsLoading = true;
+                LoadingMessage = _isAddMode ? "Creating order and verifying address..." : "Updating order...";
+                Mouse.OverrideCursor = Cursors.Wait;
+                btnActionOrSave.IsEnabled = false;
+
+                try
                 {
-                    s_bl.Orders.Create(CurrentOrder);
-                    MessageBox.Show("Order created successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-                else
-                {
-                    if (CurrentOrder.OrderStatus != OrderStatus.Open)
+                    if (_isAddMode)
                     {
-                        MessageBox.Show($"Cannot update order in {CurrentOrder.OrderStatus} status.", "Operation Not Allowed", MessageBoxButton.OK, MessageBoxImage.Warning);
-                        return;
+                        // Use async method with geocoding
+                        var (success, error, geocodeStatus) = await s_bl.Orders.CreateOrderAsync(CurrentOrder);
+
+                        if (!success)
+                        {
+                            MessageBox.Show($"Failed to create order: {error}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                            return;
+                        }
+
+                        string message = "Order created successfully.";
+                        if (geocodeStatus == 2) // NetworkError
+                        {
+                            message += "\n\n⚠️ Note: Could not verify address due to network issues. Location is estimated.";
+                        }
+                        else if (geocodeStatus == 3) // InvalidAddress
+                        {
+                            message += "\n\n⚠️ Note: Address could not be found. Please verify the address is correct.";
+                        }
+
+                        MessageBox.Show(message, "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                    else
+                    {
+                        if (CurrentOrder.OrderStatus != OrderStatus.Open)
+                        {
+                            MessageBox.Show($"Cannot update order in {CurrentOrder.OrderStatus} status.", "Operation Not Allowed", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            return;
+                        }
+
+                        // Use async method with geocoding if address changed
+                        var (success, error, geocodeStatus) = await s_bl.Orders.UpdateOrderAsync(CurrentOrder, _originalAddress);
+
+                        if (!success)
+                        {
+                            MessageBox.Show($"Failed to update order: {error}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                            return;
+                        }
+
+                        string message = "Order updated successfully.";
+                        if (geocodeStatus == 2)
+                        {
+                            message += "\n\n⚠️ Note: Could not verify new address due to network issues.";
+                        }
+                        else if (geocodeStatus == 3)
+                        {
+                            message += "\n\n⚠️ Note: New address could not be found. Please verify.";
+                        }
+
+                        MessageBox.Show(message, "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
 
-                    s_bl.Orders.Update(CurrentOrder);
-                    MessageBox.Show("Order updated successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    Close();
                 }
-
-                Close();
+                finally
+                {
+                    IsLoading = false;
+                    Mouse.OverrideCursor = null;
+                    btnActionOrSave.IsEnabled = true;
+                }
             }
             catch (BLAlreadyExistsException)
             {

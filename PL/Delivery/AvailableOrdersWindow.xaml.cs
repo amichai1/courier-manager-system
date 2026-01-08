@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace PL.Delivery;
 
@@ -30,31 +31,98 @@ public partial class AvailableOrdersWindow : Window
     public static readonly DependencyProperty AvailableOrdersProperty =
         DependencyProperty.Register("AvailableOrders", typeof(IEnumerable<BO.Order>), typeof(AvailableOrdersWindow), new PropertyMetadata(null));
 
+    // Stage 7 - Loading indicator
+    public bool IsLoading
+    {
+        get => (bool)GetValue(IsLoadingProperty);
+        set => SetValue(IsLoadingProperty, value);
+    }
+
+    public static readonly DependencyProperty IsLoadingProperty =
+        DependencyProperty.Register("IsLoading", typeof(bool), typeof(AvailableOrdersWindow), new PropertyMetadata(false));
+
+    public string LoadingMessage
+    {
+        get => (string)GetValue(LoadingMessageProperty);
+        set => SetValue(LoadingMessageProperty, value);
+    }
+
+    public static readonly DependencyProperty LoadingMessageProperty =
+        DependencyProperty.Register("LoadingMessage", typeof(string), typeof(AvailableOrdersWindow), new PropertyMetadata("Loading..."));
+
     #endregion
 
     #region Lifecycle
 
-    private void Window_Loaded(object sender, RoutedEventArgs e)
+    private async void Window_Loaded(object sender, RoutedEventArgs e)
     {
         tbTitle.Text = $"Available Orders - Courier ID: {_courierId}";
-        LoadAvailableOrders();
+        await LoadAvailableOrdersAsync();
         try
-        { s_bl.Orders.AddObserver(OrderObserver); }
+        {
+            s_bl.Orders.AddObserver(OrderObserver);
+        }
         catch { /* ignore */ }
     }
 
     private void Window_Closed(object sender, EventArgs e)
     {
         try
-        { s_bl.Orders.RemoveObserver(OrderObserver); }
+        {
+            s_bl.Orders.RemoveObserver(OrderObserver);
+        }
         catch { /* ignore */ }
     }
 
     #endregion
 
-    #region Loading
+    #region Loading - Stage 7 Async
 
-    private void LoadAvailableOrders()
+    /// <summary>
+    /// Loads available orders with actual route distances (async).
+    /// Shows loading indicator while calculating distances.
+    /// </summary>
+    private async System.Threading.Tasks.Task LoadAvailableOrdersAsync()
+    {
+        try
+        {
+            if (_courierId <= 0)
+            {
+                AvailableOrders = new List<BO.Order>();
+                tbEmptyState.Visibility = Visibility.Visible;
+                tbOrderCount.Text = "Total Orders: 0";
+                return;
+            }
+
+            // Show loading indicator
+            IsLoading = true;
+            LoadingMessage = "Calculating distances...";
+
+            // Use async method to get orders with real route distances
+            var availableOrders = await s_bl.Orders.GetAvailableOrdersWithDistanceAsync(_courierId);
+            var orderList = availableOrders.ToList();
+
+            AvailableOrders = orderList;
+            tbEmptyState.Visibility = orderList.Any() ? Visibility.Collapsed : Visibility.Visible;
+            tbOrderCount.Text = $"Total Orders: {orderList.Count}";
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading available orders: {ex.Message}");
+            AvailableOrders = new List<BO.Order>();
+            tbEmptyState.Visibility = Visibility.Visible;
+            tbOrderCount.Text = "Total Orders: 0";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// Fallback synchronous load (for observer updates).
+    /// </summary>
+    private void LoadAvailableOrdersSync()
     {
         try
         {
@@ -127,7 +195,6 @@ public partial class AvailableOrdersWindow : Window
                 }
 
                 // Step 3: Associate the order to this courier
-                // (BL layer handles all validations and updates, including observer notifications)
                 s_bl.Orders.AssociateCourierToOrder(order.Id, _courierId);
 
                 MessageBox.Show(
@@ -136,13 +203,7 @@ public partial class AvailableOrdersWindow : Window
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
 
-                // Step 4: Observers will automatically notify all affected windows
-                // - OrderObserver will refresh the available orders list in this window
-                // - CourierListWindow will be notified via CourierObserver to update courier status
-                // - CourierWindow will be notified via CourierObserver to show the current order
-                // (See BL AssociateCourierToOrder method for observer notifications)
-
-                // Step 5: Close the window
+                // Step 4: Close the window
                 Close();
             }
         }
@@ -154,6 +215,11 @@ public partial class AvailableOrdersWindow : Window
         {
             MessageBox.Show($"Error assigning order: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    private async void btnRefresh_Click(object sender, RoutedEventArgs e)
+    {
+        await LoadAvailableOrdersAsync();
     }
 
     private void btnClose_Click(object sender, RoutedEventArgs e)
@@ -171,7 +237,8 @@ public partial class AvailableOrdersWindow : Window
         {
             Dispatcher.BeginInvoke(new Action(() =>
             {
-                LoadAvailableOrders();
+                // Use sync version for quick observer updates
+                LoadAvailableOrdersSync();
             }), System.Windows.Threading.DispatcherPriority.Background);
         }
         catch (Exception ex)

@@ -13,86 +13,126 @@
         Loaded="Window_Loaded"
         Closed="Window_Closed">
 
-    <Grid Margin="20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+    </Window.Resources>
 
-        <!-- Header -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,20">
-            <TextBlock x:Name="tbTitle" Style="{StaticResource SectionHeader}"/>
-            <Rectangle Height="2" Fill="{StaticResource PrimaryColor}" HorizontalAlignment="Left" Width="80"/>
-        </StackPanel>
+    <Grid>
+        <!-- Main Content -->
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-        <!-- DataGrid -->
-        <Border Grid.Row="1" Style="{StaticResource RoundedBorderWithShadow}" Padding="15">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
+            <!-- Header -->
+            <StackPanel Grid.Row="0" Margin="0,0,0,20">
+                <TextBlock x:Name="tbTitle" Style="{StaticResource SectionHeader}"/>
+                <Rectangle Height="2" Fill="{StaticResource PrimaryColor}" HorizontalAlignment="Left" Width="80"/>
+            </StackPanel>
 
-                <DataGrid Grid.Row="0"
-                          x:Name="dgAvailableOrders"
-                          ItemsSource="{Binding AvailableOrders}"
-                          AutoGenerateColumns="False"
-                          CanUserAddRows="False"
-                          IsReadOnly="True"
-                          VerticalScrollBarVisibility="Auto">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="50"/>
-                        <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="120"/>
-                        <DataGridTextColumn Header="Type" Binding="{Binding OrderType}" Width="70"/>
-                        <DataGridTextColumn Header="Distance (km)" Binding="{Binding ArialDistance, StringFormat={}{0:F2}}" Width="100"/>
-                        <DataGridTextColumn Header="Weight (kg)" Binding="{Binding Weight, StringFormat={}{0:F2}}" Width="100"/>
-                        <DataGridTextColumn Header="Fragile" Binding="{Binding IsFragile}" Width="70"/>
-                        <DataGridTemplateColumn Header="Action" Width="100">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <Button Content="TAKE IT"
-                                            Style="{StaticResource PrimaryButton}"
-                                            Click="btnTakeOrder_Click"
-                                            Padding="8,4"
-                                            FontSize="11"
-                                            Foreground="White"/>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                    </DataGrid.Columns>
-                </DataGrid>
+            <!-- DataGrid -->
+            <Border Grid.Row="1" Style="{StaticResource RoundedBorderWithShadow}" Padding="15">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-                <!-- Empty State -->
-                <TextBlock Grid.Row="0"
-                           x:Name="tbEmptyState"
-                           Text="No available orders for your delivery range"
-                           Style="{StaticResource EmptyStateMessage}"
-                           Visibility="Collapsed"/>
+                    <DataGrid Grid.Row="0"
+                              x:Name="dgAvailableOrders"
+                              ItemsSource="{Binding AvailableOrders}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              IsReadOnly="True"
+                              VerticalScrollBarVisibility="Auto">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="50"/>
+                            <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="120"/>
+                            <DataGridTextColumn Header="Type" Binding="{Binding OrderType}" Width="70"/>
+                            <DataGridTextColumn Header="Distance (km)" Binding="{Binding ArialDistance, StringFormat={}{0:F2}}" Width="100"/>
+                            <DataGridTextColumn Header="Weight (kg)" Binding="{Binding Weight, StringFormat={}{0:F2}}" Width="100"/>
+                            <DataGridTextColumn Header="Fragile" Binding="{Binding IsFragile}" Width="70"/>
+                            <DataGridTemplateColumn Header="Action" Width="100">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="TAKE IT"
+                                                Style="{StaticResource PrimaryButton}"
+                                                Click="btnTakeOrder_Click"
+                                                Padding="8,4"
+                                                FontSize="11"
+                                                Foreground="White"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
 
-                <!-- Footer Stats -->
-                <Border Grid.Row="1" BorderBrush="{StaticResource BorderColor}" BorderThickness="0,1,0,0" Padding="0,10,0,0">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
+                    <!-- Empty State -->
+                    <TextBlock Grid.Row="0"
+                               x:Name="tbEmptyState"
+                               Text="No available orders for your delivery range"
+                               Style="{StaticResource EmptyStateMessage}"
+                               Visibility="Collapsed"/>
 
-                        <TextBlock Grid.Column="0" 
-                                   x:Name="tbOrderCount"
-                                   Text="Total Orders: 0" 
-                                   FontWeight="SemiBold" 
-                                   Foreground="{StaticResource SecondaryColor}"/>
+                    <!-- Footer Stats -->
+                    <Border Grid.Row="1" BorderBrush="{StaticResource BorderColor}" BorderThickness="0,1,0,0" Padding="0,10,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
 
-                        <Button Grid.Column="2"
-                               Content="Close"
-                               Click="btnClose_Click"
-                               Style="{StaticResource SecondaryButton}"
-                               Width="80"/>
-                    </Grid>
-                </Border>
-            </Grid>
-        </Border>
+                            <TextBlock Grid.Column="0" 
+                                       x:Name="tbOrderCount"
+                                       Text="Total Orders: 0" 
+                                       FontWeight="SemiBold" 
+                                       Foreground="{StaticResource SecondaryColor}"/>
+
+                            <Button Grid.Column="2"
+                                    Content="🔄 Refresh"
+                                    Click="btnRefresh_Click"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Width="90"
+                                    Margin="0,0,10,0"/>
+
+                            <Button Grid.Column="3"
+                                    Content="Close"
+                                    Click="btnClose_Click"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Width="80"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Loading Overlay - Stage 7 -->
+        <Grid Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}"
+              Background="#80000000"
+              Panel.ZIndex="1000">
+            <Border Background="White" 
+                    CornerRadius="10" 
+                    Padding="30"
+                    HorizontalAlignment="Center" 
+                    VerticalAlignment="Center">
+                <Border.Effect>
+                    <DropShadowEffect Color="#000000" Opacity="0.2" BlurRadius="20" ShadowDepth="5"/>
+                </Border.Effect>
+                <StackPanel>
+                    <ProgressBar IsIndeterminate="True" 
+                                 Width="200" 
+                                 Height="20" 
+                                 Margin="0,0,0,15"/>
+                    <TextBlock Text="{Binding LoadingMessage}"
+                               HorizontalAlignment="Center"
+                               FontSize="14"
+                               Foreground="{StaticResource SecondaryColor}"/>
+                </StackPanel>
+            </Border>
+        </Grid>
     </Grid>
 </Window>

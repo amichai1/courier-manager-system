@@ -5,6 +5,7 @@ using Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace BL.Helpers;
 
@@ -226,7 +227,7 @@ internal static class OrderManager
             {
                 return BO.ScheduleStatus.Late;
             }
-            
+
             if (timeUntilMax <= config.RiskRange)
             {
                 return BO.ScheduleStatus.InRisk;
@@ -274,18 +275,9 @@ internal static class OrderManager
             if (config.CompanyLatitude is null || config.CompanyLongitude is null)
                 return 0;
 
-            const double EARTH_RADIUS_KM = 6371;
-            double lat1 = config.CompanyLatitude.Value * Math.PI / 180;
-            double lat2 = doOrder.Latitude * Math.PI / 180;
-            double dLat = (doOrder.Latitude - config.CompanyLatitude.Value) * Math.PI / 180;
-            double dLon = (doOrder.Longitude - config.CompanyLongitude.Value) * Math.PI / 180;
-
-            double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
-                       Math.Cos(lat1) * Math.Cos(lat2) *
-                       Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
-
-            double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
-            return EARTH_RADIUS_KM * c;
+            return GeocodingService.CalculateAirDistanceFallback(
+                config.CompanyLatitude.Value, config.CompanyLongitude.Value,
+                doOrder.Latitude, doOrder.Longitude);
         }
         catch
         {
@@ -963,5 +955,208 @@ internal static class OrderManager
                 throw new BLOperationFailedException($"Failed to get order list: {ex.Message}", ex);
             }
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // *** STAGE 7: ASYNC NETWORK OPERATIONS ***
+    // ═══════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Creates an order with async geocoding of the address.
+    /// If geocoding fails, the order is still created but with coordinates = 0.
+    /// Async all the way - keeps UI responsive.
+    /// </summary>
+    public static async Task<(bool success, string? errorMessage, GeocodingService.GeocodingStatus geocodeStatus)> CreateOrderAsync(BO.Order order)
+    {
+        // First, try to geocode the address (async network call)
+        var (lat, lon, status) = await GeocodingService.GeocodeAddressAsync(order.Address).ConfigureAwait(false);
+
+        if (status == GeocodingService.GeocodingStatus.Success)
+        {
+            order.Latitude = lat;
+            order.Longitude = lon;
+
+            // Calculate air distance from company
+            var config = AdminManager.GetConfig();
+            if (config.CompanyLatitude.HasValue && config.CompanyLongitude.HasValue)
+            {
+                order.ArialDistance = GeocodingService.CalculateAirDistanceFallback(
+                    config.CompanyLatitude.Value, config.CompanyLongitude.Value,
+                    lat, lon);
+            }
+        }
+        else
+        {
+            // Geocoding failed - order still created with coordinates = 0
+            order.Latitude = 0;
+            order.Longitude = 0;
+            order.ArialDistance = 0;
+        }
+
+        // Create the order (sync DAL operation)
+        try
+        {
+            CreateOrder(order);
+            return (true, null, status);
+        }
+        catch (Exception ex)
+        {
+            return (false, ex.Message, status);
+        }
+    }
+
+    /// <summary>
+    /// Updates an order with async geocoding if address changed.
+    /// </summary>
+    public static async Task<(bool success, string? errorMessage, GeocodingService.GeocodingStatus geocodeStatus)> UpdateOrderAsync(BO.Order order, string? originalAddress)
+    {
+        var geocodeStatus = GeocodingService.GeocodingStatus.NotAttempted;
+
+        // Only geocode if address changed
+        if (!string.IsNullOrWhiteSpace(order.Address) && order.Address != originalAddress)
+        {
+            var (lat, lon, status) = await GeocodingService.GeocodeAddressAsync(order.Address).ConfigureAwait(false);
+            geocodeStatus = status;
+
+            if (status == GeocodingService.GeocodingStatus.Success)
+            {
+                order.Latitude = lat;
+                order.Longitude = lon;
+
+                var config = AdminManager.GetConfig();
+                if (config.CompanyLatitude.HasValue && config.CompanyLongitude.HasValue)
+                {
+                    order.ArialDistance = GeocodingService.CalculateAirDistanceFallback(
+                        config.CompanyLatitude.Value, config.CompanyLongitude.Value,
+                        lat, lon);
+                }
+            }
+        }
+
+        try
+        {
+            UpdateOrder(order);
+            return (true, null, geocodeStatus);
+        }
+        catch (Exception ex)
+        {
+            return (false, ex.Message, geocodeStatus);
+        }
+    }
+
+    /// <summary>
+    /// Gets available orders for a courier with actual route distances (async).
+    /// Uses OSRM API to calculate real driving/walking distances.
+    /// </summary>
+    public static async Task<IEnumerable<BO.Order>> GetAvailableOrdersWithRouteDistanceAsync(int courierId)
+    {
+        // Get orders synchronously first
+        var orders = GetAvailableOrdersForCourier(courierId).ToList();
+
+        if (!orders.Any())
+            return orders;
+
+        // Get courier info
+        var courier = CourierManager.ReadCourier(courierId);
+        if (courier.Location == null)
+            return orders;
+
+        bool isDriving = courier.DeliveryType == BO.DeliveryType.Car ||
+                         courier.DeliveryType == BO.DeliveryType.Motorcycle;
+
+        // Calculate route distances in parallel (max 5 concurrent to avoid API throttling)
+        var semaphore = new System.Threading.SemaphoreSlim(5);
+
+        var tasks = orders.Select(async order =>
+        {
+            await semaphore.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                var (distance, _) = await GeocodingService.GetRouteDistanceAsync(
+                    courier.Location.Latitude, courier.Location.Longitude,
+                    order.Latitude, order.Longitude,
+                    isDriving).ConfigureAwait(false);
+
+                order.ArialDistance = distance;
+            }
+            catch
+            {
+                // Keep original air distance on error
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+            return order;
+        });
+
+        var results = await Task.WhenAll(tasks).ConfigureAwait(false);
+
+        // Return sorted by distance
+        return results.OrderBy(o => o.ArialDistance).ToList();
+    }
+
+    /// <summary>
+    /// Gets order list with route distances calculated asynchronously.
+    /// </summary>
+    public static async Task<IEnumerable<BO.OrderInList>> GetOrderListWithRouteDistancesAsync()
+    {
+        var orderList = GetOrderList().ToList();
+        var config = AdminManager.GetConfig();
+
+        if (!config.CompanyLatitude.HasValue || !config.CompanyLongitude.HasValue)
+            return orderList;
+
+        // Calculate distances in parallel (limited concurrency)
+        var semaphore = new System.Threading.SemaphoreSlim(5);
+
+        var tasks = orderList.Select(async order =>
+        {
+            await semaphore.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                // Get coordinates from the full order
+                var fullOrder = ReadOrder(order.OrderId);
+
+                if (fullOrder.Latitude != 0 && fullOrder.Longitude != 0)
+                {
+                    var (distance, _) = await GeocodingService.GetRouteDistanceAsync(
+                        config.CompanyLatitude.Value, config.CompanyLongitude.Value,
+                        fullOrder.Latitude, fullOrder.Longitude,
+                        true).ConfigureAwait(false);
+
+                    // Create a new OrderInList with updated Distance
+                    order = new BO.OrderInList
+                    {
+                        OrderId = order.OrderId,
+                        DeliveryId = order.DeliveryId,
+                        OrderType = order.OrderType,
+                        Distance = distance,
+                        OrderStatus = order.OrderStatus,
+                        ScheduleStatus = order.ScheduleStatus,
+                        OrderCompletionTime = order.OrderCompletionTime,
+                        HandlingTime = order.HandlingTime,
+                        TotalDeliveries = order.TotalDeliveries,
+                        CustomerName = order.CustomerName,
+                        CustomerPhone = order.CustomerPhone,
+                        Address = order.Address,
+                        CourierName = order.CourierName,
+                        CreatedAt = order.CreatedAt
+                    };
+                }
+            }
+            catch
+            {
+                // Keep original distance on error
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+            return order;
+        });
+
+        var results=await Task.WhenAll(tasks).ConfigureAwait(false);
+        return results;
     }
 }
