@@ -54,7 +54,8 @@ public static class Initialization
 
     private static void CreateConfig()
     {
-        s_dal!.Config.Clock = new DateTime(2025, 1, 1, 8, 0, 0);
+        // Set clock to January 21, 2026 at 2:00 PM (14:00)
+        s_dal!.Config.Clock = new DateTime(2026, 1, 21, 14, 0, 0);
         s_dal.Config.ManagerId = 123456789;
         s_dal.Config.ManagerPassword = "Admin123!";
         s_dal.Config.CompanyAddress = WOLT_ADDRESS;
@@ -245,12 +246,8 @@ public static class Initialization
                 DeliveryDate = null
             };
 
-            // Create order - DAL assigns the ID automatically
             s_dal.Order.Create(order);
-            
-            // Get the created order ID by reading it back
             int createdOrderId = s_nextOrderId++;
-            System.Diagnostics.Debug.WriteLine($"[Initialization] Created Order ID: {createdOrderId}");
 
             // Create current delivery record for InProgress orders
             if (courierId.HasValue)
@@ -273,7 +270,6 @@ public static class Initialization
 
                 s_dal.Delivery.Create(delivery);
                 currentDeliveryCount++;
-                System.Diagnostics.Debug.WriteLine($"[Initialization] Created current Delivery for Order: {createdOrderId}");
             }
 
             // First 12 orders ALWAYS get delivery history
@@ -285,7 +281,6 @@ public static class Initialization
                 int created = CreateDeliveryHistoryForOrder(createdOrderId, createdAt, allCouriers, historyCount);
                 totalDeliveryHistory += created;
                 ordersWithHistory++;
-                System.Diagnostics.Debug.WriteLine($"[Initialization] Created {created} history deliveries for Order: {createdOrderId}");
             }
         }
 
@@ -310,7 +305,8 @@ public static class Initialization
             var courier = allCouriers[s_rand.Next(allCouriers.Count)];
             DateTime startTime = orderCreatedAt.AddMinutes(s_rand.Next(5, 30) + (i * 60));
 
-            DeliveryStatus status = s_rand.Next(2) == 0 ? DeliveryStatus.Cancelled : DeliveryStatus.CustomerRefused;
+            // All history deliveries are CustomerRefused (as per requirements)
+            DeliveryStatus status = DeliveryStatus.CustomerRefused;
             DateTime endTime = startTime.AddMinutes(s_rand.Next(10, 45));
 
             Delivery delivery = new Delivery(
@@ -351,11 +347,11 @@ public static class Initialization
         string[] customerNames = { "History Customer 1", "History Customer 2", "History Customer 3" };
 
         int totalHistoryDeliveries = 0;
-        int onTimeDelivered = 0, inRiskDelivered = 0, lateDelivered = 0;
+        int completedCount = 0, canceledCount = 0;
 
         foreach (var courier in couriersWithHistory)
         {
-            int deliveryCount = s_rand.Next(1, 4);
+            int deliveryCount = s_rand.Next(2, 5);
 
             for (int i = 0; i < deliveryCount; i++)
             {
@@ -370,17 +366,24 @@ public static class Initialization
                     _ => s_rand.Next(241, 360)
                 };
 
-                switch (scheduleRoll)
+                // Determine if this is a completed or canceled delivery
+                // 70% completed, 30% canceled
+                bool isCanceled = s_rand.Next(100) < 30;
+                DeliveryStatus deliveryStatus = isCanceled ? DeliveryStatus.Cancelled : DeliveryStatus.Completed;
+
+                if (isCanceled)
                 {
-                    case 0: onTimeDelivered++; break;
-                    case 1: inRiskDelivered++; break;
-                    default: lateDelivered++; break;
+                    canceledCount++;
+                }
+                else
+                {
+                    completedCount++;
                 }
 
                 Order historicalOrder = new Order(Id: 0, CreatedAt: historicalDate)
                 {
                     OrderType = (OrderType)s_rand.Next(0, 3),
-                    Description = $"Historical Order - Delivered by {courier.Name}",
+                    Description = $"Historical Order - {(isCanceled ? "Canceled" : "Delivered")} by {courier.Name}",
                     Address = address,
                     Latitude = lat,
                     Longitude = lon,
@@ -389,10 +392,10 @@ public static class Initialization
                     Weight = s_rand.NextDouble() * 5 + 1.0,
                     Volume = s_rand.NextDouble() * 0.5 + 1.0,
                     IsFragile = false,
-                    CourierId = courier.Id,
-                    CourierAssociatedDate = historicalDate.AddMinutes(10),
-                    PickupDate = historicalDate.AddMinutes(20),
-                    DeliveryDate = historicalDate.AddMinutes(deliveryMinutes)
+                    CourierId = isCanceled ? null : courier.Id,
+                    CourierAssociatedDate = isCanceled ? null : historicalDate.AddMinutes(10),
+                    PickupDate = isCanceled ? null : historicalDate.AddMinutes(20),
+                    DeliveryDate = isCanceled ? null : historicalDate.AddMinutes(deliveryMinutes)
                 };
 
                 s_dal.Order.Create(historicalOrder);
@@ -400,7 +403,7 @@ public static class Initialization
 
                 double distance = CalculateAirDistance(WOLT_LATITUDE, WOLT_LONGITUDE, lat, lon);
 
-                Delivery completedDelivery = new Delivery(
+                Delivery historicalDelivery = new Delivery(
                     Id: 0,
                     OrderId: createdOrderId,
                     CourierId: courier.Id,
@@ -409,18 +412,17 @@ public static class Initialization
                     ActualDistance: distance * 1.5
                 )
                 {
-                    CompletionStatus = DeliveryStatus.Completed,
+                    CompletionStatus = deliveryStatus,
                     EndTime = historicalDate.AddMinutes(deliveryMinutes)
                 };
 
-                s_dal.Delivery.Create(completedDelivery);
-                System.Diagnostics.Debug.WriteLine($"[Initialization] Created completed Delivery for historical Order: {createdOrderId}");
+                s_dal.Delivery.Create(historicalDelivery);
                 totalHistoryDeliveries++;
             }
         }
 
-        Console.WriteLine($"  Created {totalHistoryDeliveries} historical DELIVERED orders for {couriersWithHistory.Count} couriers");
-        Console.WriteLine($"    Delivered ScheduleStatus: {onTimeDelivered} OnTime, {inRiskDelivered} InRisk, {lateDelivered} Late");
+        Console.WriteLine($"  Created {totalHistoryDeliveries} historical orders for {couriersWithHistory.Count} couriers");
+        Console.WriteLine($"    Status: {completedCount} Completed, {canceledCount} Canceled");
     }
 
     private static int GenerateValidIsraeliId()

@@ -18,6 +18,31 @@ namespace PL
             InitializeComponent();
         }
 
+        #region Window Management
+
+        /// <summary>
+        /// Brings the Login window to front when user wants to login again
+        /// </summary>
+        protected override void OnActivated(EventArgs e)
+        {
+            base.OnActivated(e);
+            
+            // When window is activated (brought to front), ensure it's restored and visible
+            if (WindowState == WindowState.Minimized)
+            {
+                WindowState = WindowState.Normal;
+            }
+            
+            // Bring to front
+            Topmost = true;
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                Topmost = false;
+            }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        }
+
+        #endregion
+
         #region Event Handlers - Key Navigation
 
         /// <summary>
@@ -122,7 +147,7 @@ namespace PL
             MainWindow mainWindow = new();
             mainWindow.Show();
             
-            // Bring MainWindow to front and send Login to back
+            // Bring MainWindow to front and minimize Login
             mainWindow.Activate();
             this.WindowState = WindowState.Minimized;
             
@@ -183,7 +208,7 @@ namespace PL
 
                 courierWindow.Show();
                 
-                // Bring CourierWindow to front and send Login to back
+                // Bring CourierWindow to front and minimize Login
                 courierWindow.Activate();
                 this.WindowState = WindowState.Minimized;
                 

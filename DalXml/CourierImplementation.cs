@@ -1,9 +1,10 @@
-﻿namespace Dal;
+namespace Dal;
 using DalApi;
 using DO;
 using System;
 using System.Linq;
 using System.Xml.Linq;
+using System.Runtime.CompilerServices;
 
 internal class CourierImplementation : ICourier
 {
@@ -39,6 +40,7 @@ internal class CourierImplementation : ICourier
         return elem;
     }
 
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public void Create(Courier item)
     {
         XElement root = XMLTools.LoadListFromXMLElement(Config.s_couriers_xml);
@@ -48,6 +50,7 @@ internal class CourierImplementation : ICourier
         XMLTools.SaveListToXMLElement(root, Config.s_couriers_xml);
     }
 
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public Courier? Read(int id)
     {
         XElement? elem = XMLTools.LoadListFromXMLElement(Config.s_couriers_xml)
@@ -55,10 +58,12 @@ internal class CourierImplementation : ICourier
         return elem is null ? null : getCourier(elem);
     }
 
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public Courier? Read(Func<Courier, bool> filter)
         => XMLTools.LoadListFromXMLElement(Config.s_couriers_xml)
                .Elements().Select(e => getCourier(e)).FirstOrDefault(filter);
 
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public IEnumerable<Courier> ReadAll(Func<Courier, bool>? filter = null)
     {
         var items = XMLTools.LoadListFromXMLElement(Config.s_couriers_xml)
@@ -66,6 +71,7 @@ internal class CourierImplementation : ICourier
         return filter is null ? items : items.Where(filter);
     }
 
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public void Update(Courier item)
     {
         XElement root = XMLTools.LoadListFromXMLElement(Config.s_couriers_xml);
@@ -76,6 +82,7 @@ internal class CourierImplementation : ICourier
         XMLTools.SaveListToXMLElement(root, Config.s_couriers_xml);
     }
 
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public void Delete(int id)
     {
         XElement root = XMLTools.LoadListFromXMLElement(Config.s_couriers_xml);
@@ -85,6 +92,7 @@ internal class CourierImplementation : ICourier
         XMLTools.SaveListToXMLElement(root, Config.s_couriers_xml);
     }
 
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public void DeleteAll()
         => XMLTools.SaveListToXMLElement(new XElement("Couriers"), Config.s_couriers_xml);
 }

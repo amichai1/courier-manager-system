@@ -1,5 +1,6 @@
-﻿namespace Dal;
+namespace Dal;
 using DalApi;
+using System.Runtime.CompilerServices;
 
 /// <summary>
 /// Implementation of configuration access interface.
@@ -16,7 +17,9 @@ internal class ConfigImplementation : IConfig
     /// </summary>
     public DateTime Clock
     {
+        [MethodImpl(MethodImplOptions.Synchronized)]
         get => Config.Clock;
+        [MethodImpl(MethodImplOptions.Synchronized)]
         set => Config.Clock = value;
     }
 
@@ -25,8 +28,10 @@ internal class ConfigImplementation : IConfig
     /// </summary>
     public int ManagerId
     {
+        [MethodImpl(MethodImplOptions.Synchronized)]
         get => Config.ManagerId;
-        set => Config.ManagerId = value; 
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        set => Config.ManagerId = value;
     }
 
     /// <summary>
@@ -34,7 +39,9 @@ internal class ConfigImplementation : IConfig
     /// </summary>
     public string ManagerPassword
     {
+        [MethodImpl(MethodImplOptions.Synchronized)]
         get => Config.ManagerPassword;
+        [MethodImpl(MethodImplOptions.Synchronized)]
         set => Config.ManagerPassword = value;
     }
 
@@ -43,7 +50,9 @@ internal class ConfigImplementation : IConfig
     /// </summary>
     public string? CompanyAddress
     {
+        [MethodImpl(MethodImplOptions.Synchronized)]
         get => Config.CompanyAddress;
+        [MethodImpl(MethodImplOptions.Synchronized)]
         set => Config.CompanyAddress = value;
     }
 
@@ -52,7 +61,9 @@ internal class ConfigImplementation : IConfig
     /// </summary>
     public double? CompanyLatitude
     {
+        [MethodImpl(MethodImplOptions.Synchronized)]
         get => Config.CompanyLatitude;
+        [MethodImpl(MethodImplOptions.Synchronized)]
         set => Config.CompanyLatitude = value;
     }
 
@@ -61,7 +72,9 @@ internal class ConfigImplementation : IConfig
     /// </summary>
     public double? CompanyLongitude
     {
+        [MethodImpl(MethodImplOptions.Synchronized)]
         get => Config.CompanyLongitude;
+        [MethodImpl(MethodImplOptions.Synchronized)]
         set => Config.CompanyLongitude = value;
     }
 
@@ -70,7 +83,9 @@ internal class ConfigImplementation : IConfig
     /// </summary>
     public double? MaxDeliveryDistance
     {
+        [MethodImpl(MethodImplOptions.Synchronized)]
         get => Config.MaxDeliveryDistance;
+        [MethodImpl(MethodImplOptions.Synchronized)]
         set => Config.MaxDeliveryDistance = value;
     }
 
@@ -79,7 +94,9 @@ internal class ConfigImplementation : IConfig
     /// </summary>
     public double CarSpeed
     {
+        [MethodImpl(MethodImplOptions.Synchronized)]
         get => Config.CarSpeed;
+        [MethodImpl(MethodImplOptions.Synchronized)]
         set => Config.CarSpeed = value;
     }
 
@@ -88,7 +105,9 @@ internal class ConfigImplementation : IConfig
     /// </summary>
     public double MotorcycleSpeed
     {
+        [MethodImpl(MethodImplOptions.Synchronized)]
         get => Config.MotorcycleSpeed;
+        [MethodImpl(MethodImplOptions.Synchronized)]
         set => Config.MotorcycleSpeed = value;
     }
 
@@ -97,7 +116,9 @@ internal class ConfigImplementation : IConfig
     /// </summary>
     public double BicycleSpeed
     {
+        [MethodImpl(MethodImplOptions.Synchronized)]
         get => Config.BicycleSpeed;
+        [MethodImpl(MethodImplOptions.Synchronized)]
         set => Config.BicycleSpeed = value;
     }
 
@@ -106,7 +127,9 @@ internal class ConfigImplementation : IConfig
     /// </summary>
     public double OnFootSpeed
     {
+        [MethodImpl(MethodImplOptions.Synchronized)]
         get => Config.OnFootSpeed;
+        [MethodImpl(MethodImplOptions.Synchronized)]
         set => Config.OnFootSpeed = value;
     }
 
@@ -115,7 +138,9 @@ internal class ConfigImplementation : IConfig
     /// </summary>
     public TimeSpan MaxDeliveryTime
     {
+        [MethodImpl(MethodImplOptions.Synchronized)]
         get => Config.MaxDeliveryTime;
+        [MethodImpl(MethodImplOptions.Synchronized)]
         set => Config.MaxDeliveryTime = value;
     }
 
@@ -124,7 +149,9 @@ internal class ConfigImplementation : IConfig
     /// </summary>
     public TimeSpan RiskRange
     {
+        [MethodImpl(MethodImplOptions.Synchronized)]
         get => Config.RiskRange;
+        [MethodImpl(MethodImplOptions.Synchronized)]
         set => Config.RiskRange = value;
     }
 
@@ -133,13 +160,16 @@ internal class ConfigImplementation : IConfig
     /// </summary>
     public TimeSpan InactivityRange
     {
+        [MethodImpl(MethodImplOptions.Synchronized)]
         get => Config.InactivityRange;
+        [MethodImpl(MethodImplOptions.Synchronized)]
         set => Config.InactivityRange = value;
     }
 
     /// <summary>
     /// Resets all configuration properties to their initial values.
     /// </summary>
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public void Reset()
     {
         Config.Reset();

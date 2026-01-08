@@ -1,8 +1,9 @@
-﻿namespace Dal;
+namespace Dal;
 using DalApi;
 using DO;
-using System.Linq; // Added for LINQ
-using System; // For Func/Exception
+using System.Linq;
+using System;
+using System.Runtime.CompilerServices;
 
 /// <summary>
 /// Implementation of data access methods for Courier entity.
@@ -13,8 +14,7 @@ internal class CourierImplementation : ICourier
     /// <summary>
     /// Creates a new courier in the system.
     /// </summary>
-    /// <param name="item">Courier object with all properties filled (ID must be valid national ID)</param>
-    /// <exception cref="Exception">Thrown if a courier with the same ID already exists</exception>
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public void Create(Courier item)
     {
         // Check if courier with this ID already exists
@@ -29,6 +29,7 @@ internal class CourierImplementation : ICourier
     /// </summary>
     /// <param name="id">National ID of the courier</param>
     /// <returns>Courier object if found, null otherwise</returns>
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public Courier? Read(int id)
     {
         // [Chapter 8a] Use FirstOrDefault (LINQ)
@@ -41,6 +42,7 @@ internal class CourierImplementation : ICourier
     /// <param name="filter">Boolean function to filter the list</param>
     /// <returns>First courier matching the filter, or null</returns>
     // [Chapter 8c] New Read method
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public Courier? Read(Func<Courier, bool> filter)
     {
         // Use FirstOrDefault with the provided Func delegate
@@ -54,6 +56,7 @@ internal class CourierImplementation : ICourier
     /// <param name="filter">Optional boolean function for filtering couriers.</param>
     /// <returns>Filtered collection of couriers, or all couriers if no filter provided.</returns>
     // [Chapter 8b] Updated ReadAll signature and implementation using LINQ
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public IEnumerable<Courier> ReadAll(Func<Courier, bool>? filter = null)
     {
         // Ensure null-coalescing operator to handle possible null reference
@@ -68,6 +71,7 @@ internal class CourierImplementation : ICourier
     /// </summary>
     /// <param name="item">Updated courier object with valid ID</param>
     /// <exception cref="Exception">Thrown if courier with the given ID does not exist</exception>
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public void Update(Courier item)
     {
         // Check if courier exists
@@ -86,6 +90,7 @@ internal class CourierImplementation : ICourier
         /// </summary>
         /// <param name="id">National ID of the courier to delete</param>
         /// <exception cref="Exception">Thrown if courier with the given ID does not exist</exception>
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public void Delete(int id)
     {
         // Check if courier exist
@@ -100,6 +105,7 @@ internal class CourierImplementation : ICourier
     /// <summary>
     /// Deletes all couriers from the system.
     /// </summary>
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public void DeleteAll()
     {
         DataSource.Couriers.Clear();

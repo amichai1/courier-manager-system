@@ -18,30 +18,16 @@ internal class AdminImplementation : IAdmin
     public DateTime GetClock() => AdminManager.Now;
     public void ForwardClock(BO.TimeUnit unit)
     {
-        // 1. קבלת הזמן הנוכחי
         DateTime now = GetClock();
-        DateTime newTime = now;
-
-        // 2. חישוב הזמן החדש לפי היחידה
-        switch (unit)
+        DateTime newTime = unit switch
         {
-            case BO.TimeUnit.Minute:
-                newTime = now.AddMinutes(1);
-                break;
-            case BO.TimeUnit.Hour:
-                newTime = now.AddHours(1);
-                break;
-            case BO.TimeUnit.Day:
-                newTime = now.AddDays(1);
-                break;
-            case BO.TimeUnit.Month:
-                // calculate new time by adding one month, handling month length variations
-                newTime = now.AddMonths(1);
-                break;
-            case BO.TimeUnit.Year:
-                newTime = now.AddYears(1);
-                break;
-        }
+            BO.TimeUnit.Minute => now.AddMinutes(1),
+            BO.TimeUnit.Hour => now.AddHours(1),
+            BO.TimeUnit.Day => now.AddDays(1),
+            BO.TimeUnit.Month => now.AddMonths(1),
+            BO.TimeUnit.Year => now.AddYears(1),
+            _ => now.AddMinutes(1)
+        };
 
         AdminManager.UpdateClock(newTime);
     }
@@ -63,4 +49,15 @@ internal class AdminImplementation : IAdmin
     public void RemoveConfigObserver(Action configObserver) =>
         AdminManager.ConfigUpdatedObservers -= configObserver;
     #endregion Stage 5
+
+    #region Stage 7 - Simulator Control
+    public void StartSimulator(int intervalMinutes) =>
+        AdminManager.StartSimulator(intervalMinutes);
+
+    public void StopSimulator() =>
+        AdminManager.StopSimulator();
+
+    public bool IsSimulatorRunning =>
+        AdminManager.IsSimulatorRunning;
+    #endregion Stage 7
 }

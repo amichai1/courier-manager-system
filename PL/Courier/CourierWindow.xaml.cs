@@ -285,7 +285,7 @@ public partial class CourierWindow : Window
                     CurrentOrderVisibility = Visibility.Visible;
                     NoCurrentOrderVisibility = Visibility.Collapsed;
                     SelectOrderButtonEnabled = false;
-                    IsDeliveryTypeEnabled = false; // ❌ לא ניתן לשנות סוג משלוח כשיש הזמנה פעילה
+                    IsDeliveryTypeEnabled = false;
 
                     try { s_bl.Orders.AddObserver(OrderObserver); } catch { }
                 }
@@ -295,7 +295,7 @@ public partial class CourierWindow : Window
                     CurrentOrderVisibility = Visibility.Collapsed;
                     NoCurrentOrderVisibility = Visibility.Visible;
                     SelectOrderButtonEnabled = true;
-                    IsDeliveryTypeEnabled = true; // ✅ ניתן לשנות סוג משלוח כשאין הזמנה פעילה
+                    IsDeliveryTypeEnabled = true;
                 }
             }
         }
@@ -322,23 +322,11 @@ public partial class CourierWindow : Window
             return;
         }
 
-        // Check if order has been picked up (has PickupDate)
-        bool hasBeenPickedUp = CurrentOrder.PickupDate.HasValue;
-
+        // Show Complete button for any InProgress order
         if (CurrentOrder.OrderStatus == BO.OrderStatus.InProgress)
         {
             PromoteStatusButtonVisibility = Visibility.Visible;
-
-            if (!hasBeenPickedUp)
-            {
-                // Associated but not picked up - show Pick Up button
-                PromoteStatusButtonText = "🔼 Pick Up";
-            }
-            else
-            {
-                // Picked up but not delivered - show Complete button
-                PromoteStatusButtonText = "✓ Complete";
-            }
+            PromoteStatusButtonText = "✓ Complete Delivery";
         }
         else
         {
@@ -358,39 +346,44 @@ public partial class CourierWindow : Window
             }
 
             int orderId = CurrentOrder.Id;
-            bool hasBeenPickedUp = CurrentOrder.PickupDate.HasValue;
+
+            // Confirm completion
+            var result = MessageBox.Show(
+                $"Are you sure you want to complete Order #{orderId}?",
+                "Confirm Delivery Completion",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result != MessageBoxResult.Yes)
+            {
+                return;
+            }
 
             try
             {
-                if (!hasBeenPickedUp)
+                // If order hasn't been picked up yet, do it automatically
+                if (!CurrentOrder.PickupDate.HasValue)
                 {
-                    // Pick up the order
                     s_bl.Orders.PickUpOrder(orderId);
-                    MessageBox.Show(
-                        $"Order #{orderId} picked up successfully!",
-                        "Order Picked Up",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information);
                 }
-                else
-                {
-                    // Deliver the order
-                    s_bl.Orders.DeliverOrder(orderId);
-                    MessageBox.Show(
-                        $"Order #{orderId} completed successfully!",
-                        "Order Completed",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information);
-                }
+
+                // Complete the delivery
+                s_bl.Orders.DeliverOrder(orderId);
+
+                MessageBox.Show(
+                    $"Order #{orderId} completed successfully!",
+                    "Delivery Completed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
             }
             catch (BO.BLException ex)
             {
-                MessageBox.Show($"Cannot process order: {ex.Message}", "Operation Failed", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show($"Cannot complete order: {ex.Message}", "Operation Failed", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error processing order: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Error completing order: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

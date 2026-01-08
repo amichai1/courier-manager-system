@@ -9,7 +9,7 @@
         mc:Ignorable="d"
         Title="WPF Manage" Height="700" Width="1200"
         WindowStartupLocation="CenterScreen"
-        Background="#F5F7FA"
+        Background="{StaticResource AppBackgroundColor}"
         DataContext="{Binding RelativeSource={RelativeSource Mode=Self}}"
         Loaded="Window_Loaded"
         Closed="Window_Closed">
@@ -18,54 +18,6 @@
         <converters:StatusToColorConverter x:Key="StatusToColorConverter"/>
         <converters:BoolToAvailabilityConverter x:Key="BoolToAvailabilityConverter"/>
         <converters:IsraeliIdDisplayConverter x:Key="IsraeliIdDisplayConverter"/>
-        
-        <!-- Toggle Switch Style -->
-        <Style x:Key="ToggleSwitchStyle" TargetType="CheckBox">
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="CheckBox">
-                        <Grid>
-                            <Border x:Name="Background" Width="50" Height="26" CornerRadius="13" Background="#E0E0E0" Cursor="Hand"/>
-                            <Border x:Name="Thumb" Width="22" Height="22" CornerRadius="11" Background="White" HorizontalAlignment="Left" Margin="2,0,0,0">
-                                <Border.Effect>
-                                    <DropShadowEffect ShadowDepth="1" BlurRadius="3" Opacity="0.3"/>
-                                </Border.Effect>
-                            </Border>
-                        </Grid>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Background" Property="Background" Value="#4CAF50"/>
-                                <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right"/>
-                                <Setter TargetName="Thumb" Property="Margin" Value="0,0,2,0"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- Status Badge Style -->
-        <Style x:Key="StatusBadgeStyle" TargetType="Border">
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="12,6"/>
-            <Setter Property="HorizontalAlignment" Value="Center"/>
-        </Style>
-
-        <!-- Courier Card Style -->
-        <Style x:Key="CourierCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Margin" Value="10,5"/>
-            <Setter Property="Padding" Value="15"/>
-            <Setter Property="BorderBrush" Value="#E0E0E0"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="BorderBrush" Value="{StaticResource PrimaryColor}"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
     </Window.Resources>
 
     <Grid Margin="20">
@@ -87,34 +39,16 @@
             <Button Grid.Column="0" 
                     Content="+ Add New Courier" 
                     Click="btnAdd_Click"
-                    Background="{StaticResource PrimaryColor}"
-                    Foreground="White"
-                    FontSize="14"
-                    FontWeight="SemiBold"
-                    Padding="20,12"
-                    Cursor="Hand">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{StaticResource PrimaryHoverColor}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
-            </Button>
+                    Style="{StaticResource AddButtonStyle}"/>
 
             <!-- Title and Filter/Sort -->
             <StackPanel Grid.Column="2" HorizontalAlignment="Right">
-                <TextBlock Text="Courier Management" FontSize="28" FontWeight="Bold" HorizontalAlignment="Right" Foreground="{StaticResource SecondaryColor}"/>
+                <TextBlock Text="Courier Management" Style="{StaticResource PageTitleStyle}"/>
                 
                 <!-- Filter and Sort Controls -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
                     <!-- Filter by Status -->
-                    <TextBlock Text="Filter by Status" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{StaticResource LightTextColor}"/>
+                    <TextBlock Text="Filter by Status" Style="{StaticResource FilterLabelStyle}"/>
                     <ComboBox Width="150" 
                               Style="{StaticResource ComboBoxRegular}"
                               ItemsSource="{Binding Source={StaticResource DeliveryTypesCollectionKey}}"
@@ -122,7 +56,7 @@
                               SelectionChanged="ComboBox_SelectionChanged"/>
 
                     <!-- Sort By -->
-                    <TextBlock Text="Sort By" VerticalAlignment="Center" Margin="20,0,10,0" Foreground="{StaticResource LightTextColor}"/>
+                    <TextBlock Text="Sort By" Style="{StaticResource FilterLabelStyle}" Margin="20,0,10,0"/>
                     <ComboBox x:Name="cmbSortBy"
                               Width="150" 
                               Style="{StaticResource ComboBoxRegular}"
@@ -131,7 +65,7 @@
                               SelectionChanged="SortComboBox_SelectionChanged"/>
 
                     <!-- Sort Order -->
-                    <TextBlock Text="Order" VerticalAlignment="Center" Margin="20,0,10,0" Foreground="{StaticResource LightTextColor}"/>
+                    <TextBlock Text="Order" Style="{StaticResource FilterLabelStyle}" Margin="20,0,10,0"/>
                     <ComboBox x:Name="cmbSortOrder"
                               Width="120" 
                               Style="{StaticResource ComboBoxRegular}"
@@ -147,7 +81,7 @@
             <ItemsControl ItemsSource="{Binding CourierList}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border Style="{StaticResource CourierCardStyle}" MouseLeftButtonDown="CourierCard_Click">
+                        <Border Style="{StaticResource CardStyle}" MouseLeftButtonDown="CourierCard_Click">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
@@ -161,26 +95,9 @@
                                 <Button Grid.Column="0" 
                                         Content="🗑 Delete" 
                                         Click="DeleteButton_Click"
-                                        Background="#E74C3C"
-                                        Foreground="White"
-                                        FontSize="12"
-                                        Padding="12,8"
+                                        Style="{StaticResource DangerButtonStyle}"
                                         Margin="0,0,20,0"
-                                        Cursor="Hand"
-                                        VerticalAlignment="Center">
-                                    <Button.Template>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
-                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="#C0392B"/>
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Button.Template>
-                                </Button>
+                                        VerticalAlignment="Center"/>
 
                                 <!-- Availability Toggle -->
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,30,0">
@@ -228,7 +145,7 @@
                                     </StackPanel>
                                 </StackPanel>
 
-                                <!-- Courier Info - Updated with converter -->
+                                <!-- Courier Info -->
                                 <StackPanel Grid.Column="4" VerticalAlignment="Center" HorizontalAlignment="Right" MinWidth="180">
                                     <TextBlock HorizontalAlignment="Right" FontWeight="SemiBold">
                                         <Run Text="ID: "/>

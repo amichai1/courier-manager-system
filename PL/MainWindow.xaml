@@ -20,7 +20,7 @@
         <converters:ScheduleStatusToColorConverter x:Key="ScheduleStatusToColor"/>
         <converters:GreaterThanZeroConverter x:Key="GreaterThanZeroConverter"/>
         
-        <!-- DataTrigger Style for Status Cards (תוספת DataTrigger) -->
+        <!-- DataTrigger Style for Status Cards -->
         <Style x:Key="StatusCardStyle" TargetType="Border">
             <Setter Property="Background" Value="{StaticResource BackgroundColor}"/>
             <Setter Property="CornerRadius" Value="8"/>
@@ -39,7 +39,7 @@
                 </Setter.Value>
             </Setter>
             <Style.Triggers>
-                <!-- EventTrigger - Hover Animation (תוספת טריגר אירועים) -->
+                <!-- EventTrigger - Hover Animation -->
                 <EventTrigger RoutedEvent="MouseEnter">
                     <BeginStoryboard>
                         <Storyboard>
@@ -93,6 +93,37 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
+        <!-- Close Button (Top Right) -->
+        <Button Grid.Row="0"
+                Content="✕"
+                Click="btnClose_Click"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Margin="0,-10,-10,0"
+                Width="32"
+                Height="32"
+                FontSize="16"
+                FontWeight="Bold"
+                Foreground="White"
+                Background="{StaticResource AccentColor}"
+                Cursor="Hand"
+                Panel.ZIndex="100">
+            <Button.Template>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border" 
+                            Background="{TemplateBinding Background}" 
+                            CornerRadius="16">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource DangerColor}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Button.Template>
+        </Button>
+
         <!-- Header with Logo/Icon  -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
             <!-- Logo Shape -->
@@ -105,16 +136,17 @@
                        VerticalAlignment="Center" FontSize="28"/>
         </StackPanel>
 
-        <!-- Clock and Time Controls -->
-        <Border Grid.Row="1" Style="{StaticResource RoundedBorderWithShadow}" Padding="20" Margin="0,0,0,20">
+        <!-- Clock, Time Controls, and Simulator - ALL IN ONE ROW -->
+        <Border Grid.Row="1" Style="{StaticResource RoundedBorderWithShadow}" Padding="15" Margin="0,0,0,20">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Current Time Display with Rotation Transform (תוספת טרנספורמציה) -->
+                <!-- Current Time Display -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="🕐" FontSize="24" VerticalAlignment="Center" Margin="0,0,10,0"
                                RenderTransformOrigin="0.5,0.5">
@@ -139,12 +171,38 @@
                 </StackPanel>
 
                 <!-- Time Control Buttons -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal">
-                    <Button Content="+1 Min" Click="btnAddOneMinute_Click" Style="{StaticResource SecondaryButton}" Padding="10,5"/>
-                    <Button Content="+1 Hour" Click="btnAddOneHour_Click" Style="{StaticResource SecondaryButton}" Padding="10,5"/>
-                    <Button Content="+1 Day" Click="btnAddOneDay_Click" Style="{StaticResource SecondaryButton}" Padding="10,5"/>
-                    <Button Content="+1 Month" Click="btnAddOneMonth_Click" Style="{StaticResource SecondaryButton}" Padding="10,5"/>
-                    <Button Content="+1 Year" Click="btnAddOneYear_Click" Style="{StaticResource SecondaryButton}" Padding="10,5"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="+1 Min" Click="btnAddOneMinute_Click" Style="{StaticResource SecondaryButton}" Padding="8,4"/>
+                    <Button Content="+1 Hour" Click="btnAddOneHour_Click" Style="{StaticResource SecondaryButton}" Padding="8,4"/>
+                    <Button Content="+1 Day" Click="btnAddOneDay_Click" Style="{StaticResource SecondaryButton}" Padding="8,4"/>
+                    <Button Content="+1 Month" Click="btnAddOneMonth_Click" Style="{StaticResource SecondaryButton}" Padding="8,4"/>
+                    <Button Content="+1 Year" Click="btnAddOneYear_Click" Style="{StaticResource SecondaryButton}" Padding="8,4"/>
+                </StackPanel>
+
+                <!-- Simulator Controls - MOVED HERE -->
+                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="15,0,0,0">
+                    <Border Background="{StaticResource AppBackgroundColor}" CornerRadius="4" Padding="8,4" Margin="0,0,5,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="⏱️" FontSize="14" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBox x:Name="txtSimulatorInterval" 
+                                     Width="45" 
+                                     Text="10" 
+                                     VerticalAlignment="Center"
+                                     Style="{StaticResource TextBoxRegular}"
+                                     FontSize="12"
+                                     Padding="4,2"
+                                     ToolTip="Interval in minutes"/>
+                            <TextBlock Text="min" FontSize="11" VerticalAlignment="Center" Margin="3,0,0,0" 
+                                       Foreground="{StaticResource LightTextColor}"/>
+                        </StackPanel>
+                    </Border>
+                    <Button x:Name="btnToggleSimulator" 
+                            Content="▶ Start" 
+                            Width="80"
+                            Click="btnToggleSimulator_Click"
+                            Style="{StaticResource PrimaryButton}"
+                            Padding="10,6"
+                            FontSize="12"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -234,7 +292,7 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- Quick Actions with Graphics -->
+                <!-- Quick Actions -->
                 <Border Grid.Row="0" Style="{StaticResource RoundedBorderWithShadow}" Padding="20" Margin="0,0,0,15">
                     <StackPanel>
                         <TextBlock Text="⚡ Quick Actions" Style="{StaticResource SubtitleHeader}"/>
@@ -245,18 +303,16 @@
 
                 <!-- Configuration Panel -->
                 <Border Grid.Row="1" Style="{StaticResource RoundedBorderWithShadow}" Padding="20" Margin="0,0,0,15">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <StackPanel>
-                            <TextBlock Text="⚙️ Configuration" Style="{StaticResource SubtitleHeader}"/>
+                    <StackPanel>
+                        <TextBlock Text="⚙️ Configuration" Style="{StaticResource SubtitleHeader}"/>
 
-                            <Label Content="Max Delivery Distance (km):" Style="{StaticResource LabelHeader}"/>
-                            <TextBox Text="{Binding Configuration.MaxDeliveryDistance, RelativeSource={RelativeSource AncestorType=Window}, UpdateSourceTrigger=PropertyChanged}" 
-                                     Style="{StaticResource TextBoxRegular}"/>
+                        <Label Content="Max Delivery Distance (km):" Style="{StaticResource LabelHeader}"/>
+                        <TextBox Text="{Binding Configuration.MaxDeliveryDistance, RelativeSource={RelativeSource AncestorType=Window}, UpdateSourceTrigger=PropertyChanged}" 
+                                 Style="{StaticResource TextBoxRegular}"/>
 
-                            <Button Content="💾 Update Config" Click="btnUpdateConfig_Click" 
-                                    Style="{StaticResource SecondaryButton}" Margin="0,15,0,0"/>
-                        </StackPanel>
-                    </ScrollViewer>
+                        <Button Content="💾 Update Config" Click="btnUpdateConfig_Click" 
+                                Style="{StaticResource SecondaryButton}" Margin="0,15,0,0"/>
+                    </StackPanel>
                 </Border>
 
                 <!-- Database Actions -->
@@ -272,10 +328,10 @@
             </Grid>
         </Grid>
 
-        <!-- Footer with Loading Indicator -->
+        <!-- Footer -->
         <Border Grid.Row="3" Margin="0,15,0,0">
             <Grid>
-                <TextBlock Text="© 2025 Wolt Delivery System" 
+                <TextBlock Text="made by ariel yazdi and amichai mukades" 
                            HorizontalAlignment="Center" 
                            Foreground="{StaticResource LightTextColor}"
                            FontSize="11"/>

@@ -96,6 +96,15 @@ namespace PL.Order
         public static readonly DependencyProperty CourierInfoVisibilityProperty =
             DependencyProperty.Register("CourierInfoVisibility", typeof(Visibility), typeof(OrderWindow), new PropertyMetadata(Visibility.Collapsed));
 
+        public Visibility CancelOrderVisibility
+        {
+            get => (Visibility)GetValue(CancelOrderVisibilityProperty);
+            set => SetValue(CancelOrderVisibilityProperty, value);
+        }
+
+        public static readonly DependencyProperty CancelOrderVisibilityProperty =
+            DependencyProperty.Register("CancelOrderVisibility", typeof(Visibility), typeof(OrderWindow), new PropertyMetadata(Visibility.Collapsed));
+
         #endregion
 
         #region Lifecycle
@@ -104,8 +113,8 @@ namespace PL.Order
         {
             PopulateComboBoxes();
             LoadOrder();
-            // LoadDeliveryHistory is now called inside LoadOrder after CurrentOrder is set
             UpdateCourierInfoVisibility();
+            UpdateCancelOrderVisibility();
         }
 
         #endregion
@@ -147,7 +156,6 @@ namespace PL.Order
                         ArialDistance = 0
                     };
 
-                    // No delivery history for new orders
                     DeliveryHistoryVisibility = Visibility.Collapsed;
                 }
                 else
@@ -160,7 +168,6 @@ namespace PL.Order
                         return;
                     }
 
-                    // Load delivery history after CurrentOrder is set
                     LoadDeliveryHistory();
                 }
 
@@ -209,16 +216,10 @@ namespace PL.Order
                     return;
                 }
 
-                // Always show the delivery history section for existing orders
                 DeliveryHistoryVisibility = Visibility.Visible;
 
-                // Get delivery history from CurrentOrder (loaded by BL)
                 var allHistory = CurrentOrder.DeliveryHistory ?? new List<BO.DeliveryPerOrderInList>();
-                
-                // Debug output
-                System.Diagnostics.Debug.WriteLine($"[OrderWindow] Order {CurrentOrder.Id} has {allHistory.Count} delivery history records");
 
-                // Take the most recent items
                 var history = allHistory
                     .OrderByDescending(d => d.EndTime ?? d.StartTimeDelivery)
                     .Take(MaxDeliveryHistoryItems)
@@ -231,13 +232,11 @@ namespace PL.Order
                 {
                     NoDeliveryHistoryVisibility = Visibility.Collapsed;
                     HasDeliveryHistoryVisibility = Visibility.Visible;
-                    System.Diagnostics.Debug.WriteLine($"[OrderWindow] Showing {history.Count} delivery history items");
                 }
                 else
                 {
                     NoDeliveryHistoryVisibility = Visibility.Visible;
                     HasDeliveryHistoryVisibility = Visibility.Collapsed;
-                    System.Diagnostics.Debug.WriteLine($"[OrderWindow] No delivery history to show");
                 }
             }
             catch (Exception ex)
@@ -316,6 +315,21 @@ namespace PL.Order
             }
         }
 
+        private void UpdateCancelOrderVisibility()
+        {
+            if (!_isAddMode && CurrentOrder != null &&
+                CurrentOrder.OrderStatus != OrderStatus.Delivered &&
+                CurrentOrder.OrderStatus != OrderStatus.Canceled &&
+                CurrentOrder.OrderStatus != OrderStatus.OrderRefused)
+            {
+                CancelOrderVisibility = Visibility.Visible;
+            }
+            else
+            {
+                CancelOrderVisibility = Visibility.Collapsed;
+            }
+        }
+
         #endregion
 
         #region Actions
@@ -370,6 +384,51 @@ namespace PL.Order
             catch (Exception ex)
             {
                 MessageBox.Show($"Unexpected error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void btnCancelOrder_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (CurrentOrder == null || CurrentOrder.Id <= 0)
+                {
+                    MessageBox.Show("No order to cancel.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                string message = CurrentOrder.CourierId.HasValue
+                    ? $"Are you sure you want to cancel Order #{CurrentOrder.Id}?\n\nThe assigned courier will be released and notified by email."
+                    : $"Are you sure you want to cancel Order #{CurrentOrder.Id}?";
+                
+                var result = MessageBox.Show(
+                    message,
+                    "Confirm Cancel Order",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (result != MessageBoxResult.Yes)
+                {
+                    return;
+                }
+
+                s_bl.Orders.CancelOrder(CurrentOrder.Id);
+
+                MessageBox.Show(
+                    $"Order #{CurrentOrder.Id} has been canceled successfully.",
+                    "Order Canceled",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+
+                Close();
+            }
+            catch (BLException ex)
+            {
+                MessageBox.Show($"Cannot cancel order: {ex.Message}", "Operation Failed", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error canceling order: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

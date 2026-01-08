@@ -1,9 +1,10 @@
-﻿namespace Dal;
+namespace Dal;
 using DalApi;
 using DO;
-using System.Linq; // Required for LINQ extension methods (FirstOrDefault, Where, Select)
-using System.Collections.Generic; // Kept, though System.Linq covers most list needs
+using System.Linq;
+using System.Collections.Generic;
 using System;
+using System.Runtime.CompilerServices;
 
 /// <summary>
 /// Implementation of data access methods for Delivery entity.
@@ -14,7 +15,7 @@ internal class DeliveryImplementation : IDelivery
     /// <summary>
     /// Creates a new delivery in the system with auto-generated running ID.
     /// </summary>
-    /// <param name="item">Delivery object with all properties filled (ID will be auto-generated)</param>
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public void Create(Delivery item)
     {
         // Generate new running ID for the delivery
@@ -33,6 +34,7 @@ internal class DeliveryImplementation : IDelivery
     /// </summary>
     /// <param name="id">ID of the delivery to delete</param>
     /// <exception cref="Exception">Thrown if delivery with the given ID does not exist</exception>
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public void Delete(int id)
     {
         // Using updated Read(int id)
@@ -47,6 +49,7 @@ internal class DeliveryImplementation : IDelivery
     /// <summary>
     /// Deletes all deliveries from the system.
     /// </summary>
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public void DeleteAll()
     {
         DataSource.Deliveries.Clear();
@@ -57,6 +60,7 @@ internal class DeliveryImplementation : IDelivery
     /// </summary>
     /// <param name="id">ID of the delivery</param>
     /// <returns>Delivery object if found, null otherwise</returns>
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public Delivery? Read(int id)
     {
         // [Chapter 8a] Using Linq To Object (FirstOrDefault) instead of List.Find
@@ -69,6 +73,7 @@ internal class DeliveryImplementation : IDelivery
     /// <param name="filter">Boolean function to filter the list</param>
     /// <returns>First delivery matching the filter, or null</returns>
     // [Chapter 8c] New Read method implementation
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public Delivery? Read(Func<Delivery, bool> filter)
     {
         // Uses FirstOrDefault on the list with the provided Func delegate
@@ -76,15 +81,16 @@ internal class DeliveryImplementation : IDelivery
     }
 
     /// <summary>
-    /// Reads all deliveries in the system, optionally filtering by a function.
-    /// </summary>
-    /// <param name="filter">Optional boolean function for filtering deliveries.</param>
-    /// <returns>Filtered collection of deliveries, or all deliveries if no filter provided.</returns>
-    // [Chapter 8b] Updated ReadAll signature and implementation using LINQ
-    public IEnumerable<Delivery> ReadAll(Func<Delivery, bool>? filter = null)
-    {
-        // If filter is null, return all items. Otherwise, apply the filter.
-        return filter == null
+    /// Reads all deliveries in the system, optionally filtering by a function.
+    /// </summary>
+    /// <param name="filter">Optional boolean function for filtering deliveries.</param>
+    /// <returns>Filtered collection of deliveries, or all deliveries if no filter provided.</returns>
+    // [Chapter 8b] Updated ReadAll signature and implementation using LINQ
+    [MethodImpl(MethodImplOptions.Synchronized)]
+    public IEnumerable<Delivery> ReadAll(Func<Delivery, bool>? filter = null)
+    {
+        // If filter is null, return all items. Otherwise, apply the filter.
+        return filter == null
      ? DataSource.Deliveries.Where(item => item != null).Select(item => item!)
      : DataSource.Deliveries.Where(item => item != null && filter(item!)).Select(item => item!);
 
@@ -95,6 +101,7 @@ internal class DeliveryImplementation : IDelivery
     /// </summary>
     /// <param name="item">Updated delivery object with valid ID</param>
     /// <exception cref="Exception">Thrown if delivery with the given ID does not exist</exception> 
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public void Update(Delivery item)
     {
         // Using the updated Read(int id) method.

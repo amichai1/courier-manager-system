@@ -4,9 +4,11 @@ using DO;
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 internal class OrderImplementation : IOrder
 {
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public void Create(Order item)
     {
         List<Order> orders = XMLTools.LoadListFromXMLSerializer<Order>(Config.s_orders_xml);
@@ -16,24 +18,28 @@ internal class OrderImplementation : IOrder
         XMLTools.SaveListToXMLSerializer(orders, Config.s_orders_xml);
     }
 
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public Order? Read(int id)
     {
         List<Order> orders = XMLTools.LoadListFromXMLSerializer<Order>(Config.s_orders_xml);
         return orders.FirstOrDefault(o => o.Id == id);
     }
 
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public Order? Read(Func<Order, bool> filter)
     {
         List<Order> orders = XMLTools.LoadListFromXMLSerializer<Order>(Config.s_orders_xml);
         return orders.FirstOrDefault(filter);
     }
 
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public IEnumerable<Order> ReadAll(Func<Order, bool>? filter = null)
     {
         List<Order> orders = XMLTools.LoadListFromXMLSerializer<Order>(Config.s_orders_xml);
         return filter is null ? orders : orders.Where(filter);
     }
 
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public void Update(Order item)
     {
         List<Order> orders = XMLTools.LoadListFromXMLSerializer<Order>(Config.s_orders_xml);
@@ -43,6 +49,7 @@ internal class OrderImplementation : IOrder
         XMLTools.SaveListToXMLSerializer(orders, Config.s_orders_xml);
     }
 
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public void Delete(int id)
     {
         List<Order> orders = XMLTools.LoadListFromXMLSerializer<Order>(Config.s_orders_xml);
@@ -51,6 +58,7 @@ internal class OrderImplementation : IOrder
         XMLTools.SaveListToXMLSerializer(orders, Config.s_orders_xml);
     }
 
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public void DeleteAll()
         => XMLTools.SaveListToXMLSerializer(new List<Order>(), Config.s_orders_xml);
 }

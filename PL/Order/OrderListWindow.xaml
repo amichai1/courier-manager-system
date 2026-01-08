@@ -8,7 +8,7 @@
         mc:Ignorable="d"
         Title="WPF Manage" Height="700" Width="1300"
         WindowStartupLocation="CenterScreen"
-        Background="#F5F7FA"
+        Background="{StaticResource AppBackgroundColor}"
         Loaded="Window_Loaded"
         Closed="Window_Closed"
         DataContext="{Binding RelativeSource={RelativeSource Mode=Self}}">
@@ -17,30 +17,6 @@
         <converters:StatusToColorConverter x:Key="StatusToColorConverter"/>
         <converters:ScheduleStatusToColorConverter x:Key="ScheduleStatusToColorConverter"/>
         <converters:DeliveryTypeToIconConverter x:Key="DeliveryTypeToIconConverter"/>
-        
-        <!-- Status Badge Style -->
-        <Style x:Key="StatusBadgeStyle" TargetType="Border">
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="12,6"/>
-            <Setter Property="HorizontalAlignment" Value="Left"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
-
-        <!-- Order Card Style -->
-        <Style x:Key="OrderCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Margin" Value="10,5"/>
-            <Setter Property="Padding" Value="15"/>
-            <Setter Property="BorderBrush" Value="#E0E0E0"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="BorderBrush" Value="{StaticResource PrimaryColor}"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
     </Window.Resources>
 
     <Grid Margin="20">
@@ -62,34 +38,16 @@
             <Button Grid.Column="0" 
                     Content="+ Add New Order" 
                     Click="btnAddOrder_Click"
-                    Background="{StaticResource PrimaryColor}"
-                    Foreground="White"
-                    FontSize="14"
-                    FontWeight="SemiBold"
-                    Padding="20,12"
-                    Cursor="Hand">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{StaticResource PrimaryHoverColor}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
-            </Button>
+                    Style="{StaticResource AddButtonStyle}"/>
 
             <!-- Title and Filter/Sort -->
             <StackPanel Grid.Column="2" HorizontalAlignment="Right">
-                <TextBlock Text="Order Management" FontSize="28" FontWeight="Bold" HorizontalAlignment="Right" Foreground="{StaticResource SecondaryColor}"/>
+                <TextBlock Text="Order Management" Style="{StaticResource PageTitleStyle}"/>
                 
                 <!-- Filter and Sort Controls -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
                     <!-- Filter by Status -->
-                    <TextBlock Text="Filter by Status" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{StaticResource LightTextColor}"/>
+                    <TextBlock Text="Filter by Status" Style="{StaticResource FilterLabelStyle}"/>
                     <ComboBox x:Name="cbxStatusFilter"
                               Width="140" 
                               Style="{StaticResource ComboBoxRegular}"
@@ -103,7 +61,7 @@
                     </ComboBox>
 
                     <!-- Sort By -->
-                    <TextBlock Text="Sort By" VerticalAlignment="Center" Margin="20,0,10,0" Foreground="{StaticResource LightTextColor}"/>
+                    <TextBlock Text="Sort By" Style="{StaticResource FilterLabelStyle}" Margin="20,0,10,0"/>
                     <ComboBox x:Name="cmbSortBy"
                               Width="130" 
                               Style="{StaticResource ComboBoxRegular}"
@@ -112,7 +70,7 @@
                               SelectionChanged="SortComboBox_SelectionChanged"/>
 
                     <!-- Sort Order -->
-                    <TextBlock Text="Order" VerticalAlignment="Center" Margin="20,0,10,0" Foreground="{StaticResource LightTextColor}"/>
+                    <TextBlock Text="Order" Style="{StaticResource FilterLabelStyle}" Margin="20,0,10,0"/>
                     <ComboBox x:Name="cmbSortOrder"
                               Width="110" 
                               Style="{StaticResource ComboBoxRegular}"
@@ -127,9 +85,8 @@
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
             <ItemsControl ItemsSource="{Binding OrderList}">
                 <ItemsControl.ItemTemplate>
-                    <!-- Update the DataTemplate bindings to use OrderInList properties -->
                     <DataTemplate>
-                        <Border Style="{StaticResource OrderCardStyle}" MouseLeftButtonDown="OrderCard_Click">
+                        <Border Style="{StaticResource CardStyle}" MouseLeftButtonDown="OrderCard_Click">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
@@ -145,6 +102,7 @@
                                         Style="{StaticResource StatusBadgeStyle}" 
                                         Background="{Binding OrderStatus, Converter={StaticResource StatusToColorConverter}}"
                                         MinWidth="90"
+                                        HorizontalAlignment="Left"
                                         Margin="0,0,20,0">
                                     <TextBlock Text="{Binding OrderStatus, Mode=OneWay}" 
                                                Foreground="White" 
@@ -192,7 +150,7 @@
                                     </StackPanel>
                                 </StackPanel>
 
-                                <!-- Order Info - Changed Id to OrderId -->
+                                <!-- Order Info -->
                                 <StackPanel Grid.Column="5" VerticalAlignment="Center" HorizontalAlignment="Right" MinWidth="150">
                                     <TextBlock HorizontalAlignment="Right" FontWeight="SemiBold">
                                         <Run Text="Order ID: "/>

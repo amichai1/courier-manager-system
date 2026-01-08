@@ -21,6 +21,9 @@ namespace PL
         private static MainWindow? s_instance = null;
         public static bool IsAdminWindowOpen => s_instance != null;
 
+        // Flag to prevent window activation during observer updates
+        private bool _suppressActivation = false;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -185,14 +188,19 @@ namespace PL
                 {
                     Mouse.OverrideCursor = Cursors.Wait;
                     CloseAllWindowsExceptMainAndLogin();
+                    
+                    // Suppress activation during initialization
+                    _suppressActivation = true;
                     s_bl.Admin.InitializeDB();
-                    // Refresh data after initialization
                     RefreshAllData();
+                    _suppressActivation = false;
+                    
                     Mouse.OverrideCursor = null;
                     MessageBox.Show("Database initialized successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
                 {
+                    _suppressActivation = false;
                     Mouse.OverrideCursor = null;
                     MessageBox.Show($"Error initializing database: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
@@ -208,14 +216,19 @@ namespace PL
                 {
                     Mouse.OverrideCursor = Cursors.Wait;
                     CloseAllWindowsExceptMainAndLogin();
+                    
+                    // Suppress activation during reset
+                    _suppressActivation = true;
                     s_bl.Admin.ResetDB();
-                    // Refresh data after reset
                     RefreshAllData();
+                    _suppressActivation = false;
+                    
                     Mouse.OverrideCursor = null;
                     MessageBox.Show("Database reset successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
                 {
+                    _suppressActivation = false;
                     Mouse.OverrideCursor = null;
                     MessageBox.Show($"Error resetting database: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
@@ -259,11 +272,27 @@ namespace PL
 
         private void Window_Closed(object sender, EventArgs e)
         {
+            // Stop simulator if running
+            if (s_bl.Admin.IsSimulatorRunning)
+            {
+                s_bl.Admin.StopSimulator();
+            }
+
             s_instance = null;
             s_bl.Admin.RemoveClockObserver(clockObserver);
             s_bl.Admin.RemoveConfigObserver(configObserver);
             s_bl.Orders.RemoveObserver(orderObserver);
             Application.Current.Shutdown();
+        }
+
+        // Override to prevent activation when suppressed
+        protected override void OnActivated(EventArgs e)
+        {
+            if (_suppressActivation)
+            {
+                return; // Don't call base - prevents window from coming to front
+            }
+            base.OnActivated(e);
         }
 
         #endregion
@@ -272,30 +301,72 @@ namespace PL
 
         private void clockObserver()
         {
-            // Use BeginInvoke with Background priority to avoid bringing window to front
             Dispatcher.BeginInvoke(new Action(() =>
             {
-                CurrentTime = s_bl.Admin.GetClock();
-            }), System.Windows.Threading.DispatcherPriority.Background);
+                if (IsLoaded && !_suppressActivation)
+                {
+                    CurrentTime = s_bl.Admin.GetClock();
+                }
+            }), System.Windows.Threading.DispatcherPriority.DataBind);
         }
 
         private void configObserver()
         {
             Dispatcher.BeginInvoke(new Action(() =>
             {
-                Configuration = s_bl.Admin.GetConfig();
-                _originalMaxDistance = Configuration.MaxDeliveryDistance ?? MaxDistanceConverter.DefaultDistance;
-            }), System.Windows.Threading.DispatcherPriority.Background);
+                if (IsLoaded && !_suppressActivation)
+                {
+                    Configuration = s_bl.Admin.GetConfig();
+                    _originalMaxDistance = Configuration.MaxDeliveryDistance ?? MaxDistanceConverter.DefaultDistance;
+                }
+            }), System.Windows.Threading.DispatcherPriority.DataBind);
         }
 
         private void orderObserver()
         {
             Dispatcher.BeginInvoke(new Action(() =>
             {
-                OrderSummary = s_bl.Orders.GetOrderStatusSummary();
-            }), System.Windows.Threading.DispatcherPriority.Background);
+                if (IsLoaded && !_suppressActivation)
+                {
+                    OrderSummary = s_bl.Orders.GetOrderStatusSummary();
+                }
+            }), System.Windows.Threading.DispatcherPriority.DataBind);
         }
 
         #endregion
+
+        private void btnClose_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
+        private void btnToggleSimulator_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (s_bl.Admin.IsSimulatorRunning)
+                {
+                    s_bl.Admin.StopSimulator();
+                    btnToggleSimulator.Content = "▶ Start";
+                    txtSimulatorInterval.IsEnabled = true;
+                }
+                else
+                {
+                    if (!int.TryParse(txtSimulatorInterval.Text, out int interval) || interval <= 0)
+                    {
+                        MessageBox.Show("Please enter a valid positive interval in minutes.", "Invalid Input", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+
+                    s_bl.Admin.StartSimulator(interval);
+                    btnToggleSimulator.Content = "⏹ Stop";
+                    txtSimulatorInterval.IsEnabled = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Simulator error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
     }
 }

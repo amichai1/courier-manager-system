@@ -49,7 +49,7 @@ namespace PL.Order
         }
 
         /// <summary>
-        /// Forces the window to appear above other windows (but not above newly opened windows)
+        /// Forces the window to appear above other windows without affecting other windows
         /// </summary>
         private static void BringToFront()
         {
@@ -60,7 +60,7 @@ namespace PL.Order
                 _instance.WindowState = WindowState.Normal;
             }
 
-            _instance.Activate();
+            // Use Focus() instead of Activate() + Topmost trick
             _instance.Focus();
         }
 
@@ -129,7 +129,7 @@ namespace PL.Order
                 {
                     QueryOrderList();
                 }
-            }), System.Windows.Threading.DispatcherPriority.Background);
+            }), System.Windows.Threading.DispatcherPriority.DataBind);
         }
 
         #endregion
@@ -182,9 +182,6 @@ namespace PL.Order
             }
         }
 
-        /// <summary>
-        /// Applies sorting to the order list based on selected sort criteria and order.
-        /// </summary>
         private IEnumerable<BO.OrderInList> ApplySorting(IEnumerable<BO.OrderInList> orders)
         {
             bool ascending = SelectedSortOrder == BO.SortOrder.Ascending;
@@ -247,16 +244,14 @@ namespace PL.Order
 
         private void OrderCard_Click(object sender, MouseButtonEventArgs e)
         {
-            // Prevent opening window if click came from interactive elements inside the card
             if (e.OriginalSource is DependencyObject source)
             {
-                // Check if click originated from a Button or other interactive control
                 DependencyObject? current = source;
                 while (current != null && current != sender)
                 {
                     if (current is Button || current is CheckBox)
                     {
-                        return; // Don't open window - click was on internal control
+                        return;
                     }
                     current = System.Windows.Media.VisualTreeHelper.GetParent(current);
                 }
@@ -265,16 +260,14 @@ namespace PL.Order
             if (sender is FrameworkElement element && element.DataContext is BO.OrderInList order)
             {
                 var window = new OrderWindow(order.OrderId);
-                window.Owner = this;
-                window.ShowDialog();
+                window.Show();
             }
         }
 
         private void btnAddOrder_Click(object sender, RoutedEventArgs e)
         {
             var window = new OrderWindow();
-            window.Owner = this;
-            window.ShowDialog();
+            window.Show();
         }
 
         private void btnRefresh_Click(object sender, RoutedEventArgs e)
@@ -287,8 +280,7 @@ namespace PL.Order
             if (SelectedOrder != null)
             {
                 var window = new OrderWindow(SelectedOrder.OrderId);
-                window.Owner = this;
-                window.ShowDialog();
+                window.Show();
             }
         }
 
