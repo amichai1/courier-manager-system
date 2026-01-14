@@ -436,7 +436,50 @@ internal static class OrderManager
 
         try
         {
-            // Logic here if needed for order periodic updates
+            List<int> ordersChangedIds = new();
+
+            lock (AdminManager.BlMutex)
+            {
+                var config = AdminManager.GetConfig();
+                
+                // Get all active orders (not yet delivered)
+                var activeOrders = s_dal.Order.ReadAll(o => !o.DeliveryDate.HasValue).ToList();
+
+                foreach (var order in activeOrders)
+                {
+                    // Calculate critical time thresholds
+                    DateTime maxTime = order.CreatedAt.Add(config.MaxDeliveryTime);
+                    DateTime riskTime = maxTime.Subtract(config.RiskRange);
+
+                    // Check if we crossed the Risk threshold (OnTime -> InRisk)
+                    if (oldClock < riskTime && newClock >= riskTime)
+                    {
+                        ordersChangedIds.Add(order.Id);
+                        System.Diagnostics.Debug.WriteLine($"[SIMULATOR] Order {order.Id} transitioned to InRisk");
+                    }
+                    // Check if we crossed the Late threshold (InRisk/OnTime -> Late)
+                    else if (oldClock < maxTime && newClock >= maxTime)
+                    {
+                        ordersChangedIds.Add(order.Id);
+                        System.Diagnostics.Debug.WriteLine($"[SIMULATOR] Order {order.Id} transitioned to Late");
+                    }
+                }
+            }
+
+            // Notify UI to refresh these items (outside lock to prevent deadlocks)
+            foreach (var id in ordersChangedIds)
+            {
+                Observers.NotifyItemUpdated(id);
+            }
+            
+            if (ordersChangedIds.Any())
+            {
+                Observers.NotifyListUpdated();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ERROR] PeriodicOrderUpdates: {ex.Message}");
         }
         finally
         {
@@ -587,7 +630,24 @@ internal static class OrderManager
             }
 
             // Step 2: Geocode address asynchronously - await the geocoding service
-            var (lat, lon, geocodeStatus) = await GeocodingService.GeocodeAddressAsync(order.Address).ConfigureAwait(false);
+            GeocodingService.GeocodingStatus geocodeStatus = GeocodingService.GeocodingStatus.NetworkError;
+            double lat = 0;
+            double lon = 0;
+
+            try
+            {
+                // ✅ Use ConfigureAwait(true) to return to UI thread
+                var (geocodeLat, geocodeLon, status) = await GeocodingService.GeocodeAddressAsync(order.Address).ConfigureAwait(true);
+                lat = geocodeLat;
+                lon = geocodeLon;
+                geocodeStatus = status;
+            }
+            catch (Exception geocodeEx)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ORDER] Geocoding exception for: {order.Address}: {geocodeEx.Message}");
+                // Treat any exception as network error and continue with default coordinates
+                geocodeStatus = GeocodingService.GeocodingStatus.NetworkError;
+            }
 
             // Step 3: Handle geocoding results
             if (geocodeStatus == GeocodingService.GeocodingStatus.Success)
@@ -599,20 +659,32 @@ internal static class OrderManager
             }
             else if (geocodeStatus == GeocodingService.GeocodingStatus.InvalidAddress)
             {
+                // ✅ Return BEFORE creating order
                 return (false, $"Address '{order.Address}' could not be found. Please verify the address is correct.", geocodeStatus);
             }
             else if (geocodeStatus == GeocodingService.GeocodingStatus.NetworkError)
             {
                 System.Diagnostics.Debug.WriteLine($"[ORDER] Geocoding network error for: {order.Address}. Using estimated location.");
+                // Use default coordinates (0, 0) or order's current coordinates
+                if (order.Latitude == 0 && order.Longitude == 0)
+                {
+                    order.Latitude = 0;
+                    order.Longitude = 0;
+                }
             }
 
-            await Task.CompletedTask.ConfigureAwait(true);
+            // ✅ ONLY create order AFTER all validation and geocoding is successful
+            // This is inside the try block, so if creation fails, we return error WITHOUT duplicating
+            lock (AdminManager.BlMutex)
+            {
+                CreateOrderWithoutNotification(order);
+                System.Diagnostics.Debug.WriteLine($"[ORDER] Order created successfully with ID: {order.Id}");
 
-            CreateOrderWithoutNotification(order);
-            System.Diagnostics.Debug.WriteLine($"[ORDER] Order created successfully with ID: {order.Id}");
+                // Notify observers ONLY after successful creation
+                Observers.NotifyListUpdated();
+            }
 
-            Observers.NotifyListUpdated();
-
+            // ✅ Fire-and-forget email notification (doesn't affect success)
             _ = EmailHelper.SendNewOrderNotificationToNearbyCouriersAsync(order).ConfigureAwait(false);
 
             return (true, null, geocodeStatus);
@@ -620,6 +692,7 @@ internal static class OrderManager
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[ORDER ERROR] CreateOrderAsync failed: {ex.Message}");
+            // ✅ Order is NOT created if we reach here (because creation happens after all validation)
             return (false, $"Error creating order: {ex.Message}", GeocodingService.GeocodingStatus.NetworkError);
         }
     }
@@ -627,14 +700,13 @@ internal static class OrderManager
     /// <summary>
     /// Helper method - creates order without triggering observers
     /// Used by CreateOrderAsync to avoid lock contention
+    /// NOTE: Must be called INSIDE lock (AdminManager.BlMutex)
     /// </summary>
     private static void CreateOrderWithoutNotification(BO.Order order)
     {
-        lock (AdminManager.BlMutex)
-        {
-            DO.Order doOrder = ConvertBOToDO(order);
-            s_dal.Order.Create(doOrder);
-        }
+        // ✅ Lock is ALREADY held by caller, don't add another one!
+        DO.Order doOrder = ConvertBOToDO(order);
+        s_dal.Order.Create(doOrder);
     }
 
     /// <summary>
@@ -659,26 +731,35 @@ internal static class OrderManager
                 System.Diagnostics.Debug.WriteLine($"[ORDER] Address changed from '{originalAddress}' to '{order.Address}'");
 
                 // Step 2: Geocode new address asynchronously - await
-                var (lat, lon, status) = await GeocodingService.GeocodeAddressAsync(order.Address).ConfigureAwait(false);
-                geocodeStatus = status;
+                // ✅ Use ConfigureAwait(true) to return to UI thread
+                try
+                {
+                    var (lat, lon, status) = await GeocodingService.GeocodeAddressAsync(order.Address).ConfigureAwait(true);
+                    geocodeStatus = status;
 
-                // Step 3: Handle geocoding results
-                if (geocodeStatus == GeocodingService.GeocodingStatus.Success)
-                {
-                    order.Latitude = lat;
-                    order.Longitude = lon;
-                    System.Diagnostics.Debug.WriteLine($"[ORDER] New address geocoded successfully");
+                    // Step 3: Handle geocoding results
+                    if (geocodeStatus == GeocodingService.GeocodingStatus.Success)
+                    {
+                        order.Latitude = lat;
+                        order.Longitude = lon;
+                        System.Diagnostics.Debug.WriteLine($"[ORDER] New address geocoded successfully");
+                    }
+                    else if (geocodeStatus == GeocodingService.GeocodingStatus.InvalidAddress)
+                    {
+                        // Invalid address - DO NOT update the order
+                        System.Diagnostics.Debug.WriteLine($"[ORDER] New address is invalid: {order.Address}");
+                        return (false, $"New address '{order.Address}' could not be found. Please verify.", geocodeStatus);
+                    }
+                    else if (geocodeStatus == GeocodingService.GeocodingStatus.NetworkError)
+                    {
+                        // Network error - update with existing coordinates
+                        System.Diagnostics.Debug.WriteLine($"[ORDER] Geocoding network error. Using existing coordinates.");
+                    }
                 }
-                else if (geocodeStatus == GeocodingService.GeocodingStatus.InvalidAddress)
+                catch (Exception geocodeEx)
                 {
-                    // Invalid address - DO NOT update the order
-                    System.Diagnostics.Debug.WriteLine($"[ORDER] New address is invalid: {order.Address}");
-                    return (false, $"New address '{order.Address}' could not be found. Please verify.", geocodeStatus);
-                }
-                else if (geocodeStatus == GeocodingService.GeocodingStatus.NetworkError)
-                {
-                    // Network error - update with existing coordinates
-                    System.Diagnostics.Debug.WriteLine($"[ORDER] Geocoding network error. Using existing coordinates.");
+                    System.Diagnostics.Debug.WriteLine($"[ORDER] Geocoding exception: {geocodeEx.Message}");
+                    geocodeStatus = GeocodingService.GeocodingStatus.NetworkError;
                 }
             }
             else if (order.Address == originalAddress)
@@ -686,16 +767,16 @@ internal static class OrderManager
                 System.Diagnostics.Debug.WriteLine($"[ORDER] Address unchanged, skipping geocoding");
             }
 
-            // ✅ Step 4: CRITICAL - Return to Main Thread before calling Observers
-            await Task.CompletedTask.ConfigureAwait(true);
+            // ✅ Step 4: Update order
+            lock (AdminManager.BlMutex)
+            {
+                s_dal.Order.Update(ConvertBOToDO(order));
+                System.Diagnostics.Debug.WriteLine($"[ORDER] Order updated successfully");
 
-            // ✅ Step 5: Update WITHOUT notification (without Observers!)
-            UpdateOrderWithoutNotification(order);
-            System.Diagnostics.Debug.WriteLine($"[ORDER] Order updated successfully");
-
-            // ✅ Step 6: Notify observers AFTER update
-            Observers.NotifyItemUpdated(order.Id);
-            Observers.NotifyListUpdated();
+                // Notify observers ONLY after successful update
+                Observers.NotifyItemUpdated(order.Id);
+                Observers.NotifyListUpdated();
+            }
 
             return (true, null, geocodeStatus);
         }

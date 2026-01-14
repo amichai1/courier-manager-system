@@ -54,8 +54,8 @@ public static class Initialization
 
     private static void CreateConfig()
     {
-        // Set clock to January 21, 2026 at 2:00 PM (08:00)
-        s_dal!.Config.Clock = new DateTime(2026, 1, 21, 8, 0, 0);
+        // Set clock to January 21, 2026 at 2:00 PM (14:00)
+        s_dal!.Config.Clock = new DateTime(2026, 1, 21, 14, 0, 0); 
         s_dal.Config.ManagerId = 123456789;
         s_dal.Config.ManagerPassword = "123456789";
         s_dal.Config.CompanyAddress = WOLT_ADDRESS;
@@ -97,7 +97,10 @@ public static class Initialization
             string plainPassword = GenerateStrongPassword();
             double? maxDistance = s_rand.Next(10, 51);
             DeliveryType deliveryType = deliveryTypes[i % deliveryTypes.Length];
-            DateTime startDate = s_dal!.Config.Clock.AddDays(-s_rand.Next(30, 180));
+            
+            // ✅ FIX: ALL couriers start working at the simulator's current clock time
+            // So they won't be automatically deactivated when simulator time advances
+            DateTime startDate = s_dal!.Config.Clock;
 
             Courier courier = new Courier(id, startDate)
             {
@@ -114,7 +117,7 @@ public static class Initialization
 
             s_dal.Courier.Create(courier);
             s_courierIds.Add(id);
-            Console.WriteLine($"  Created: {courierNames[i]}, ID: {id}, Password: {plainPassword}");
+            Console.WriteLine($"  Created: {courierNames[i]}, ID: {id}, Password: {plainPassword}, Start Date: {startDate:yyyy-MM-dd HH:mm:ss}");
         }
     }
 

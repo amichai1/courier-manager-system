@@ -713,18 +713,29 @@ internal static class CourierManager
             try
             {
                 TimeSpan maxInactivityTime = AdminManager.GetConfig().InactivityRange;
-                bool courierUpdated = false; // Stage 5
+                bool courierUpdated = false;
                 
-                // LINQ Method Syntax - demonstrates: Where with lambda, ToList
+                // LINQ Method Syntax - get only active couriers
                 var activeCouriersToCheck = s_dal.Courier.ReadAll()
                     .Where(c => c.IsActive)
                     .ToList();
 
-                // LINQ Query Syntax - demonstrates: where with complex condition, select
+                // LINQ Query Syntax - find couriers exceeding inactivity time threshold
                 var couriersToDeactivate = (from courier in activeCouriersToCheck
-                                       let timeSinceStart = newClock - courier.StartWorkingDate
-                                       where timeSinceStart > maxInactivityTime
-                                       select courier).ToList();
+                                           let timeSinceStart = newClock - courier.StartWorkingDate
+                                           where timeSinceStart > maxInactivityTime
+                                           select courier).ToList();
+
+                // Debug: Log details about the check
+                if (activeCouriersToCheck.Any())
+                {
+                    System.Diagnostics.Debug.WriteLine($"[COURIER] Periodic check - Current time: {newClock}, MaxInactivityTime: {maxInactivityTime.TotalDays} days");
+                    foreach (var c in activeCouriersToCheck)
+                    {
+                        TimeSpan elapsed = newClock - c.StartWorkingDate;
+                        System.Diagnostics.Debug.WriteLine($"[COURIER] Courier {c.Id} ({c.Name}) - Started: {c.StartWorkingDate}, Elapsed: {elapsed.TotalDays} days, Status: {(elapsed > maxInactivityTime ? "TO DEACTIVATE" : "OK")}");
+                    }
+                }
 
                 // Update each inactive courier
                 foreach (var doCourier in couriersToDeactivate)

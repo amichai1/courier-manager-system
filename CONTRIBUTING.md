@@ -283,8 +283,8 @@ internal static class AdminManager
             OrderManager.PeriodicOrderUpdates(oldClock, newClock);
             DeliveryManager.PeriodicDeliveryUpdates(oldClock, newClock);
             
-            // DISABLED: Prevent expiration status changes
-             //OrderManager.CheckAndUpdateExpiredOrders();
+            // DISABLED: Order status transitions (expiration) are stopped to keep simulator focusing only on time/schedule.
+            // OrderManager.CheckAndUpdateExpiredOrders();
         }
         catch (Exception ex)
         {
@@ -306,7 +306,22 @@ internal static class AdminManager
            return;
 
         try
-        {   
+        {
+            // DISABLED: Random simulation operations are stopped to prevent status changes.
+            /*
+            Random rand = new();
+            int action = rand.Next(100);
+
+            if (action < 30)
+                SimulateOrderPickup(rand);
+            else if (action < 60)
+                SimulateOrderDelivery(rand);
+            else if (action < 80)
+                SimulateCourierLocationUpdate(rand);
+            else
+                SimulateOrderAssignment(rand);
+            */
+            
             await Task.Yield(); // Ensure async context
         }
         catch (Exception ex)
@@ -324,7 +339,98 @@ internal static class AdminManager
     // Manager methods have their own locks and handle notifications locally/safely.
     // releasing lock before calling manager prevents wide-locking the DB.
     
-   
+    private static void SimulateOrderPickup(Random rand)
+    {
+        List<DO.Order> ordersToPickup;
+        lock (BlMutex)
+        {
+            ordersToPickup = s_dal.Order.ReadAll()
+                .Where(o => o.CourierAssociatedDate.HasValue && !o.PickupDate.HasValue)
+                .ToList();
+        }
+
+        if (ordersToPickup.Count > 0)
+        {
+            var orderToPickup = ordersToPickup[rand.Next(ordersToPickup.Count)];
+            // We call OrderManager direct (internal). It will handle logic + notifications.
+            OrderManager.PickUpOrder(orderToPickup.Id);
+            System.Diagnostics.Debug.WriteLine($"[SIMULATOR] Picked up order {orderToPickup.Id}");
+        }
+    }
+
+    private static void SimulateOrderDelivery(Random rand)
+    {
+        List<DO.Order> ordersToDeliver;
+        lock (BlMutex)
+        {
+            ordersToDeliver = s_dal.Order.ReadAll()
+                .Where(o => o.PickupDate.HasValue && !o.DeliveryDate.HasValue)
+                .ToList();
+        }
+
+        if (ordersToDeliver.Count > 0)
+        {
+            var orderToDeliver = ordersToDeliver[rand.Next(ordersToDeliver.Count)];
+            OrderManager.DeliverOrder(orderToDeliver.Id);
+            System.Diagnostics.Debug.WriteLine($"[SIMULATOR] Delivered order {orderToDeliver.Id}");
+        }
+    }
+
+    private static void SimulateCourierLocationUpdate(Random rand)
+    {
+        List<DO.Courier> activeCouriers;
+        lock (BlMutex)
+        {
+            activeCouriers = s_dal.Courier.ReadAll()
+                .Where(c => c.IsActive)
+                .ToList();
+        }
+
+        if (activeCouriers.Count > 0)
+        {
+            var courier = activeCouriers[rand.Next(activeCouriers.Count)];
+            double offset = 0.01;
+            double newLat = courier.AddressLatitude + (rand.NextDouble() - 0.5) * offset;
+            double newLon = courier.AddressLongitude + (rand.NextDouble() - 0.5) * offset;
+
+            CourierManager.UpdateCourierLocation(courier.Id, new BO.Location
+            {
+                Latitude = newLat,
+                Longitude = newLon
+            });
+             System.Diagnostics.Debug.WriteLine($"[SIMULATOR] Updated courier {courier.Id} location");
+        }
+    }
+
+    private static void SimulateOrderAssignment(Random rand)
+    {
+        List<DO.Order> openOrders;
+        List<DO.Courier> availableCouriers;
+
+        lock (BlMutex)
+        {
+            openOrders = s_dal.Order.ReadAll()
+                .Where(o => !o.CourierId.HasValue && !o.DeliveryDate.HasValue)
+                .ToList();
+
+            availableCouriers = s_dal.Courier.ReadAll()
+                .Where(c => c.IsActive)
+                .ToList();
+        }
+
+        if (openOrders.Count > 0 && availableCouriers.Count > 0)
+        {
+            var order = openOrders[rand.Next(openOrders.Count)];
+            var courier = availableCouriers[rand.Next(availableCouriers.Count)];
+            
+            try 
+            { 
+                OrderManager.AssociateCourierToOrder(order.Id, courier.Id); 
+                System.Diagnostics.Debug.WriteLine($"[SIMULATOR] Assigned courier {courier.Id} to order {order.Id}");
+            } catch { }
+        }
+    }
+
     // --- Start / Stop ---
 
     [MethodImpl(MethodImplOptions.Synchronized)]

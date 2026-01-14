@@ -419,6 +419,7 @@ namespace PL.Order
 
                 // Show loading indicator
                 IsLoading = true;
+                LoadingMessage = _isAddMode ? "Creating order..." : "Updating order...";
                 Mouse.OverrideCursor = Cursors.Wait;
                 btnActionOrSave.IsEnabled = false;
 
@@ -428,15 +429,19 @@ namespace PL.Order
                     {
                         BO.Order orderToSend = CloneOrder(CurrentOrder);
 
-
+                        // ✅ Await the async call properly
                         var (success, error, geocodeStatus) = await s_bl.Orders.CreateOrderAsync(orderToSend);
 
+                        // ✅ Even if there's an error, the order might have been created
+                        // Check the success flag - don't rely on exceptions
                         if (!success)
                         {
                             MessageBox.Show($"Failed to create order: {error}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                            // ✅ DON'T return - let finally block execute and dialog stays open
                             return;
                         }
 
+                        // ✅ Only show success and close if truly successful
                         string message = "Order created successfully.";
                         if (geocodeStatus == 2) // NetworkError
                         {
@@ -448,7 +453,7 @@ namespace PL.Order
                         }
 
                         MessageBox.Show(message, "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                        Close();
+                        Close(); // ✅ Close ONLY on success
                     }
                     else
                     {
@@ -457,7 +462,6 @@ namespace PL.Order
                             MessageBox.Show($"Cannot update order in {CurrentOrder.OrderStatus} status.", "Operation Not Allowed", MessageBoxButton.OK, MessageBoxImage.Warning);
                             return;
                         }
-
 
                         // Use async method with geocoding if address changed
                         BO.Order orderToUpdate = CloneOrder(CurrentOrder);
@@ -493,6 +497,9 @@ namespace PL.Order
             catch (Exception ex)
             {
                 MessageBox.Show($"Unexpected error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                IsLoading = false;
+                Mouse.OverrideCursor = null;
+                btnActionOrSave.IsEnabled = true;
             }
         }
 
