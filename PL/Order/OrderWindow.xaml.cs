@@ -398,8 +398,10 @@ namespace PL.Order
                 {
                     if (_isAddMode)
                     {
+                        BO.Order orderToSend = CloneOrder(CurrentOrder);
+
                         // Use async method with geocoding
-                        var (success, error, geocodeStatus) = await s_bl.Orders.CreateOrderAsync(CurrentOrder);
+                        var (success, error, geocodeStatus) = await s_bl.Orders.CreateOrderAsync(orderToSend);
 
                         if (!success)
                         {
@@ -427,8 +429,10 @@ namespace PL.Order
                             return;
                         }
 
+
                         // Use async method with geocoding if address changed
-                        var (success, error, geocodeStatus) = await s_bl.Orders.UpdateOrderAsync(CurrentOrder, _originalAddress);
+                        BO.Order orderToUpdate = CloneOrder(CurrentOrder);
+                        var (success, error, geocodeStatus) = await s_bl.Orders.UpdateOrderAsync(orderToUpdate, _originalAddress);
 
                         if (!success)
                         {

@@ -21,15 +21,9 @@
             <converters:DeliveryTimeRemainingConverter x:Key="DeliveryTimeConverter"/>
             <converters:AllTrueMultiConverter x:Key="AllTrueConverter"/>
 
-            <!-- Application Icon -->
-            <BitmapImage x:Key="AppIcon" UriSource="/Resources/app_icon.png"/>
-            
-            <!-- Default Window Style with Icon -->
-            <Style TargetType="Window" x:Key="BaseWindowStyle">
-                <Setter Property="Icon" Value="{StaticResource AppIcon}"/>
-                <Setter Property="Background" Value="{StaticResource AppBackgroundColor}"/>
-            </Style>
-            
+            <!-- Stage 7 - Single Value Converters -->
+            <converters:BoolInverterConverter x:Key="BoolInverterConverter"/>
+            <converters:SimulatorButtonTextConverter x:Key="SimulatorButtonTextConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

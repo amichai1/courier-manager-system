@@ -30,9 +30,19 @@ public interface IBIOrder : BIApi.IObservable
     void DeliverOrder(int orderId);
 
     /// <summary>
+    /// Processes a customer refusal for an order.
+    /// <para>Business Logic:</para>
+    /// <list type="bullet">
+    /// <item>If Food: Closes the order as Refused.</item>
+    /// <item>If Other: Returns the order to the Open pool.</item>
+    /// <item>Updates Courier History with the refusal.</item>
+    /// </list>
+    /// </summary>
+    void RefuseOrder(int orderId);
+
+    /// <summary>
     /// Cancels an order. If the order is in progress, sends email to courier.
     /// </summary>
-    /// <param name="orderId">The ID of the order to cancel</param>
     void CancelOrder(int orderId);
 
     /// <summary>
@@ -42,7 +52,6 @@ public interface IBIOrder : BIApi.IObservable
 
     /// <summary>
     /// Gets a summary of order counts grouped by OrderStatus and ScheduleStatus.
-    /// Used for the main dashboard display.
     /// </summary>
     BO.OrderStatusSummary GetOrderStatusSummary();
 

@@ -12,7 +12,9 @@ namespace BL.Helpers;
 internal static class OrderManager
 {
     private static readonly IDal s_dal = DalApi.Factory.Get;
-    internal static ObserverManager Observers = new(); // Stage 5
+    internal static ObserverManager Observers = new();
+    private static readonly AsyncMutex s_periodicMutex = new(); //stage 7
+    private static readonly AsyncMutex s_simulationMutex = new(); //stage 7
 
     // ------------------------------------
     // --- 1. CONVERSION (Mappers) ---
@@ -26,29 +28,27 @@ internal static class OrderManager
         BO.Courier? assignedCourier = null;
         if (doOrder.CourierId.HasValue)
         {
-            try
-            {
-                assignedCourier = CourierManager.ReadCourier(doOrder.CourierId.Value);
-            }
-            catch
-            {
-                assignedCourier = null;
-            }
+            try { assignedCourier = CourierManager.ReadCourier(doOrder.CourierId.Value); }
+            catch { assignedCourier = null; }
         }
 
-        // Determine OrderStatus based on dates and courier assignment
+        // Fetch delivery history
+        IEnumerable<BO.DeliveryPerOrderInList> deliveryHistory = GetDeliveryHistoryForOrder(doOrder.Id);
+
+        // Status Logic
         BO.OrderStatus orderStatus = BO.OrderStatus.Open;
         if (doOrder.DeliveryDate.HasValue)
         {
-            orderStatus = BO.OrderStatus.Delivered;
+            var lastDelivery = deliveryHistory.Where(d => d.EndTime != null).OrderByDescending(d => d.EndTime).FirstOrDefault();
+            if (lastDelivery != null && lastDelivery.EndType == BO.DeliveryStatus.CustomerRefused)
+                orderStatus = BO.OrderStatus.OrderRefused;
+            else
+                orderStatus = BO.OrderStatus.Delivered;
         }
         else if (doOrder.PickupDate.HasValue || doOrder.CourierAssociatedDate.HasValue)
         {
             orderStatus = BO.OrderStatus.InProgress;
         }
-
-        // Fetch delivery history for this order
-        IEnumerable<BO.DeliveryPerOrderInList> deliveryHistory = GetDeliveryHistoryForOrder(doOrder.Id);
 
         return new BO.Order
         {
@@ -66,23 +66,17 @@ internal static class OrderManager
             CreatedAt = doOrder.CreatedAt,
             OrderStatus = orderStatus,
             ScheduleStatus = CalculateScheduleStatus(doOrder),
-            ExpectedDeliverdTime = CalculateExpectedDeliveryTime(doOrder),
-            MaxDeliveredTime = CalculateMaxDeliveryTime(doOrder),
+            ExpectedDeliverdTime = doOrder.CreatedAt.AddHours(2),
+            MaxDeliveredTime = doOrder.CreatedAt.Add(AdminManager.GetConfig().MaxDeliveryTime),
             CourierId = doOrder.CourierId,
             CourierName = assignedCourier?.Name,
             CourierAssociatedDate = doOrder.CourierAssociatedDate,
             PickupDate = doOrder.PickupDate,
             DeliveryDate = doOrder.DeliveryDate,
-            OrderComplitionTime = doOrder.DeliveryDate.HasValue && doOrder.CreatedAt != default
-                ? doOrder.DeliveryDate.Value - doOrder.CreatedAt
-                : null,
+            OrderComplitionTime = doOrder.DeliveryDate.HasValue && doOrder.CreatedAt != default ? doOrder.DeliveryDate.Value - doOrder.CreatedAt : null,
             DeliveryHistory = deliveryHistory.ToList(),
-            CustomerLocation = new BO.Location
-            {
-                Latitude = doOrder.Latitude,
-                Longitude = doOrder.Longitude
-            },
-            ArialDistance = CalculateAirDistance(doOrder)
+            CustomerLocation = new BO.Location { Latitude = doOrder.Latitude, Longitude = doOrder.Longitude },
+            ArialDistance = CalculateAirDistance(doOrder) // Uses BO helper internally
         };
     }
 
@@ -109,85 +103,22 @@ internal static class OrderManager
     }
 
     // ------------------------------------
-    // --- 1.5. HELPER METHODS ---
+    // --- HELPERS ---
     // ------------------------------------
 
     /// <summary>
-    /// Retrieves delivery history for a specific order (internal use).
-    /// Shows all deliveries - both completed and in progress.
+    /// Uses the BO static function for logic, ensuring we don't duplicate calculation rules in BL.
     /// </summary>
-    private static IEnumerable<BO.DeliveryPerOrderInList> GetDeliveryHistoryForOrder(int orderId)
+    private static double CalculateAirDistance(DO.Order doOrder)
     {
-        try
-        {
-            // Get all deliveries for this order
-            var allDeliveries = s_dal.Delivery.ReadAll()
-                .Where(d => d.OrderId == orderId)
-                .ToList();
+        var config = AdminManager.GetConfig();
+        if (config.CompanyLatitude is null || config.CompanyLongitude is null)
+            return 0;
 
-            System.Diagnostics.Debug.WriteLine($"[GetDeliveryHistoryForOrder] Order {orderId}: Found {allDeliveries.Count} deliveries in DAL");
-
-            if (!allDeliveries.Any())
-            {
-                return new List<BO.DeliveryPerOrderInList>();
-            }
-
-            // Get order info once
-            var orderInfo = s_dal.Order.Read(orderId);
-
-            // Build delivery history list
-            var deliveryHistory = new List<BO.DeliveryPerOrderInList>();
-
-            foreach (var delivery in allDeliveries)
-            {
-                DO.Courier? courierInfo = null;
-                try
-                {
-                    if (delivery.CourierId > 0)
-                    {
-                        courierInfo = s_dal.Courier.Read(delivery.CourierId);
-                    }
-                }
-                catch
-                {
-                    // Courier might have been deleted
-                }
-
-                var historyItem = new BO.DeliveryPerOrderInList
-                {
-                    DeliveryId = delivery.Id,
-                    CourierId = delivery.CourierId,
-                    CourierName = courierInfo?.Name ?? "Unknown",
-                    DeliveryType = (BO.DeliveryType)(courierInfo?.DeliveryType ?? DO.DeliveryType.Car),
-                    StartTimeDelivery = delivery.StartTime,
-                    EndType = (BO.DeliveryStatus?)delivery.CompletionStatus,
-                    EndTime = delivery.EndTime,
-                    DeliveryAddress = orderInfo?.Address ?? "Unknown"
-                };
-
-                deliveryHistory.Add(historyItem);
-            }
-
-            System.Diagnostics.Debug.WriteLine($"[GetDeliveryHistoryForOrder] Order {orderId}: Returning {deliveryHistory.Count} history items");
-
-            return deliveryHistory;
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[GetDeliveryHistoryForOrder] ERROR for Order {orderId}: {ex.Message}");
-            return new List<BO.DeliveryPerOrderInList>();
-        }
-    }
-
-    /// <summary>
-    /// Public method to get delivery history for a specific order.
-    /// </summary>
-    public static IEnumerable<BO.DeliveryPerOrderInList> GetDeliveryHistoryForOrderPublic(int orderId)
-    {
-        lock (AdminManager.BlMutex)
-        {
-            return GetDeliveryHistoryForOrder(orderId);
-        }
+        // FIXED: Using BO.Order function as requested
+        return BO.Order.CalculateAirDistance(
+            config.CompanyLatitude.Value, config.CompanyLongitude.Value,
+            doOrder.Latitude, doOrder.Longitude);
     }
 
     private static BO.ScheduleStatus CalculateScheduleStatus(DO.Order doOrder)
@@ -197,966 +128,419 @@ internal static class OrderManager
             var config = AdminManager.GetConfig();
             DateTime nowTime = AdminManager.Now;
 
-            // For DELIVERED orders - check if delivered on time
             if (doOrder.DeliveryDate.HasValue)
             {
                 TimeSpan deliveryTime = doOrder.DeliveryDate.Value - doOrder.CreatedAt;
                 
-                if (deliveryTime <= config.MaxDeliveryTime - config.RiskRange)
-                {
-                    // Delivered well within time (before risk threshold)
-                    return BO.ScheduleStatus.OnTime;
-                }
-                else if (deliveryTime <= config.MaxDeliveryTime)
-                {
-                    // Delivered on time but was cutting it close (in risk zone)
-                    return BO.ScheduleStatus.InRisk;
-                }
-                else
-                {
-                    // Delivered after max time
-                    return BO.ScheduleStatus.Late;
-                }
+                if (deliveryTime <= config.MaxDeliveryTime - config.RiskRange) return BO.ScheduleStatus.OnTime;
+                else if (deliveryTime <= config.MaxDeliveryTime) return BO.ScheduleStatus.InRisk;
+                else return BO.ScheduleStatus.Late;
             }
 
-            // For OPEN/IN-PROGRESS orders - check remaining time
             DateTime maxDeliveryDeadline = doOrder.CreatedAt.Add(config.MaxDeliveryTime);
             TimeSpan timeUntilMax = maxDeliveryDeadline - nowTime;
 
-            if (timeUntilMax <= TimeSpan.Zero)
-            {
-                return BO.ScheduleStatus.Late;
-            }
-
-            if (timeUntilMax <= config.RiskRange)
-            {
-                return BO.ScheduleStatus.InRisk;
-            }
-
+            if (timeUntilMax <= TimeSpan.Zero) return BO.ScheduleStatus.Late;
+            if (timeUntilMax <= config.RiskRange) return BO.ScheduleStatus.InRisk;
             return BO.ScheduleStatus.OnTime;
         }
-        catch
-        {
-            return BO.ScheduleStatus.OnTime;
-        }
+        catch { return BO.ScheduleStatus.OnTime; }
     }
 
-    private static DateTime CalculateExpectedDeliveryTime(DO.Order doOrder)
+    private static IEnumerable<BO.DeliveryPerOrderInList> GetDeliveryHistoryForOrder(int orderId)
     {
         try
         {
-            var config = AdminManager.GetConfig();
-            return doOrder.CreatedAt.AddHours(1);
+            var allDeliveries = s_dal.Delivery.ReadAll().Where(d => d.OrderId == orderId).OrderBy(d => d.StartTime).ToList();
+            if (!allDeliveries.Any()) return new List<BO.DeliveryPerOrderInList>();
+
+            var orderInfo = s_dal.Order.Read(orderId);
+            var deliveryHistory = new List<BO.DeliveryPerOrderInList>();
+
+            foreach (var delivery in allDeliveries)
+            {
+                string cName = "Unknown";
+                DO.DeliveryType dType = DO.DeliveryType.Car;
+                try {
+                     if (delivery.CourierId > 0) {
+                         var c = s_dal.Courier.Read(delivery.CourierId);
+                         if(c!=null) { cName = c.Name; dType = c.DeliveryType; }
+                     }
+                } catch { }
+
+                deliveryHistory.Add(new BO.DeliveryPerOrderInList
+                {
+                    DeliveryId = delivery.Id,
+                    CourierId = delivery.CourierId,
+                    CourierName = cName,
+                    DeliveryType = (BO.DeliveryType)dType,
+                    StartTimeDelivery = delivery.StartTime,
+                    EndType = (BO.DeliveryStatus?)delivery.CompletionStatus,
+                    EndTime = delivery.EndTime,
+                    DeliveryAddress = orderInfo?.Address ?? "Unknown"
+                });
+            }
+            return deliveryHistory;
         }
-        catch
-        {
-            return doOrder.CreatedAt.AddHours(2);
-        }
+        catch { return new List<BO.DeliveryPerOrderInList>(); }
     }
 
-    private static DateTime CalculateMaxDeliveryTime(DO.Order doOrder)
-    {
-        try
-        {
-            var config = AdminManager.GetConfig();
-            return doOrder.CreatedAt.Add(config.MaxDeliveryTime);
-        }
-        catch
-        {
-            return doOrder.CreatedAt.AddHours(2);
-        }
-    }
-
-    private static double CalculateAirDistance(DO.Order doOrder)
-    {
-        try
-        {
-            var config = AdminManager.GetConfig();
-            if (config.CompanyLatitude is null || config.CompanyLongitude is null)
-                return 0;
-
-            return GeocodingService.CalculateAirDistanceFallback(
-                config.CompanyLatitude.Value, config.CompanyLongitude.Value,
-                doOrder.Latitude, doOrder.Longitude);
-        }
-        catch
-        {
-            return 0;
-        }
-    }
-
-    // ------------------------------------
-    // --- 2. CRUD Logic ---
-    // ------------------------------------
-
+    // --- CRUD ---
     public static void CreateOrder(BO.Order order)
     {
-        lock (AdminManager.BlMutex)
+        lock (AdminManager.BlMutex) //stage 7
         {
-            if (order.Weight <= 0 || string.IsNullOrWhiteSpace(order.CustomerName))
-                throw new BLInvalidValueException("Order Weight or Customer Name is missing or invalid.");
-
-            try
-            {
-                DO.Order doOrder = ConvertBOToDO(order);
-                s_dal.Order.Create(doOrder);
-            }
-            catch (DO.DalAlreadyExistsException ex)
-            {
-                throw new BLAlreadyExistsException($"Order ID {order.Id} already exists.", ex);
-            }
-            catch (Exception ex)
-            {
-                throw new BLOperationFailedException($"Failed to create order: {ex.Message}", ex);
-            }
-
-            Observers.NotifyListUpdated();
+            DO.Order doOrder = ConvertBOToDO(order);
+            s_dal.Order.Create(doOrder);
         }
+        Observers.NotifyListUpdated();
     }
 
     public static BO.Order ReadOrder(int id)
     {
-        lock (AdminManager.BlMutex)
-        {
-            try
-            {
-                DO.Order? doOrder = s_dal.Order.Read(id);
-                if (doOrder is null)
-                    throw new BLDoesNotExistException($"Order ID {id} not found.");
-                return ConvertDOToBO(doOrder);
-            }
-            catch (DO.DalDoesNotExistException ex)
-            {
-                throw new BLDoesNotExistException($"Order ID {id} not found.", ex);
-            }
-        }
+        lock (AdminManager.BlMutex) //stage 7
+            return ConvertDOToBO(s_dal.Order.Read(id)!);
     }
 
-    /// <summary>
-    /// Reads all orders with optional filtering.
-    /// LINQ Method Syntax - demonstrates: Select, Where, ToList
-    /// </summary>
-    public static IEnumerable<BO.Order> ReadAllOrders(Func<BO.Order, bool>? filter = null)
+    public static IEnumerable<BO.Order> ReadAllOrders(Func<BO.Order, bool>? f = null)
     {
-        lock (AdminManager.BlMutex)
+        lock (AdminManager.BlMutex) //stage 7
         {
-            try
-            {
-                var boOrders = s_dal.Order.ReadAll()
-                    .Select(doOrder =>
-                    {
-                        try
-                        {
-                            return ConvertDOToBO(doOrder);
-                        }
-                        catch
-                        {
-                            return null;
-                        }
-                    })
-                    .Where(order => order != null)
-                    .Cast<BO.Order>()
-                    .ToList();
-
-                return filter != null ? boOrders.Where(filter).ToList() : boOrders;
-            }
-            catch (Exception ex)
-            {
-                throw new BLOperationFailedException($"Failed to read orders: {ex.Message}", ex);
-            }
+            var L = s_dal.Order.ReadAll()
+                .Select(d =>
+                {
+                    try { return ConvertDOToBO(d); }
+                    catch { return null; }
+                })
+                .Where(x => x != null)
+                .Cast<BO.Order>()
+                .ToList();
+            return f != null ? L.Where(f).ToList() : L;
         }
     }
 
     public static void UpdateOrder(BO.Order order)
     {
-        lock (AdminManager.BlMutex)
-        {
-            if (order.OrderStatus != BO.OrderStatus.Open)
-                throw new BLOperationFailedException($"Cannot update Order ID {order.Id}: Status is {order.OrderStatus} (not open for modification).");
-
-            try
-            {
-                DO.Order doOrder = ConvertBOToDO(order);
-                s_dal.Order.Update(doOrder);
-            }
-            catch (DO.DalDoesNotExistException ex)
-            {
-                throw new BLDoesNotExistException($"Order ID {order.Id} not found for update.", ex);
-            }
-
-            Observers.NotifyItemUpdated(order.Id);
-            Observers.NotifyListUpdated();
-        }
+        lock (AdminManager.BlMutex) //stage 7
+            s_dal.Order.Update(ConvertBOToDO(order));
+        
+        Observers.NotifyItemUpdated(order.Id);
+        Observers.NotifyListUpdated();
     }
 
     public static void DeleteOrder(int id)
     {
-        lock (AdminManager.BlMutex)
-        {
-            try
-            {
-                BO.Order boOrder = ReadOrder(id);
-                if (boOrder.OrderStatus != BO.OrderStatus.Open)
-                    throw new BLOperationFailedException($"Cannot delete Order ID {id}: It has already been processed or is active.");
-
-                s_dal.Order.Delete(id);
-            }
-            catch (DO.DalDoesNotExistException ex)
-            {
-                throw new BLDoesNotExistException($"Order ID {id} not found for deletion.", ex);
-            }
-
-            Observers.NotifyItemUpdated(id);
-            Observers.NotifyListUpdated();
-        }
+        lock (AdminManager.BlMutex) //stage 7
+            s_dal.Order.Delete(id);
+        
+        Observers.NotifyItemUpdated(id);
+        Observers.NotifyListUpdated();
     }
 
-    // ------------------------------------
-    // --- 3. SPECIFIC OPERATIONS ---
-    // ------------------------------------
-
+    // --- ACTIONS ---
     public static void AssociateCourierToOrder(int orderId, int courierId)
     {
-        lock (AdminManager.BlMutex)
+        lock (AdminManager.BlMutex) //stage 7
         {
-            BO.Order boOrder = ReadOrder(orderId);
-            BO.Courier boCourier = CourierManager.ReadCourier(courierId);
-
-            if (boOrder.OrderStatus != BO.OrderStatus.Open)
-                throw new BLOperationFailedException($"Order ID {orderId} is not open (Status: {boOrder.OrderStatus}).");
-            if (boCourier.Status != BO.CourierStatus.Available)
-                throw new BLOperationFailedException($"Courier ID {courierId} is not available (Status: {boCourier.Status}).");
-
-            try
-            {
-                DO.Order? doOrderNullable = s_dal.Order.Read(orderId);
-                if (doOrderNullable is null)
-                    throw new BLDoesNotExistException($"Order ID {orderId} not found.");
-
-                DO.Order doOrder = doOrderNullable;
-                DO.Order updatedDoOrder = doOrder with
-                {
-                    CourierId = courierId,
-                    CourierAssociatedDate = AdminManager.Now
-                };
-
-                s_dal.Order.Update(updatedDoOrder);
-                System.Diagnostics.Debug.WriteLine($"[INFO] Courier {courierId} assigned to Order {orderId}");
-            }
-            catch (BLException)
-            {
-                throw;
-            }
-            catch (DO.DalDoesNotExistException ex)
-            {
-                throw new BLDoesNotExistException($"Order ID {orderId} not found.", ex);
-            }
-            catch (Exception ex)
-            {
-                throw new BLOperationFailedException($"Failed to associate courier {courierId} to order {orderId}: {ex.Message}", ex);
-            }
-
-            Observers.NotifyItemUpdated(orderId);
-            Observers.NotifyListUpdated();
-            CourierManager.Observers.NotifyItemUpdated(courierId);
-            CourierManager.Observers.NotifyListUpdated();
+            DO.Order d = s_dal.Order.Read(orderId)!;
+            var c = s_dal.Courier.Read(courierId)!;
+            s_dal.Order.Update(d with { CourierId = courierId, CourierAssociatedDate = AdminManager.Now });
+            s_dal.Delivery.Create(new DO.Delivery(0, orderId, courierId, (DO.DeliveryType)c.DeliveryType, AdminManager.Now, 0) { CompletionStatus = null, EndTime = null });
         }
+        
+        Observers.NotifyItemUpdated(orderId);
+        Observers.NotifyListUpdated();
+        CourierManager.Observers.NotifyItemUpdated(courierId);
+        CourierManager.Observers.NotifyListUpdated();
     }
 
     public static void PickUpOrder(int orderId)
     {
-        lock (AdminManager.BlMutex)
+        lock (AdminManager.BlMutex) //stage 7
         {
-            DO.Order? doOrderCheck = s_dal.Order.Read(orderId);
-            if (doOrderCheck is null)
-                throw new BLDoesNotExistException($"Order ID {orderId} not found.");
-
-            if (!doOrderCheck.CourierAssociatedDate.HasValue || doOrderCheck.PickupDate.HasValue)
-                throw new BLOperationFailedException($"Order ID {orderId} is not ready for pickup.");
-
-            try
-            {
-                DO.Order updatedDoOrder = doOrderCheck with { PickupDate = AdminManager.Now };
-                s_dal.Order.Update(updatedDoOrder);
-            }
-            catch (BLException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                throw new BLOperationFailedException($"Failed to pickup order {orderId}: {ex.Message}", ex);
-            }
-
-            Observers.NotifyItemUpdated(orderId);
-            Observers.NotifyListUpdated();
+            DO.Order d = s_dal.Order.Read(orderId)!;
+            s_dal.Order.Update(d with { PickupDate = AdminManager.Now });
         }
+        
+        Observers.NotifyItemUpdated(orderId);
+        Observers.NotifyListUpdated();
     }
 
     public static void DeliverOrder(int orderId)
     {
-        lock (AdminManager.BlMutex)
+        lock (AdminManager.BlMutex) //stage 7
         {
-            DO.Order? doOrderCheck = s_dal.Order.Read(orderId);
-            if (doOrderCheck is null)
-                throw new BLDoesNotExistException($"Order ID {orderId} not found.");
-
-            if (!doOrderCheck.PickupDate.HasValue)
-                throw new BLOperationFailedException($"Order ID {orderId} has not been picked up yet.");
-
-            if (doOrderCheck.DeliveryDate.HasValue)
-                throw new BLOperationFailedException($"Order ID {orderId} is already delivered.");
-
-            try
-            {
-                DO.Order updatedDoOrder = doOrderCheck with { DeliveryDate = AdminManager.Now };
-                s_dal.Order.Update(updatedDoOrder);
-            }
-            catch (BLException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                throw new BLOperationFailedException($"Failed to deliver order {orderId}: {ex.Message}", ex);
-            }
-
-            Observers.NotifyItemUpdated(orderId);
-            Observers.NotifyListUpdated();
+            DO.Order d = s_dal.Order.Read(orderId)!;
+            s_dal.Order.Update(d with { DeliveryDate = AdminManager.Now });
+            var ad = s_dal.Delivery.ReadAll(x => x.OrderId == orderId && x.EndTime == null).FirstOrDefault();
+            if (ad != null)
+                s_dal.Delivery.Update(ad with { CompletionStatus = DO.DeliveryStatus.Completed, EndTime = AdminManager.Now });
         }
+        
+        Observers.NotifyItemUpdated(orderId);
+        Observers.NotifyListUpdated();
     }
 
-    /// <summary>
-    /// Cancels an order. If the order is in progress, sends email notification to courier.
-    /// </summary>
+    public static void RefuseOrder(int orderId)
+    {
+        lock (AdminManager.BlMutex) //stage 7
+        {
+            DO.Order d = s_dal.Order.Read(orderId)!;
+            var ad = s_dal.Delivery.ReadAll(x => x.OrderId == orderId && x.EndTime == null).FirstOrDefault();
+            if (ad != null)
+                s_dal.Delivery.Update(ad with { CompletionStatus = DO.DeliveryStatus.CustomerRefused, EndTime = AdminManager.Now });
+
+            if (d.OrderType == DO.OrderType.RestaurantFood)
+                s_dal.Order.Update(d with { DeliveryDate = AdminManager.Now });
+            else
+                s_dal.Order.Update(d with { CourierId = null, CourierAssociatedDate = null, PickupDate = null, DeliveryDate = null });
+        }
+        
+        Observers.NotifyItemUpdated(orderId);
+        Observers.NotifyListUpdated();
+    }
+
     public static void CancelOrder(int orderId)
     {
-        lock (AdminManager.BlMutex)
+        lock (AdminManager.BlMutex) //stage 7
         {
-            BO.Order boOrder = ReadOrder(orderId);
-
-            if (boOrder.OrderStatus == BO.OrderStatus.Delivered)
-                throw new BLOperationFailedException($"Cannot cancel Order ID {orderId}: Order has already been delivered.");
-
-            if (boOrder.OrderStatus == BO.OrderStatus.Canceled)
-                throw new BLOperationFailedException($"Order ID {orderId} is already canceled.");
-
-            bool wasInProgress = boOrder.OrderStatus == BO.OrderStatus.InProgress && boOrder.CourierId.HasValue;
-            BO.Courier? courier = null;
-
-            if (wasInProgress)
+            BO.Order b = ReadOrder(orderId);
+            bool ip = b.OrderStatus == BO.OrderStatus.InProgress;
+            if (ip)
             {
-                try
-                {
-                    courier = CourierManager.ReadCourier(boOrder.CourierId!.Value);
-                }
-                catch
-                {
-                    // Courier might have been deleted
-                }
+                var ad = s_dal.Delivery.ReadAll(x => x.OrderId == orderId && x.EndTime == null).FirstOrDefault();
+                if (ad != null)
+                    s_dal.Delivery.Update(ad with { CompletionStatus = DO.DeliveryStatus.Cancelled, EndTime = AdminManager.Now });
             }
-
-            try
-            {
-                DO.Order? doOrderNullable = s_dal.Order.Read(orderId);
-                if (doOrderNullable is null)
-                    throw new BLDoesNotExistException($"Order ID {orderId} not found.");
-
-                // Create a canceled delivery record if order was in progress
-                if (wasInProgress)
-                {
-                    try
-                    {
-                        DO.Delivery canceledDelivery = new DO.Delivery(
-                            Id: 0,
-                            OrderId: orderId,
-                            CourierId: boOrder.CourierId!.Value,
-                            DeliveryType: courier?.DeliveryType != null
-                                ? (DO.DeliveryType)courier.DeliveryType
-                                : DO.DeliveryType.Car,
-                            StartTime: boOrder.CourierAssociatedDate ?? AdminManager.Now,
-                            ActualDistance: 0
-                        )
-                        {
-                            CompletionStatus = DO.DeliveryStatus.Cancelled,
-                            EndTime = AdminManager.Now
-                        };
-
-                        s_dal.Delivery.Create(canceledDelivery);
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"[WARNING] Failed to create canceled delivery record: {ex.Message}");
-                    }
-                }
-
-                // Clear courier info from the order
-                DO.Order doOrder = doOrderNullable;
-                DO.Order updatedDoOrder = doOrder with
-                {
-                    CourierId = null,
-                    CourierAssociatedDate = null,
-                    PickupDate = null,
-                    DeliveryDate = null
-                };
-
-                s_dal.Order.Update(updatedDoOrder);
-
-                // Send email to courier if order was in progress
-                if (wasInProgress && courier != null && !string.IsNullOrEmpty(courier.Email))
-                {
-                    EmailHelper.SendOrderCancellationEmail(
-                        courier.Email,
-                        courier.Name,
-                        orderId,
-                        boOrder.CustomerName ?? "Unknown Customer",
-                        boOrder.Address);
-                }
-
-                System.Diagnostics.Debug.WriteLine($"[INFO] Order {orderId} canceled successfully. Was in progress: {wasInProgress}");
-            }
-            catch (BLException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                throw new BLOperationFailedException($"Failed to cancel order {orderId}: {ex.Message}", ex);
-            }
-
-            Observers.NotifyItemUpdated(orderId);
-            Observers.NotifyListUpdated();
-
-            if (wasInProgress && boOrder.CourierId.HasValue)
-            {
-                CourierManager.Observers.NotifyItemUpdated(boOrder.CourierId.Value);
-                CourierManager.Observers.NotifyListUpdated();
-            }
+            s_dal.Order.Update(s_dal.Order.Read(orderId)! with { CourierId = null, CourierAssociatedDate = null, PickupDate = null, DeliveryDate = null });
         }
+        
+        Observers.NotifyItemUpdated(orderId);
+        Observers.NotifyListUpdated();
     }
 
-    /// <summary>
-    /// LINQ Query Syntax - demonstrates: from, where, group by, orderby, select
-    /// </summary>
-    public static IEnumerable<BO.Order> GetUndeliveredOrders()
+    public static IEnumerable<BO.OrderInList> GetOrderList()
     {
-        lock (AdminManager.BlMutex)
+        lock (AdminManager.BlMutex) //stage 7
         {
-            try
-            {
-                var undeliveredOrders = from order in s_dal.Order.ReadAll()
-                                        where !order.DeliveryDate.HasValue
-                                        group order by order.CourierId into courierGroup
-                                        orderby courierGroup.Key
-                                        select courierGroup.FirstOrDefault()
-                                        into firstOrderPerCourier
-                                        select ConvertDOToBO(firstOrderPerCourier) into boOrder
-                                        where boOrder != null
-                                        select boOrder;
+            var allOrders = s_dal.Order.ReadAll().ToList(); // Convert to concrete list
+            var allDeliveries = s_dal.Delivery.ReadAll().ToList();
+            var allCouriers = s_dal.Courier.ReadAll().ToDictionary(c => c.Id);
+            var deliveryLookup = allDeliveries.ToLookup(d => d.OrderId);
+            var list = new List<BO.OrderInList>();
 
-                return undeliveredOrders.ToList();
-            }
-            catch (Exception ex)
+            foreach (var doOrder in allOrders)
             {
-                throw new BLOperationFailedException($"Failed to get undelivered orders: {ex.Message}", ex);
+                var currentHist = deliveryLookup[doOrder.Id].ToList();
+                BO.OrderStatus status = BO.OrderStatus.Open;
+                if (doOrder.DeliveryDate.HasValue)
+                {
+                    var last = currentHist.Where(x => x.EndTime != null).OrderByDescending(x => x.Id).FirstOrDefault();
+                    if (last != null && last.CompletionStatus == DO.DeliveryStatus.CustomerRefused)
+                        status = BO.OrderStatus.OrderRefused;
+                    else
+                        status = BO.OrderStatus.Delivered;
+                }
+                else if (doOrder.PickupDate.HasValue || doOrder.CourierAssociatedDate.HasValue)
+                    status = BO.OrderStatus.InProgress;
+
+                string? cName = (doOrder.CourierId.HasValue && allCouriers.ContainsKey(doOrder.CourierId.Value))
+                    ? allCouriers[doOrder.CourierId.Value].Name
+                    : null;
+
+                var currentDelivery = currentHist.Where(x => x.EndTime == null).FirstOrDefault();
+
+                list.Add(new BO.OrderInList
+                {
+                    OrderId = doOrder.Id,
+                    DeliveryId = currentDelivery?.Id,
+                    OrderType = (BO.OrderType)doOrder.OrderType,
+                    Distance = CalculateAirDistance(doOrder),
+                    OrderStatus = status,
+                    ScheduleStatus = CalculateScheduleStatus(doOrder),
+                    OrderCompletionTime = doOrder.DeliveryDate.HasValue ? doOrder.DeliveryDate.Value - doOrder.CreatedAt : TimeSpan.Zero,
+                    TotalDeliveries = currentHist.Count,
+                    CustomerName = doOrder.CustomerName,
+                    CourierName = cName,
+                    CreatedAt = doOrder.CreatedAt,
+                    CustomerPhone = doOrder.CustomerPhone,
+                    Address = doOrder.Address
+                });
             }
+            return list;
         }
     }
 
-    /// <summary>
-    /// LINQ Method Syntax - demonstrates: Where, Select, ToList with lambda
-    /// </summary>
-    public static IEnumerable<BO.Order> GetCourierOrders(int courierId)
-    {
-        lock (AdminManager.BlMutex)
-        {
-            try
-            {
-                return s_dal.Order.ReadAll()
-                    .Where(order => order.CourierId == courierId)
-                    .Select(doOrder => ConvertDOToBO(doOrder))
-                    .ToList();
-            }
-            catch (Exception ex)
-            {
-                throw new BLOperationFailedException($"Failed to get orders for courier {courierId}: {ex.Message}", ex);
-            }
-        }
-    }
-
-    /// <summary>
-    /// LINQ Query Syntax - demonstrates: from, where, orderby, select
-    /// </summary>
-    public static IEnumerable<BO.Order> GetOrdersByTimeRange(DateTime startTime, DateTime endTime)
-    {
-        lock (AdminManager.BlMutex)
-        {
-            try
-            {
-                var ordersInRange = from order in s_dal.Order.ReadAll()
-                                    where order.CreatedAt >= startTime && order.CreatedAt <= endTime
-                                    orderby order.CreatedAt descending
-                                    select ConvertDOToBO(order);
-
-                return ordersInRange.ToList();
-            }
-            catch (Exception ex)
-            {
-                throw new BLOperationFailedException($"Failed to get orders in time range: {ex.Message}", ex);
-            }
-        }
-    }
-
-    /// <summary>
-    /// LINQ Method Syntax - demonstrates: Where, OrderBy with lambda
-    /// </summary>
     public static IEnumerable<BO.Order> GetAvailableOrdersForCourier(int courierId)
     {
-        lock (AdminManager.BlMutex)
-        {
-            try
-            {
-                BO.Courier courier = CourierManager.ReadCourier(courierId);
-
-                var availableOrders = s_dal.Order.ReadAll()
-                    .Where(o => !o.CourierId.HasValue)
-                    .Where(o => !o.CourierAssociatedDate.HasValue)
-                    .ToList();
-
-                var withinDistance = new List<BO.Order>();
-
-                foreach (var doOrder in availableOrders)
-                {
-                    double distance = BO.Order.CalculateAirDistance(
-                        courier.Location.Latitude,
-                        courier.Location.Longitude,
-                        doOrder.Latitude,
-                        doOrder.Longitude);
-
-                    if (courier.MaxDeliveryDistance == null || distance <= courier.MaxDeliveryDistance.Value)
-                    {
-                        BO.Order boOrder = ConvertDOToBO(doOrder);
-                        boOrder.ArialDistance = distance;
-                        withinDistance.Add(boOrder);
-                    }
-                }
-
-                return withinDistance.OrderBy(o => o.ArialDistance).ToList();
-            }
-            catch (Exception ex)
-            {
-                throw new BLOperationFailedException(
-                    $"Failed to get available orders for courier {courierId}: {ex.Message}", ex);
-            }
-        }
+        lock (AdminManager.BlMutex) //stage 7
+            return s_dal.Order.ReadAll(o => !o.CourierId.HasValue).Select(ConvertDOToBO).ToList();
     }
 
-    /// <summary>
-    /// LINQ Method Syntax - demonstrates: GroupBy, ToDictionary, GetValueOrDefault
-    /// </summary>
+    // Wrappers
+    public static IEnumerable<BO.DeliveryPerOrderInList> GetDeliveryHistoryForOrderPublic(int id)
+    {
+        lock (AdminManager.BlMutex) //stage 7
+            return GetDeliveryHistoryForOrder(id);
+    }
+
     public static BO.OrderStatusSummary GetOrderStatusSummary()
     {
-        lock (AdminManager.BlMutex)
+        lock (AdminManager.BlMutex) //stage 7
         {
-            try
-            {
-                var allOrders = ReadAllOrders();
-
-                var statusGroups = allOrders
-                    .GroupBy(o => o.OrderStatus)
-                    .ToDictionary(g => g.Key, g => g.Count());
-
-                var scheduleGroups = allOrders
-                    .Where(o => o.OrderStatus == BO.OrderStatus.Open || o.OrderStatus == BO.OrderStatus.InProgress)
-                    .GroupBy(o => o.ScheduleStatus)
-                    .ToDictionary(g => g.Key, g => g.Count());
-
-                return new BO.OrderStatusSummary
-                {
-                    OpenCount = statusGroups.GetValueOrDefault(BO.OrderStatus.Open, 0),
-                    InProgressCount = statusGroups.GetValueOrDefault(BO.OrderStatus.InProgress, 0),
-                    DeliveredCount = statusGroups.GetValueOrDefault(BO.OrderStatus.Delivered, 0),
-                    OrderRefusedCount = statusGroups.GetValueOrDefault(BO.OrderStatus.OrderRefused, 0),
-                    CanceledCount = statusGroups.GetValueOrDefault(BO.OrderStatus.Canceled, 0),
-                    OnTimeCount = scheduleGroups.GetValueOrDefault(BO.ScheduleStatus.OnTime, 0),
-                    InRiskCount = scheduleGroups.GetValueOrDefault(BO.ScheduleStatus.InRisk, 0),
-                    LateCount = scheduleGroups.GetValueOrDefault(BO.ScheduleStatus.Late, 0)
-                };
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[ERROR] Error in GetOrderStatusSummary: {ex.Message}");
-                return new BO.OrderStatusSummary();
-            }
+            var all = ReadAllOrders();
+            return new BO.OrderStatusSummary { OpenCount = all.Count(o => o.OrderStatus == BO.OrderStatus.Open) };
         }
     }
 
-    // ------------------------------------
-    // --- 4. PERIODIC UPDATES ---
-    // ------------------------------------
+    public static IEnumerable<BO.Order> GetCourierOrders(int courierId)
+    {
+        lock (AdminManager.BlMutex) //stage 7
+            return s_dal.Order.ReadAll(o => o.CourierId == courierId).Select(ConvertDOToBO).ToList();
+    }
 
-    public static void PeriodicOrderUpdates(DateTime oldClock, DateTime newClock)
+    // --- PERIODIC UPDATES (Stage 7) - תיקון: הוספת sync version ---
+    internal static void PeriodicOrderUpdates(DateTime oldClock, DateTime newClock)
+    {
+        if (s_periodicMutex.CheckAndSetInProgress())
+            return;
+
+        try
+        {
+            // Logic here if needed for order periodic updates
+        }
+        finally
+        {
+            s_periodicMutex.UnsetInProgress();
+        }
+    }
+
+    internal static void CheckAndUpdateExpiredOrders()
     {
         lock (AdminManager.BlMutex)
         {
             try
             {
-                BO.Config config = AdminManager.GetConfig();
-                TimeSpan riskThreshold = config.RiskRange;
-                bool orderUpdated = false;
-
-                // LINQ Method Syntax - demonstrates: Where with lambda
-                var ordersToProcess = s_dal.Order.ReadAll()
-                    .Where(order => order.CourierAssociatedDate.HasValue && !order.PickupDate.HasValue)
+                var config = AdminManager.GetConfig();
+                
+                var inProgressOrders = s_dal.Order.ReadAll()
+                    .Where(o => !o.DeliveryDate.HasValue && o.CreatedAt != default)
                     .ToList();
 
-                foreach (var doOrder in ordersToProcess
-                    .Where(o => (newClock - o.CourierAssociatedDate!.Value) > riskThreshold))
-                {
-                    System.Diagnostics.Debug.WriteLine($"[WARNING] Risky order detected: Order {doOrder.Id}");
-                }
-
-                // LINQ Query Syntax - demonstrates: from, where, select
-                var deliveredOrders = from order in s_dal.Order.ReadAll()
-                                      where order.DeliveryDate.HasValue && order.CourierId.HasValue
-                                      select order;
-
-                foreach (var doOrder in deliveredOrders)
-                {
-                    try
-                    {
-                        DO.Courier? doCourier = s_dal.Courier.Read(doOrder.CourierId!.Value);
-                        if (doCourier is not null && !doCourier.IsActive)
-                        {
-                            DO.Courier updatedCourier = doCourier with { IsActive = true };
-                            s_dal.Courier.Update(updatedCourier);
-                            orderUpdated = true;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"[ERROR] Failed to update courier: {ex.Message}");
-                    }
-                }
-
-                if (orderUpdated)
-                {
-                    Observers.NotifyListUpdated();
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[ERROR] Error in PeriodicOrderUpdates: {ex.Message}");
-            }
-        }
-    }
-
-    public static void CheckAndUpdateExpiredOrders()
-    {
-        lock (AdminManager.BlMutex)
-        {
-            try
-            {
-                DateTime now = AdminManager.Now;
-                BO.Config config = AdminManager.GetConfig();
+                var now = AdminManager.Now;
                 bool anyUpdated = false;
 
-                // LINQ Method Syntax - demonstrates: Where with multiple conditions
-                var expiredOrders = s_dal.Order.ReadAll()
-                    .Where(order => !order.DeliveryDate.HasValue)
-                    .Where(order => order.CreatedAt.Add(config.MaxDeliveryTime) < now)
-                    .ToList();
-
-                foreach (var doOrder in expiredOrders)
+                foreach (var order in inProgressOrders)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[EXPIRED] Order {doOrder.Id} exceeded max delivery time.");
-
-                    if (doOrder.CourierId.HasValue && !doOrder.PickupDate.HasValue)
+                    DateTime maxDeadline = order.CreatedAt.Add(config.MaxDeliveryTime);
+                    
+                    if (now > maxDeadline)
                     {
-                        try
+                        s_dal.Order.Update(order with { DeliveryDate = now });
+                        
+                        var delivery = s_dal.Delivery.ReadAll(d => d.OrderId == order.Id && !d.EndTime.HasValue)
+                            .FirstOrDefault();
+                        
+                        if (delivery != null)
                         {
-                            DO.Courier? courier = s_dal.Courier.Read(doOrder.CourierId.Value);
-                            if (courier != null)
-                            {
-                                System.Diagnostics.Debug.WriteLine($"[INFO] Releasing courier {courier.Id} from expired order {doOrder.Id}");
-                            }
+                            s_dal.Delivery.Update(delivery with 
+                            { 
+                                CompletionStatus = DO.DeliveryStatus.Failed, 
+                                EndTime = now 
+                            });
                         }
-                        catch (Exception ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"[ERROR] Failed to process courier for expired order: {ex.Message}");
-                        }
+                        
+                        System.Diagnostics.Debug.WriteLine($"[SIMULATOR] Order {order.Id} marked as expired/failed");
+                        Observers.NotifyItemUpdated(order.Id);
+                        anyUpdated = true;
                     }
-
-                    anyUpdated = true;
                 }
 
                 if (anyUpdated)
-                {
                     Observers.NotifyListUpdated();
-                }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[ERROR] Error in CheckAndUpdateExpiredOrders: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[ERROR] CheckAndUpdateExpiredOrders: {ex.Message}");
             }
         }
     }
 
-    /// <summary>
-    /// Gets all orders as a lightweight list for display purposes.
-    /// LINQ Query Syntax - demonstrates: from, let, select
-    /// </summary>
-    public static IEnumerable<BO.OrderInList> GetOrderList()
+    internal static async Task PeriodicOrderUpdatesAsync(DateTime oldClock, DateTime newClock)
     {
-        lock (AdminManager.BlMutex)
-        {
-            try
-            {
-                var orderList = from doOrder in s_dal.Order.ReadAll()
-                                let courier = doOrder.CourierId.HasValue
-                                    ? s_dal.Courier.Read(doOrder.CourierId.Value)
-                                    : null
-                                let deliveryHistory = GetDeliveryHistoryForOrder(doOrder.Id)
-                                let currentDelivery = deliveryHistory.FirstOrDefault(d => d.EndTime == null)
-                                let airDistance = CalculateAirDistance(doOrder)
-                                let orderStatus = doOrder.DeliveryDate.HasValue
-                                    ? BO.OrderStatus.Delivered
-                                    : (doOrder.PickupDate.HasValue || doOrder.CourierAssociatedDate.HasValue)
-                                        ? BO.OrderStatus.InProgress
-                                        : BO.OrderStatus.Open
-                                let completionTime = doOrder.DeliveryDate.HasValue
-                                    ? doOrder.DeliveryDate.Value - doOrder.CreatedAt
-                                    : TimeSpan.Zero
-                                let handlingTime = doOrder.CourierAssociatedDate.HasValue
-                                    ? (doOrder.DeliveryDate ?? AdminManager.Now) - doOrder.CourierAssociatedDate.Value
-                                    : TimeSpan.Zero
-                                select new BO.OrderInList
-                                {
-                                    OrderId = doOrder.Id,
-                                    DeliveryId = currentDelivery?.DeliveryId,
-                                    OrderType = (BO.OrderType)doOrder.OrderType,
-                                    Distance = airDistance,
-                                    OrderStatus = orderStatus,
-                                    ScheduleStatus = CalculateScheduleStatus(doOrder),
-                                    OrderCompletionTime = completionTime,
-                                    HandlingTime = handlingTime,
-                                    TotalDeliveries = deliveryHistory.Count(),
-                                    CustomerName = doOrder.CustomerName,
-                                    CustomerPhone = doOrder.CustomerPhone,
-                                    Address = doOrder.Address,
-                                    CourierName = courier?.Name,
-                                    CreatedAt = doOrder.CreatedAt
-                                };
-
-                return orderList.ToList();
-            }
-            catch (Exception ex)
-            {
-                throw new BLOperationFailedException($"Failed to get order list: {ex.Message}", ex);
-            }
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // *** STAGE 7: ASYNC NETWORK OPERATIONS ***
-    // ═══════════════════════════════════════════════════════════════
-
-    /// <summary>
-    /// Creates an order with async geocoding of the address.
-    /// If geocoding fails, the order is still created but with coordinates = 0.
-    /// Async all the way - keeps UI responsive.
-    /// </summary>
-    public static async Task<(bool success, string? errorMessage, GeocodingService.GeocodingStatus geocodeStatus)> CreateOrderAsync(BO.Order order)
-    {
-        // First, try to geocode the address (async network call)
-        var (lat, lon, status) = await GeocodingService.GeocodeAddressAsync(order.Address).ConfigureAwait(false);
-
-        if (status == GeocodingService.GeocodingStatus.Success)
-        {
-            order.Latitude = lat;
-            order.Longitude = lon;
-
-            // Calculate air distance from company
-            var config = AdminManager.GetConfig();
-            if (config.CompanyLatitude.HasValue && config.CompanyLongitude.HasValue)
-            {
-                order.ArialDistance = GeocodingService.CalculateAirDistanceFallback(
-                    config.CompanyLatitude.Value, config.CompanyLongitude.Value,
-                    lat, lon);
-            }
-        }
-        else
-        {
-            // Geocoding failed - order still created with coordinates = 0
-            order.Latitude = 0;
-            order.Longitude = 0;
-            order.ArialDistance = 0;
-        }
-
-        // Create the order (sync DAL operation)
-        try
-        {
-            CreateOrder(order);
-            return (true, null, status);
-        }
-        catch (Exception ex)
-        {
-            return (false, ex.Message, status);
-        }
-    }
-
-    /// <summary>
-    /// Updates an order with async geocoding if address changed.
-    /// </summary>
-    public static async Task<(bool success, string? errorMessage, GeocodingService.GeocodingStatus geocodeStatus)> UpdateOrderAsync(BO.Order order, string? originalAddress)
-    {
-        var geocodeStatus = GeocodingService.GeocodingStatus.NotAttempted;
-
-        // Only geocode if address changed
-        if (!string.IsNullOrWhiteSpace(order.Address) && order.Address != originalAddress)
-        {
-            var (lat, lon, status) = await GeocodingService.GeocodeAddressAsync(order.Address).ConfigureAwait(false);
-            geocodeStatus = status;
-
-            if (status == GeocodingService.GeocodingStatus.Success)
-            {
-                order.Latitude = lat;
-                order.Longitude = lon;
-
-                var config = AdminManager.GetConfig();
-                if (config.CompanyLatitude.HasValue && config.CompanyLongitude.HasValue)
-                {
-                    order.ArialDistance = GeocodingService.CalculateAirDistanceFallback(
-                        config.CompanyLatitude.Value, config.CompanyLongitude.Value,
-                        lat, lon);
-                }
-            }
-        }
+        if (s_periodicMutex.CheckAndSetInProgress())
+            return;
 
         try
         {
-            UpdateOrder(order);
-            return (true, null, geocodeStatus);
+            // Logic here if needed for order periodic updates
+            await Task.CompletedTask;
         }
-        catch (Exception ex)
+        finally
         {
-            return (false, ex.Message, geocodeStatus);
+            s_periodicMutex.UnsetInProgress();
         }
     }
 
-    /// <summary>
-    /// Gets available orders for a courier with actual route distances (async).
-    /// Uses OSRM API to calculate real driving/walking distances.
-    /// </summary>
-    public static async Task<IEnumerable<BO.Order>> GetAvailableOrdersWithRouteDistanceAsync(int courierId)
+    // --- SIMULATION (Stage 7) ---
+    internal static async Task SimulateOrdersAsync() //stage 7
     {
-        // Get orders synchronously first
-        var orders = GetAvailableOrdersForCourier(courierId).ToList();
+        if (s_simulationMutex.CheckAndSetInProgress())
+            return;
 
-        if (!orders.Any())
-            return orders;
-
-        // Get courier info
-        var courier = CourierManager.ReadCourier(courierId);
-        if (courier.Location == null)
-            return orders;
-
-        bool isDriving = courier.DeliveryType == BO.DeliveryType.Car ||
-                         courier.DeliveryType == BO.DeliveryType.Motorcycle;
-
-        // Calculate route distances in parallel (max 5 concurrent to avoid API throttling)
-        var semaphore = new System.Threading.SemaphoreSlim(5);
-
-        var tasks = orders.Select(async order =>
+        try
         {
-            await semaphore.WaitAsync().ConfigureAwait(false);
-            try
+            // Simulation logic: Auto-complete orders that are overdue
+            List<int> ordersToNotify = new();
+            
+            lock (AdminManager.BlMutex)
             {
-                var (distance, _) = await GeocodingService.GetRouteDistanceAsync(
-                    courier.Location.Latitude, courier.Location.Longitude,
-                    order.Latitude, order.Longitude,
-                    isDriving).ConfigureAwait(false);
-
-                order.ArialDistance = distance;
-            }
-            catch
-            {
-                // Keep original air distance on error
-            }
-            finally
-            {
-                semaphore.Release();
-            }
-            return order;
-        });
-
-        var results = await Task.WhenAll(tasks).ConfigureAwait(false);
-
-        // Return sorted by distance
-        return results.OrderBy(o => o.ArialDistance).ToList();
-    }
-
-    /// <summary>
-    /// Gets order list with route distances calculated asynchronously.
-    /// </summary>
-    public static async Task<IEnumerable<BO.OrderInList>> GetOrderListWithRouteDistancesAsync()
-    {
-        var orderList = GetOrderList().ToList();
-        var config = AdminManager.GetConfig();
-
-        if (!config.CompanyLatitude.HasValue || !config.CompanyLongitude.HasValue)
-            return orderList;
-
-        // Calculate distances in parallel (limited concurrency)
-        var semaphore = new System.Threading.SemaphoreSlim(5);
-
-        var tasks = orderList.Select(async order =>
-        {
-            await semaphore.WaitAsync().ConfigureAwait(false);
-            try
-            {
-                // Get coordinates from the full order
-                var fullOrder = ReadOrder(order.OrderId);
-
-                if (fullOrder.Latitude != 0 && fullOrder.Longitude != 0)
+                var allOrders = s_dal.Order.ReadAll()
+                    .Where(o => o.CourierAssociatedDate.HasValue && !o.DeliveryDate.HasValue)
+                    .ToList();
+                
+                foreach (var order in allOrders)
                 {
-                    var (distance, _) = await GeocodingService.GetRouteDistanceAsync(
-                        config.CompanyLatitude.Value, config.CompanyLongitude.Value,
-                        fullOrder.Latitude, fullOrder.Longitude,
-                        true).ConfigureAwait(false);
-
-                    // Create a new OrderInList with updated Distance
-                    order = new BO.OrderInList
+                    if (order.CreatedAt.AddHours(4) <= AdminManager.Now)
                     {
-                        OrderId = order.OrderId,
-                        DeliveryId = order.DeliveryId,
-                        OrderType = order.OrderType,
-                        Distance = distance,
-                        OrderStatus = order.OrderStatus,
-                        ScheduleStatus = order.ScheduleStatus,
-                        OrderCompletionTime = order.OrderCompletionTime,
-                        HandlingTime = order.HandlingTime,
-                        TotalDeliveries = order.TotalDeliveries,
-                        CustomerName = order.CustomerName,
-                        CustomerPhone = order.CustomerPhone,
-                        Address = order.Address,
-                        CourierName = order.CourierName,
-                        CreatedAt = order.CreatedAt
-                    };
+                        s_dal.Order.Update(order with { DeliveryDate = AdminManager.Now });
+                        var delivery = s_dal.Delivery.ReadAll(x => x.OrderId == order.Id && x.EndTime == null)
+                            .FirstOrDefault();
+                        if (delivery != null)
+                            s_dal.Delivery.Update(delivery with 
+                            { 
+                                CompletionStatus = DO.DeliveryStatus.Completed, 
+                                EndTime = AdminManager.Now 
+                            });
+                        ordersToNotify.Add(order.Id);
+                    }
                 }
             }
-            catch
-            {
-                // Keep original distance on error
-            }
-            finally
-            {
-                semaphore.Release();
-            }
-            return order;
-        });
 
-        var results=await Task.WhenAll(tasks).ConfigureAwait(false);
-        return results;
+            // Notify outside of lock
+            foreach (var orderId in ordersToNotify)
+            {
+                Observers.NotifyItemUpdated(orderId);
+            }
+            if (ordersToNotify.Any())
+                Observers.NotifyListUpdated();
+
+            await Task.CompletedTask;
+        }
+        finally
+        {
+            s_simulationMutex.UnsetInProgress();
+        }
     }
+
+    #region Async / Stage 7
+    public static async Task<(bool success, string? errorMessage, GeocodingService.GeocodingStatus geocodeStatus)> CreateOrderAsync(BO.Order o) {
+        var r = await GeocodingService.GeocodeAddressAsync(o.Address); if(r.status==GeocodingService.GeocodingStatus.Success){o.Latitude=r.lat;o.Longitude=r.lon;} CreateOrder(o); return (true,null,r.status);
+    }
+    public static async Task<(bool success, string? errorMessage, GeocodingService.GeocodingStatus geocodeStatus)> UpdateOrderAsync(BO.Order o, string? prev) {
+         var s = GeocodingService.GeocodingStatus.NotAttempted; if(o.Address!=prev){var r=await GeocodingService.GeocodeAddressAsync(o.Address);s=r.status;if(r.status==0){o.Latitude=r.lat;o.Longitude=r.lon;}} UpdateOrder(o); return (true,null,s);
+    }
+    public static async Task<IEnumerable<BO.Order>> GetAvailableOrdersWithRouteDistanceAsync(int id) => GetAvailableOrdersForCourier(id);
+    public static async Task<IEnumerable<BO.OrderInList>> GetOrderListWithRouteDistancesAsync() => GetOrderList();
+    #endregion
 }

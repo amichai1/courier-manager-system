@@ -7,6 +7,8 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Helpers;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Helpers;
 
@@ -15,16 +17,17 @@ namespace Helpers;
 /// </summary>
 internal static class AdminManager
 {
-    private static readonly IDal s_dal = Factory.Get;
+    private static readonly IDal s_dal = DalApi.Factory.Get;
     internal static readonly object BlMutex = new();
 
-    // Stage 7 fields
+    // Stage 7 fields - Simulator
     private static volatile Thread? s_thread = null;
     private static volatile bool s_stop = false;
-    private static int s_interval = 0;
+    private static int s_interval = 1;
 
-    // Flag to track if simulation task is still running
-    private static volatile bool s_isSimulationRunning = false;
+    // Mutexes for async operations (Non-blocking)
+    private static readonly AsyncMutex s_periodicMutex = new();
+    private static readonly AsyncMutex s_simulationMutex = new();
 
     // Flag to suppress observer notifications during DB operations
     internal static bool SuppressObservers { get; set; } = false;
@@ -43,6 +46,7 @@ internal static class AdminManager
 
     internal static void ResetDB()
     {
+        ThrowOnSimulatorIsRunning();
         lock (BlMutex)
         {
             SuppressObservers = true;
@@ -66,6 +70,7 @@ internal static class AdminManager
 
     internal static void InitializeDB()
     {
+        ThrowOnSimulatorIsRunning();
         lock (BlMutex)
         {
             SuppressObservers = true;
@@ -95,8 +100,10 @@ internal static class AdminManager
     /// </summary>
     internal static void UpdateClock(DateTime newClock)
     {
+        DateTime oldClock;
         lock (BlMutex)
         {
+            oldClock = s_dal.Config.Clock;
             s_dal.Config.Clock = newClock;
         }
 
@@ -105,6 +112,9 @@ internal static class AdminManager
         {
             ClockUpdatedObservers?.Invoke();
         }
+
+        // Trigger periodic updates asynchronously (Using Task.Run + AsyncMutex)
+        _ = Task.Run(() => PeriodicUpdatesWrapper(oldClock, newClock));
     }
 
     /// <summary>
@@ -138,6 +148,7 @@ internal static class AdminManager
     /// </summary>
     internal static void SetConfig(BO.Config configuration)
     {
+        ThrowOnSimulatorIsRunning(); // Blocking check
         bool configChanged = false;
 
         lock (BlMutex)
@@ -220,9 +231,15 @@ internal static class AdminManager
     // *** STAGE 7: SIMULATOR THREADING METHODS ***
     // -----------------------------------------------------------
 
+    [MethodImpl(MethodImplOptions.Synchronized)]
+    public static void ThrowOnSimulatorIsRunning()
+    {
+        if (s_thread is not null)
+            throw new BO.BLTemporaryNotAvailableException("Cannot perform the operation since Simulator is running");
+    }
+
     /// <summary>
     /// The main simulator thread method (ClockRunner).
-    /// Runs in a loop: advances clock, triggers periodic updates, runs simulation.
     /// </summary>
     private static void clockRunner()
     {
@@ -230,318 +247,212 @@ internal static class AdminManager
         {
             try
             {
-                // 1. Advance clock by X minutes (set by user)
-                UpdateClock(Now.AddMinutes(s_interval));
+                // 1. Advance clock. UpdateClock triggers PeriodicUpdates wrapper.
+                DateTime nextTime = Now.AddMinutes(s_interval);
+                UpdateClock(nextTime);
 
-                // 2. Trigger periodic updates asynchronously (fire-and-forget)
-                Task.Run(() =>
-                {
-                    try
-                    {
-                        PeriodicUpdatesSync();
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"[SIMULATOR] Periodic updates error: {ex.Message}");
-                    }
-                });
+                // 2. Trigger Routine Simulation asynchronously
+                _ = Task.Run(SimulateRoutineOperationsAsync);
 
-                // 3. Run simulation only if previous simulation finished
-                if (!s_isSimulationRunning)
-                {
-                    s_isSimulationRunning = true;
-                    Task.Run(() =>
-                    {
-                        try
-                        {
-                            SimulateRoutineOperations();
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"[SIMULATOR] Simulation error: {ex.Message}");
-                        }
-                        finally
-                        {
-                            s_isSimulationRunning = false;
-                        }
-                    });
-                }
-
-                // 4. Sleep for 1 second
+                // 3. Sleep for 1 second
                 Thread.Sleep(1000);
             }
             catch (ThreadInterruptedException)
             {
                 // Expected when Stop() is called
-                break;
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[SIMULATOR] ClockRunner error: {ex.Message}");
             }
         }
-
-        System.Diagnostics.Debug.WriteLine("[SIMULATOR] Thread exited");
     }
 
     /// <summary>
-    /// Synchronous method for periodic updates (called via Task.Run).
+    /// Wrapper for periodic updates with AsyncMutex protection
     /// </summary>
-    private static void PeriodicUpdatesSync()
+    private static void PeriodicUpdatesWrapper(DateTime oldClock, DateTime newClock)
     {
+        if (s_periodicMutex.CheckAndSetInProgress())
+            return;
+
         try
         {
-            DateTime now;
-            DateTime oldClock;
-
-            lock (BlMutex)
-            {
-                now = Now;
-                oldClock = now.AddMinutes(-s_interval);
-            }
-
-            // Call periodic updates - they handle their own locking
-            CourierManager.PeriodicCourierUpdates(oldClock, now);
-            OrderManager.PeriodicOrderUpdates(oldClock, now);
-            DeliveryManager.PeriodicDeliveryUpdates(oldClock, now);
+            // Internal managers handle their own locking (granular locks)
+            CourierManager.PeriodicCourierUpdates(oldClock, newClock);
+            OrderManager.PeriodicOrderUpdates(oldClock, newClock);
+            DeliveryManager.PeriodicDeliveryUpdates(oldClock, newClock);
             OrderManager.CheckAndUpdateExpiredOrders();
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[SIMULATOR] PeriodicUpdatesSync error: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[SIMULATOR] PeriodicUpdatesWrapper error: {ex.Message}");
+        }
+        finally
+        {
+            s_periodicMutex.UnsetInProgress();
         }
     }
 
     /// <summary>
     /// Method for simulating routine operations (add/update/delete entities).
-    /// This simulates real-world activity in the system.
     /// </summary>
-    private static void SimulateRoutineOperations()
+    internal static async Task SimulateRoutineOperationsAsync()
     {
+        // Try to acquire lock. If busy, skip.
+        if (s_simulationMutex.CheckAndSetInProgress())
+           return;
+
         try
         {
             Random rand = new();
             int action = rand.Next(100);
 
-            // 30% chance: Simulate order pickup
             if (action < 30)
-            {
                 SimulateOrderPickup(rand);
-            }
-            // 30% chance: Simulate order delivery
             else if (action < 60)
-            {
                 SimulateOrderDelivery(rand);
-            }
-            // 20% chance: Simulate courier location update
             else if (action < 80)
-            {
                 SimulateCourierLocationUpdate(rand);
-            }
-            // 20% chance: Simulate order assignment
             else
-            {
                 SimulateOrderAssignment(rand);
-            }
+            
+            await Task.Yield(); // Ensure async context
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[SIMULATOR] SimulateRoutineOperations error: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[SIMULATOR] SimulateRoutineOperationsAsync error: {ex.Message}");
+        }
+        finally
+        {
+            s_simulationMutex.UnsetInProgress();
         }
     }
 
-    /// <summary>
-    /// Simulates picking up an order that is associated but not yet picked up.
-    /// </summary>
+    // --- Simulation Helpers ---
+    // Note: These methods fetch lists under lock, then call Manager methods.
+    // Manager methods have their own locks and handle notifications locally/safely.
+    // releasing lock before calling manager prevents wide-locking the DB.
+    
     private static void SimulateOrderPickup(Random rand)
     {
-        try
+        List<DO.Order> ordersToPickup;
+        lock (BlMutex)
         {
-            List<DO.Order> ordersToPickup;
-
-            lock (BlMutex)
-            {
-                ordersToPickup = s_dal.Order.ReadAll()
-                    .Where(o => o.CourierAssociatedDate.HasValue && !o.PickupDate.HasValue)
-                    .ToList();
-            }
-
-            if (ordersToPickup.Count > 0)
-            {
-                var orderToPickup = ordersToPickup[rand.Next(ordersToPickup.Count)];
-                OrderManager.PickUpOrder(orderToPickup.Id);
-                System.Diagnostics.Debug.WriteLine($"[SIMULATOR] Picked up order {orderToPickup.Id}");
-            }
+            ordersToPickup = s_dal.Order.ReadAll()
+                .Where(o => o.CourierAssociatedDate.HasValue && !o.PickupDate.HasValue)
+                .ToList();
         }
-        catch (Exception ex)
+
+        if (ordersToPickup.Count > 0)
         {
-            System.Diagnostics.Debug.WriteLine($"[SIMULATOR] SimulateOrderPickup error: {ex.Message}");
+            var orderToPickup = ordersToPickup[rand.Next(ordersToPickup.Count)];
+            // We call OrderManager direct (internal). It will handle logic + notifications.
+            OrderManager.PickUpOrder(orderToPickup.Id);
+            System.Diagnostics.Debug.WriteLine($"[SIMULATOR] Picked up order {orderToPickup.Id}");
         }
     }
 
-    /// <summary>
-    /// Simulates delivering an order that was picked up.
-    /// </summary>
     private static void SimulateOrderDelivery(Random rand)
     {
-        try
+        List<DO.Order> ordersToDeliver;
+        lock (BlMutex)
         {
-            List<DO.Order> ordersToDeliver;
-
-            lock (BlMutex)
-            {
-                ordersToDeliver = s_dal.Order.ReadAll()
-                    .Where(o => o.PickupDate.HasValue && !o.DeliveryDate.HasValue)
-                    .ToList();
-            }
-
-            if (ordersToDeliver.Count > 0)
-            {
-                var orderToDeliver = ordersToDeliver[rand.Next(ordersToDeliver.Count)];
-                OrderManager.DeliverOrder(orderToDeliver.Id);
-                System.Diagnostics.Debug.WriteLine($"[SIMULATOR] Delivered order {orderToDeliver.Id}");
-            }
+            ordersToDeliver = s_dal.Order.ReadAll()
+                .Where(o => o.PickupDate.HasValue && !o.DeliveryDate.HasValue)
+                .ToList();
         }
-        catch (Exception ex)
+
+        if (ordersToDeliver.Count > 0)
         {
-            System.Diagnostics.Debug.WriteLine($"[SIMULATOR] SimulateOrderDelivery error: {ex.Message}");
+            var orderToDeliver = ordersToDeliver[rand.Next(ordersToDeliver.Count)];
+            OrderManager.DeliverOrder(orderToDeliver.Id);
+            System.Diagnostics.Debug.WriteLine($"[SIMULATOR] Delivered order {orderToDeliver.Id}");
         }
     }
 
-    /// <summary>
-    /// Simulates updating a courier's location.
-    /// </summary>
     private static void SimulateCourierLocationUpdate(Random rand)
     {
-        try
+        List<DO.Courier> activeCouriers;
+        lock (BlMutex)
         {
-            List<DO.Courier> activeCouriers;
-
-            lock (BlMutex)
-            {
-                activeCouriers = s_dal.Courier.ReadAll()
-                    .Where(c => c.IsActive)
-                    .ToList();
-            }
-
-            if (activeCouriers.Count > 0)
-            {
-                var courier = activeCouriers[rand.Next(activeCouriers.Count)];
-
-                // Small random movement (±0.01 degrees ~ ±1km)
-                double newLat = courier.AddressLatitude + (rand.NextDouble() - 0.5) * 0.02;
-                double newLon = courier.AddressLongitude + (rand.NextDouble() - 0.5) * 0.02;
-
-                CourierManager.UpdateCourierLocation(courier.Id, new BO.Location
-                {
-                    Latitude = newLat,
-                    Longitude = newLon
-                });
-
-                System.Diagnostics.Debug.WriteLine($"[SIMULATOR] Updated courier {courier.Id} location");
-            }
+            activeCouriers = s_dal.Courier.ReadAll()
+                .Where(c => c.IsActive)
+                .ToList();
         }
-        catch (Exception ex)
+
+        if (activeCouriers.Count > 0)
         {
-            System.Diagnostics.Debug.WriteLine($"[SIMULATOR] SimulateCourierLocationUpdate error: {ex.Message}");
+            var courier = activeCouriers[rand.Next(activeCouriers.Count)];
+            double offset = 0.01;
+            double newLat = courier.AddressLatitude + (rand.NextDouble() - 0.5) * offset;
+            double newLon = courier.AddressLongitude + (rand.NextDouble() - 0.5) * offset;
+
+            CourierManager.UpdateCourierLocation(courier.Id, new BO.Location
+            {
+                Latitude = newLat,
+                Longitude = newLon
+            });
+             System.Diagnostics.Debug.WriteLine($"[SIMULATOR] Updated courier {courier.Id} location");
         }
     }
 
-    /// <summary>
-    /// Simulates assigning a courier to an open order.
-    /// </summary>
     private static void SimulateOrderAssignment(Random rand)
     {
-        try
+        List<DO.Order> openOrders;
+        List<DO.Courier> availableCouriers;
+
+        lock (BlMutex)
         {
-            List<DO.Order> openOrders;
-            List<DO.Courier> availableCouriers;
+            openOrders = s_dal.Order.ReadAll()
+                .Where(o => !o.CourierId.HasValue && !o.DeliveryDate.HasValue)
+                .ToList();
 
-            lock (BlMutex)
-            {
-                openOrders = s_dal.Order.ReadAll()
-                    .Where(o => !o.CourierId.HasValue && !o.DeliveryDate.HasValue)
-                    .ToList();
-
-                availableCouriers = s_dal.Courier.ReadAll()
-                    .Where(c => c.IsActive)
-                    .ToList();
-            }
-
-            if (openOrders.Count > 0 && availableCouriers.Count > 0)
-            {
-                var order = openOrders[rand.Next(openOrders.Count)];
-                var courier = availableCouriers[rand.Next(availableCouriers.Count)];
-
-                OrderManager.AssociateCourierToOrder(order.Id, courier.Id);
-                System.Diagnostics.Debug.WriteLine($"[SIMULATOR] Assigned courier {courier.Id} to order {order.Id}");
-            }
+            availableCouriers = s_dal.Courier.ReadAll()
+                .Where(c => c.IsActive)
+                .ToList();
         }
-        catch (Exception ex)
+
+        if (openOrders.Count > 0 && availableCouriers.Count > 0)
         {
-            System.Diagnostics.Debug.WriteLine($"[SIMULATOR] SimulateOrderAssignment error: {ex.Message}");
+            var order = openOrders[rand.Next(openOrders.Count)];
+            var courier = availableCouriers[rand.Next(availableCouriers.Count)];
+            
+            try 
+            { 
+                OrderManager.AssociateCourierToOrder(order.Id, courier.Id); 
+                System.Diagnostics.Debug.WriteLine($"[SIMULATOR] Assigned courier {courier.Id} to order {order.Id}");
+            } catch { }
         }
     }
 
-    /// <summary>
-    /// Starts the simulator thread with the specified clock interval.
-    /// </summary>
+    // --- Start / Stop ---
+
+    [MethodImpl(MethodImplOptions.Synchronized)]
     internal static void StartSimulator(int interval)
     {
-        lock (BlMutex)
+        if (s_thread is null)
         {
-            if (s_thread is null)
-            {
-                s_interval = interval;
-                s_stop = false;
-                s_isSimulationRunning = false;
-                s_thread = new Thread(clockRunner)
-                {
-                    Name = "ClockRunner",
-                    IsBackground = true
-                };
-                s_thread.Start();
-                System.Diagnostics.Debug.WriteLine($"[SIMULATOR] Started with interval {interval} minutes");
-            }
+            s_interval = interval;
+            s_stop = false;
+            s_thread = new Thread(clockRunner) { Name = "ClockRunner", IsBackground = true };
+            s_thread.Start();
         }
     }
 
-    /// <summary>
-    /// Stops the simulator thread.
-    /// </summary>
+    [MethodImpl(MethodImplOptions.Synchronized)]
     internal static void StopSimulator()
     {
-        Thread? threadToStop = null;
-
-        lock (BlMutex)
+        if (s_thread is not null)
         {
-            if (s_thread is not null)
-            {
-                s_stop = true;
-                threadToStop = s_thread;
-                s_thread = null;
-            }
-        }
-
-        // Interrupt outside the lock to avoid deadlock
-        if (threadToStop is not null)
-        {
-            threadToStop.Interrupt();
-            System.Diagnostics.Debug.WriteLine("[SIMULATOR] Stopped");
+            s_stop = true;
+            s_thread.Interrupt(); 
+            s_thread = null;
         }
     }
 
-    /// <summary>
-    /// Returns whether the simulator is currently running.
-    /// </summary>
     internal static bool IsSimulatorRunning
     {
-        get
-        {
-            lock (BlMutex)
-            {
-                return s_thread is not null;
-            }
-        }
+        get { return s_thread is not null; }
     }
 }

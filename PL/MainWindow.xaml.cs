@@ -10,6 +10,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using BlApi;
 using PL.Converters;
+using System.Threading.Tasks;
 
 namespace PL
 {
@@ -23,6 +24,11 @@ namespace PL
 
         // Flag to prevent window activation during observer updates
         private bool _suppressActivation = false;
+
+        // Stage 7 - Observer Mutexes for thread-safe updates
+        private readonly PL.Helpers.ObserverMutex _clockMutex = new();
+        private readonly PL.Helpers.ObserverMutex _configMutex = new();
+        private readonly PL.Helpers.ObserverMutex _simulatorMutex = new();
 
         public MainWindow()
         {
@@ -59,33 +65,88 @@ namespace PL
         public static readonly DependencyProperty OrderSummaryProperty =
             DependencyProperty.Register("OrderSummary", typeof(BO.OrderStatusSummary), typeof(MainWindow));
 
+        // Stage 7 - Simulator Interval
+        public int Interval
+        {
+            get { return (int)GetValue(IntervalProperty); }
+            set { SetValue(IntervalProperty, value); }
+        }
+
+        public static readonly DependencyProperty IntervalProperty =
+            DependencyProperty.Register("Interval", typeof(int), typeof(MainWindow), new PropertyMetadata(1));
+
+        // Stage 7 - Is Simulator Running
+        public bool IsSimulatorRunning
+        {
+            get { return (bool)GetValue(IsSimulatorRunningProperty); }
+            set { SetValue(IsSimulatorRunningProperty, value); }
+        }
+
+        public static readonly DependencyProperty IsSimulatorRunningProperty =
+            DependencyProperty.Register("IsSimulatorRunning", typeof(bool), typeof(MainWindow), new PropertyMetadata(false));
+
         #endregion
 
         #region Clock Buttons
 
         private void btnAddOneMinute_Click(object sender, RoutedEventArgs e)
         {
-            s_bl.Admin.ForwardClock(BO.TimeUnit.Minute);
+            try
+            {
+                s_bl.Admin.ForwardClock(BO.TimeUnit.Minute);
+            }
+            catch (BO.BLTemporaryNotAvailableException ex)
+            {
+                MessageBox.Show($"Cannot perform operation: {ex.Message}", "Simulator Running", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
 
         private void btnAddOneHour_Click(object sender, RoutedEventArgs e)
         {
-            s_bl.Admin.ForwardClock(BO.TimeUnit.Hour);
+            try
+            {
+                s_bl.Admin.ForwardClock(BO.TimeUnit.Hour);
+            }
+            catch (BO.BLTemporaryNotAvailableException ex)
+            {
+                MessageBox.Show($"Cannot perform operation: {ex.Message}", "Simulator Running", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
 
         private void btnAddOneDay_Click(object sender, RoutedEventArgs e)
         {
-            s_bl.Admin.ForwardClock(BO.TimeUnit.Day);
+            try
+            {
+                s_bl.Admin.ForwardClock(BO.TimeUnit.Day);
+            }
+            catch (BO.BLTemporaryNotAvailableException ex)
+            {
+                MessageBox.Show($"Cannot perform operation: {ex.Message}", "Simulator Running", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
 
         private void btnAddOneMonth_Click(object sender, RoutedEventArgs e)
         {
-            s_bl.Admin.ForwardClock(BO.TimeUnit.Month);
+            try
+            {
+                s_bl.Admin.ForwardClock(BO.TimeUnit.Month);
+            }
+            catch (BO.BLTemporaryNotAvailableException ex)
+            {
+                MessageBox.Show($"Cannot perform operation: {ex.Message}", "Simulator Running", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
 
         private void btnAddOneYear_Click(object sender, RoutedEventArgs e)
         {
-            s_bl.Admin.ForwardClock(BO.TimeUnit.Year);
+            try
+            {
+                s_bl.Admin.ForwardClock(BO.TimeUnit.Year);
+            }
+            catch (BO.BLTemporaryNotAvailableException ex)
+            {
+                MessageBox.Show($"Cannot perform operation: {ex.Message}", "Simulator Running", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
 
         #endregion
@@ -115,6 +176,10 @@ namespace PL
                 s_bl.Admin.SetConfig(Configuration);
                 _originalMaxDistance = Configuration.MaxDeliveryDistance ?? MaxDistanceConverter.DefaultDistance;
                 MessageBox.Show("Configuration updated successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (BO.BLTemporaryNotAvailableException ex)
+            {
+                MessageBox.Show($"Cannot perform operation: {ex.Message}", "Simulator Running", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             catch (Exception ex)
             {
@@ -181,15 +246,14 @@ namespace PL
 
         private void btnInitializeDB_Click(object sender, RoutedEventArgs e)
         {
-            MessageBoxResult result = MessageBox.Show("Are you sure you want to initialize the database? This will create initial data.", "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Question);
-            if (result == MessageBoxResult.Yes)
+            try
             {
-                try
+                MessageBoxResult result = MessageBox.Show("Are you sure you want to initialize the database? This will create initial data.", "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (result == MessageBoxResult.Yes)
                 {
                     Mouse.OverrideCursor = Cursors.Wait;
                     CloseAllWindowsExceptMainAndLogin();
                     
-                    // Suppress activation during initialization
                     _suppressActivation = true;
                     s_bl.Admin.InitializeDB();
                     RefreshAllData();
@@ -198,26 +262,30 @@ namespace PL
                     Mouse.OverrideCursor = null;
                     MessageBox.Show("Database initialized successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
-                catch (Exception ex)
-                {
-                    _suppressActivation = false;
-                    Mouse.OverrideCursor = null;
-                    MessageBox.Show($"Error initializing database: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+            }
+            catch (BO.BLTemporaryNotAvailableException ex)
+            {
+                Mouse.OverrideCursor = null;
+                MessageBox.Show($"Cannot perform operation: {ex.Message}", "Simulator Running", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            catch (Exception ex)
+            {
+                _suppressActivation = false;
+                Mouse.OverrideCursor = null;
+                MessageBox.Show($"Error initializing database: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         private void btnResetDB_Click(object sender, RoutedEventArgs e)
         {
-            MessageBoxResult result = MessageBox.Show("Are you sure you want to reset the database? This will delete all data.", "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Question);
-            if (result == MessageBoxResult.Yes)
+            try
             {
-                try
+                MessageBoxResult result = MessageBox.Show("Are you sure you want to reset the database? This will delete all data.", "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (result == MessageBoxResult.Yes)
                 {
                     Mouse.OverrideCursor = Cursors.Wait;
                     CloseAllWindowsExceptMainAndLogin();
                     
-                    // Suppress activation during reset
                     _suppressActivation = true;
                     s_bl.Admin.ResetDB();
                     RefreshAllData();
@@ -226,12 +294,17 @@ namespace PL
                     Mouse.OverrideCursor = null;
                     MessageBox.Show("Database reset successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
-                catch (Exception ex)
-                {
-                    _suppressActivation = false;
-                    Mouse.OverrideCursor = null;
-                    MessageBox.Show($"Error resetting database: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+            }
+            catch (BO.BLTemporaryNotAvailableException ex)
+            {
+                Mouse.OverrideCursor = null;
+                MessageBox.Show($"Cannot perform operation: {ex.Message}", "Simulator Running", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            catch (Exception ex)
+            {
+                _suppressActivation = false;
+                Mouse.OverrideCursor = null;
+                MessageBox.Show($"Error resetting database: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -272,7 +345,7 @@ namespace PL
 
         private void Window_Closed(object sender, EventArgs e)
         {
-            // Stop simulator if running
+            // Stop simulator if running before closing
             if (s_bl.Admin.IsSimulatorRunning)
             {
                 s_bl.Admin.StopSimulator();
@@ -290,55 +363,78 @@ namespace PL
         {
             if (_suppressActivation)
             {
-                return; // Don't call base - prevents window from coming to front
+                return;
             }
             base.OnActivated(e);
         }
 
         #endregion
 
-        #region Observers
+        #region Observers (Stage 7 - Updated with ObserverMutex)
 
         private void clockObserver()
         {
-            Dispatcher.BeginInvoke(new Action(() =>
+            #region Stage 7 - Thread-safe observer with non-blocking mutex
+            if (_clockMutex.CheckAndSetLoadInProgressOrRestartRequired())
+                return;
+            
+            Dispatcher.BeginInvoke(async () =>
             {
                 if (IsLoaded && !_suppressActivation)
                 {
                     CurrentTime = s_bl.Admin.GetClock();
                 }
-            }), System.Windows.Threading.DispatcherPriority.DataBind);
+                
+                if (await _clockMutex.UnsetLoadInProgressAndCheckRestartRequested())
+                    clockObserver();
+            });
+            #endregion
         }
 
         private void configObserver()
         {
-            Dispatcher.BeginInvoke(new Action(() =>
+            #region Stage 7 - Thread-safe observer with non-blocking mutex
+            if (_configMutex.CheckAndSetLoadInProgressOrRestartRequired())
+                return;
+            
+            Dispatcher.BeginInvoke(async () =>
             {
                 if (IsLoaded && !_suppressActivation)
                 {
-                    Configuration = s_bl.Admin.GetConfig();
+                    var cfg = s_bl.Admin.GetConfig();
+                    Configuration = cfg;
                     _originalMaxDistance = Configuration.MaxDeliveryDistance ?? MaxDistanceConverter.DefaultDistance;
                 }
-            }), System.Windows.Threading.DispatcherPriority.DataBind);
+                
+                if (await _configMutex.UnsetLoadInProgressAndCheckRestartRequested())
+                    configObserver();
+            });
+            #endregion
         }
 
         private void orderObserver()
         {
-            Dispatcher.BeginInvoke(new Action(() =>
+            #region Stage 7 - Thread-safe observer with non-blocking mutex
+            if (_simulatorMutex.CheckAndSetLoadInProgressOrRestartRequired())
+                return;
+            
+            Dispatcher.BeginInvoke(async () =>
             {
                 if (IsLoaded && !_suppressActivation)
                 {
-                    OrderSummary = s_bl.Orders.GetOrderStatusSummary();
+                    var summary = s_bl.Orders.GetOrderStatusSummary();
+                    OrderSummary = summary;
                 }
-            }), System.Windows.Threading.DispatcherPriority.DataBind);
+                
+                if (await _simulatorMutex.UnsetLoadInProgressAndCheckRestartRequested())
+                    orderObserver();
+            });
+            #endregion
         }
 
         #endregion
 
-        private void btnClose_Click(object sender, RoutedEventArgs e)
-        {
-            Close();
-        }
+        #region Simulator Control (Stage 7)
 
         private void btnToggleSimulator_Click(object sender, RoutedEventArgs e)
         {
@@ -347,26 +443,30 @@ namespace PL
                 if (s_bl.Admin.IsSimulatorRunning)
                 {
                     s_bl.Admin.StopSimulator();
-                    btnToggleSimulator.Content = "▶ Start";
-                    txtSimulatorInterval.IsEnabled = true;
+                    IsSimulatorRunning = false;
                 }
                 else
                 {
-                    if (!int.TryParse(txtSimulatorInterval.Text, out int interval) || interval <= 0)
+                    if (!int.TryParse(Interval.ToString(), out int interval) || interval <= 0)
                     {
                         MessageBox.Show("Please enter a valid positive interval in minutes.", "Invalid Input", MessageBoxButton.OK, MessageBoxImage.Warning);
                         return;
                     }
 
                     s_bl.Admin.StartSimulator(interval);
-                    btnToggleSimulator.Content = "⏹ Stop";
-                    txtSimulatorInterval.IsEnabled = false;
+                    IsSimulatorRunning = true;
                 }
+            }
+            catch (BO.BLTemporaryNotAvailableException ex)
+            {
+                MessageBox.Show($"Simulator error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Simulator error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+        #endregion
     }
 }

@@ -6,7 +6,7 @@
         xmlns:pl="clr-namespace:PL"
         xmlns:converters="clr-namespace:PL.Converters"
         mc:Ignorable="d"
-        Title="WPF Manage" Height="700" Width="1300"
+        Title="Order Manage" Height="680" Width="1200"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource AppBackgroundColor}"
         Loaded="Window_Loaded"

@@ -12,12 +12,17 @@ internal class AdminImplementation : IAdmin
 {
     // Configuration Management
     public BO.Config GetConfig() => AdminManager.GetConfig();
-    public void SetConfig(BO.Config configuration) => AdminManager.SetConfig(configuration);
+    public void SetConfig(BO.Config configuration) 
+    {
+        AdminManager.ThrowOnSimulatorIsRunning();
+        AdminManager.SetConfig(configuration);
+    }
 
     // Clock Management
     public DateTime GetClock() => AdminManager.Now;
     public void ForwardClock(BO.TimeUnit unit)
     {
+        AdminManager.ThrowOnSimulatorIsRunning();
         DateTime now = GetClock();
         DateTime newTime = unit switch
         {
@@ -51,11 +56,14 @@ internal class AdminImplementation : IAdmin
     #endregion Stage 5
 
     #region Stage 7 - Simulator Control
-    public void StartSimulator(int intervalMinutes) =>
-        AdminManager.StartSimulator(intervalMinutes);
+    public void StartSimulator(int interval)  //stage 7
+    {
+        AdminManager.ThrowOnSimulatorIsRunning();  //stage 7
+        AdminManager.StartSimulator(interval);  //stage 7
+    }
 
-    public void StopSimulator() =>
-        AdminManager.StopSimulator();
+    public void StopSimulator()  //stage 7
+        => AdminManager.StopSimulator();  //stage 7
 
     public bool IsSimulatorRunning =>
         AdminManager.IsSimulatorRunning;

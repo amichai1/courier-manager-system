@@ -81,6 +81,8 @@
         <Setter Property="Background" Value="{StaticResource BackgroundColor}"/>
         <Setter Property="BorderBrush" Value="{StaticResource BorderColor}"/>
         <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="MinHeight" Value="30"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
         <Setter Property="Validation.ErrorTemplate">
             <Setter.Value>
@@ -473,7 +475,10 @@
     <!-- Add Button Style (with icon) -->
     <Style x:Key="AddButtonStyle" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
         <Setter Property="FontSize" Value="14"/>
-        <Setter Property="Padding" Value="20,12"/>
+        <Setter Property="Height" Value="40"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Padding" Value="20,0"/>
     </Style>
 
     <!-- Danger/Delete Button Style (solid) -->

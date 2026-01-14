@@ -31,8 +31,8 @@ public interface IAdmin
     /// <summary>
     /// Starts the simulator with specified clock advancement interval.
     /// </summary>
-    /// <param name="intervalMinutes">Minutes to advance clock each second</param>
-    void StartSimulator(int intervalMinutes);
+    /// <param name="interval">Minutes to advance clock each second</param>
+    void StartSimulator(int interval);
 
     /// <summary>
     /// Stops the simulator.

@@ -13,19 +13,43 @@ using global::Helpers;
 internal class CourierImplementation : IBICourier
 {
     // --- CRUD Operations ---
-    public void Create(BO.Courier courier) => CourierManager.CreateCourier(courier);
+    public void Create(BO.Courier courier) 
+    {
+        // Allow creating courier while simulator runs
+        CourierManager.CreateCourier(courier);
+    }
+
     public BO.Courier Read(int id) => CourierManager.ReadCourier(id);
+    
     public IEnumerable<BO.Courier> ReadAll(Func<BO.Courier, bool>? filter = null)
         => CourierManager.ReadAllCouriers(filter);
+        
     public IEnumerable<BO.CourierInList> GetCourierList() => CourierManager.GetCourierList();
-    public void Update(BO.Courier courier) => CourierManager.UpdateCourier(courier);
-    public void Delete(int id) => CourierManager.DeleteCourier(id);
+    
+    public void Update(BO.Courier courier) 
+    {
+        // Allow updating while simulator runs
+        CourierManager.UpdateCourier(courier);
+    }
+    
+    public void Delete(int id) 
+    {
+        // Allow deletion while simulator runs
+        CourierManager.DeleteCourier(id);
+    }
 
     // --- Specific Operations ---
     public void UpdateLocation(int courierId, BO.Location newLocation)
-        => CourierManager.UpdateCourierLocation(courierId, newLocation);
+    {
+        // Allow updating location while simulator runs
+        CourierManager.UpdateCourierLocation(courierId, newLocation);
+    }
+        
     public void SetCourierStatus(int courierId, BO.CourierStatus status)
-        => CourierManager.SetCourierStatus(courierId, status);
+    {
+        // Allow setting status while simulator runs
+        CourierManager.SetCourierStatus(courierId, status);
+    }
 
     /// <summary>
     /// Calculates and returns the average delivery time for a courier based on all completed deliveries.

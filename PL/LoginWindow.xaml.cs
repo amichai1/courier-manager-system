@@ -11,7 +11,10 @@ namespace PL
         static readonly IBI s_bl = BL.Factory.Get();
         
         // Static dictionary to track open Courier windows by courier ID
-        private static Dictionary<int, Courier.CourierWindow> s_courierWindows = new();
+        private static Dictionary<int, WeakReference<Courier.CourierWindow>> s_courierWindows = new();
+        
+        // Lock for thread-safe access to the static dictionary
+        private static readonly object s_dictionaryLock = new object();
 
         public LoginWindow()
         {
@@ -174,46 +177,84 @@ namespace PL
                     return;
                 }
 
-                // Check if this courier already has a window open
-                if (s_courierWindows.TryGetValue(courierId, out var existingWindow))
+                // Check if this courier already has a window open (thread-safe)
+                lock (s_dictionaryLock)
                 {
-                    if (existingWindow != null && !existingWindow.IsClosed)
+                    if (s_courierWindows.TryGetValue(courierId, out var weakRef))
                     {
-                        // Bring existing window to front
-                        existingWindow.WindowState = WindowState.Normal;
-                        existingWindow.Activate();
+                        if (weakRef.TryGetTarget(out var existingWindow) && !existingWindow.IsClosed)
+                        {
+                            // Bring existing window to front
+                            existingWindow.WindowState = WindowState.Normal;
+                            existingWindow.Activate();
                         
-                        lblError.Text = "Courier window is already open.";
-                        ClearLoginForm();
-                        return;
-                    }
-                    else
-                    {
-                        // Remove closed window from dictionary
-                        s_courierWindows.Remove(courierId);
+                            lblError.Text = "Courier window is already open.";
+                            ClearLoginForm();
+                            return;
+                        }
+                        else
+                        {
+                            // Remove dead reference from dictionary
+                            s_courierWindows.Remove(courierId);
+                        }
                     }
                 }
 
-                // Create and show new CourierWindow
-                var courierWindow = new Courier.CourierWindow(courierId, isReadOnly: false);
-                s_courierWindows[courierId] = courierWindow;
+                // Create the courier window (no longer in try block for cleanup safety)
+                Courier.CourierWindow courierWindow = null;
+                EventHandler closedHandler = null;
 
-                courierWindow.SetCourierMode(true);
-
-                // Register window closed event to clean up dictionary
-                courierWindow.Closed += (sender, e) =>
+                try
                 {
-                    s_courierWindows.Remove(courierId);
-                };
+                    courierWindow = new Courier.CourierWindow(courierId, isReadOnly: false);
+                    
+                    // Register the closed event BEFORE any operation that might throw
+                    closedHandler = (sender, e) =>
+                    {
+                        lock (s_dictionaryLock)
+                        {
+                            s_courierWindows.Remove(courierId);
+                        }
+                    };
+                    courierWindow.Closed += closedHandler;
 
-                courierWindow.Show();
-                
-                // Bring CourierWindow to front and minimize Login
-                courierWindow.Activate();
-                this.WindowState = WindowState.Minimized;
-                
-                // Clear login form for next user
-                ClearLoginForm();
+                    // Add to dictionary before any operations
+                    lock (s_dictionaryLock)
+                    {
+                        s_courierWindows[courierId] = new WeakReference<Courier.CourierWindow>(courierWindow);
+                    }
+
+                    // Now perform setup operations that might throw
+                    courierWindow.SetCourierMode(true);
+                    courierWindow.Show();
+                    
+                    // Bring CourierWindow to front and minimize Login
+                    courierWindow.Activate();
+                    this.WindowState = WindowState.Minimized;
+                    
+                    // Clear login form for next user
+                    ClearLoginForm();
+                }
+                catch (Exception setupEx)
+                {
+                    // If anything fails, properly clean up
+                    if (courierWindow != null)
+                    {
+                        if (closedHandler != null)
+                        {
+                            courierWindow.Closed -= closedHandler;
+                        }
+
+                        lock (s_dictionaryLock)
+                        {
+                            s_courierWindows.Remove(courierId);
+                        }
+
+                        courierWindow.Close();
+                    }
+
+                    lblError.Text = $"Failed to open courier window: {setupEx.Message}";
+                }
             }
             catch (BO.BLException ex)
             {

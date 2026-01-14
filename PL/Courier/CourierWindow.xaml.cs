@@ -297,6 +297,9 @@ public partial class CourierWindow : Window
                     SelectOrderButtonEnabled = true;
                     IsDeliveryTypeEnabled = true;
                 }
+
+                // Update buttons visibility based on courier mode and order state
+                UpdatePromoteStatusButton();
             }
         }
         catch (Exception ex)
@@ -306,6 +309,7 @@ public partial class CourierWindow : Window
             CurrentOrderVisibility = Visibility.Collapsed;
             NoCurrentOrderVisibility = Visibility.Visible;
             IsDeliveryTypeEnabled = true;
+            PromoteStatusButtonVisibility = Visibility.Collapsed;
         }
     }
 
@@ -313,77 +317,103 @@ public partial class CourierWindow : Window
 
     #region Status Promotion
 
-    private void UpdatePromoteStatusButton()
+    // Handler for "Customer Refuse"
+    private void btnRefuse_Click(object sender, RoutedEventArgs e)
     {
-        if (CurrentOrder == null || !_isCourierMode)
+        try
         {
-            PromoteStatusButtonVisibility = Visibility.Collapsed;
-            PromoteStatusButtonText = "";
-            return;
-        }
+            if (CurrentOrder == null || CurrentOrder.Id <= 0) return;
 
-        // Show Complete button for any InProgress order
-        if (CurrentOrder.OrderStatus == BO.OrderStatus.InProgress)
-        {
-            PromoteStatusButtonVisibility = Visibility.Visible;
-            PromoteStatusButtonText = "✓ Complete Delivery";
+            // UI Interaction only
+            var result = MessageBox.Show(
+                $"Customer refused Order #{CurrentOrder.Id}.\n\nProceed?",
+                "Customer Refused",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes) return;
+
+            int orderId = CurrentOrder.Id;
+            int courierId = _courierId;
+
+            // Delegation to Business Logic
+            s_bl.Orders.RefuseOrder(orderId);
+            
+            MessageBox.Show("Order processed as Refused.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            
+            // Reload current order after refusal
+            LoadCurrentOrder();
         }
-        else
+        catch (Exception ex)
         {
-            PromoteStatusButtonVisibility = Visibility.Collapsed;
-            PromoteStatusButtonText = "";
+            MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
+    // Updated Handler for "Delivered" (previously Complete)
     private void btnPromoteStatus_Click(object sender, RoutedEventArgs e)
     {
         try
         {
-            if (CurrentOrder == null || CurrentOrder.Id <= 0)
-            {
-                MessageBox.Show("No current order to process.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
+            if (CurrentOrder == null || CurrentOrder.Id <= 0) return;
 
-            int orderId = CurrentOrder.Id;
-
-            // Confirm completion
             var result = MessageBox.Show(
-                $"Are you sure you want to complete Order #{orderId}?",
-                "Confirm Delivery Completion",
+                $"Mark Order #{CurrentOrder.Id} as Delivered?",
+                "Confirm Delivery",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
 
-            if (result != MessageBoxResult.Yes)
-            {
-                return;
-            }
+            if (result != MessageBoxResult.Yes) return;
 
-            try
-            {
-                // If order hasn't been picked up yet, do it automatically
-                if (!CurrentOrder.PickupDate.HasValue)
-                {
-                    s_bl.Orders.PickUpOrder(orderId);
-                }
+            int orderId = CurrentOrder.Id;
 
-                // Complete the delivery
-                s_bl.Orders.DeliverOrder(orderId);
-
-                MessageBox.Show(
-                    $"Order #{orderId} completed successfully!",
-                    "Delivery Completed",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
-            }
-            catch (BO.BLException ex)
-            {
-                MessageBox.Show($"Cannot complete order: {ex.Message}", "Operation Failed", MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
+            // Delegation to BL
+            if (!CurrentOrder.PickupDate.HasValue) 
+                s_bl.Orders.PickUpOrder(orderId);
+            
+            s_bl.Orders.DeliverOrder(orderId);
+            
+            MessageBox.Show("Order delivered successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            
+            // Reload current order after delivery
+            LoadCurrentOrder();
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error completing order: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    /// <summary>
+    /// Logic to show/hide the button panel based on state.
+    /// Shows buttons ONLY if:
+    /// 1. In courier mode (not admin viewing)
+    /// 2. There is an active order (InProgress)
+    /// </summary>
+    private void UpdatePromoteStatusButton()
+    {
+        // Hide buttons if NOT in courier mode
+        if (!_isCourierMode)
+        {
+            PromoteStatusButtonVisibility = Visibility.Collapsed;
+            return;
+        }
+
+        // Hide buttons if no current order
+        if (CurrentOrder == null || CurrentOrder.Id <= 0)
+        {
+            PromoteStatusButtonVisibility = Visibility.Collapsed;
+            return;
+        }
+
+        // Show buttons if order is active (In Progress)
+        if (CurrentOrder.OrderStatus == BO.OrderStatus.InProgress)
+        {
+            PromoteStatusButtonVisibility = Visibility.Visible;
+        }
+        else
+        {
+            PromoteStatusButtonVisibility = Visibility.Collapsed;
         }
     }
 
@@ -465,7 +495,6 @@ public partial class CourierWindow : Window
             if (ButtonText == "Add")
             {
                 CurrentCourier.Password = PasswordHelper.GenerateStrongPassword();
-
                 s_bl.Couriers.Create(CurrentCourier);
 
                 MessageBox.Show(
@@ -475,6 +504,18 @@ public partial class CourierWindow : Window
                     "Courier Added",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
+
+                _courierId = CurrentCourier.Id;
+                _isNewCourier = false;
+                ButtonText = "Update";
+                DeleteVisibility = Visibility.Visible;           // Show delete button
+                PasswordFieldVisibility = Visibility.Visible;    // Show the password field
+                CurrentPassword = CurrentCourier.Password;
+                courierIdTextBox.IsReadOnly = true;
+                _originalCourier = CloneCourier(CurrentCourier);
+                try
+                { s_bl.Couriers.AddObserver(CourierObserver); }
+                catch { }
             }
             else
             {
@@ -482,8 +523,6 @@ public partial class CourierWindow : Window
                 s_bl.Couriers.Update(CurrentCourier);
                 MessageBox.Show("Courier updated successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
-
-            Close();
         }
         catch (BO.BLException boex)
         {

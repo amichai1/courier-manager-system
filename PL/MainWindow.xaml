@@ -8,13 +8,17 @@
         xmlns:converters="clr-namespace:PL.Converters"
         mc:Ignorable="d"
         Title="Wolt Delivery System - Admin Dashboard" 
-        Height="750" Width="1100"
+        Height="680" Width="1100"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource AppBackgroundColor}"
         Loaded="Window_Loaded"
         Closed="Window_Closed">
 
     <Window.Resources>
+        <!-- Stage 7 - Single Value Converters -->
+        <converters:BoolInverterConverter x:Key="BoolInverterConverter"/>
+        <converters:SimulatorButtonTextConverter x:Key="SimulatorButtonTextConverter"/>
+        
         <!-- Local Converters -->
         <converters:StatusToColorConverter x:Key="StatusToColor"/>
         <converters:ScheduleStatusToColorConverter x:Key="ScheduleStatusToColor"/>
@@ -93,41 +97,10 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Close Button (Top Right) -->
-        <Button Grid.Row="0"
-                Content="✕"
-                Click="btnClose_Click"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Top"
-                Margin="0,-10,-10,0"
-                Width="32"
-                Height="32"
-                FontSize="16"
-                FontWeight="Bold"
-                Foreground="White"
-                Background="{StaticResource AccentColor}"
-                Cursor="Hand"
-                Panel.ZIndex="100">
-            <Button.Template>
-                <ControlTemplate TargetType="Button">
-                    <Border x:Name="border" 
-                            Background="{TemplateBinding Background}" 
-                            CornerRadius="16">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="border" Property="Background" Value="{StaticResource DangerColor}"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Button.Template>
-        </Button>
-
         <!-- Header with Logo/Icon  -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
             <!-- Logo Shape -->
-            <Canvas Width="40" Height="40" Margin="0,0,15,0">
+            <Canvas Width="40" Height="30" Margin="0,0,15,0">
                 <Ellipse Width="40" Height="40" Fill="{StaticResource PrimaryColor}"/>
                 <Path Data="M20,8 L28,20 L20,32 L12,20 Z" Fill="White" Canvas.Left="0" Canvas.Top="0"/>
                 <Ellipse Width="10" Height="10" Fill="White" Canvas.Left="15" Canvas.Top="15"/>
@@ -172,37 +145,52 @@
 
                 <!-- Time Control Buttons -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Content="+1 Min" Click="btnAddOneMinute_Click" Style="{StaticResource SecondaryButton}" Padding="8,4"/>
-                    <Button Content="+1 Hour" Click="btnAddOneHour_Click" Style="{StaticResource SecondaryButton}" Padding="8,4"/>
-                    <Button Content="+1 Day" Click="btnAddOneDay_Click" Style="{StaticResource SecondaryButton}" Padding="8,4"/>
-                    <Button Content="+1 Month" Click="btnAddOneMonth_Click" Style="{StaticResource SecondaryButton}" Padding="8,4"/>
-                    <Button Content="+1 Year" Click="btnAddOneYear_Click" Style="{StaticResource SecondaryButton}" Padding="8,4"/>
+                    <Button Name="btnAddOneMinute" Click="btnAddOneMinute_Click" Content="+ 1 Min" 
+                            Style="{StaticResource PrimaryButton}"
+                            IsEnabled="{Binding IsSimulatorRunning, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolInverterConverter}}"/>
+
+                    <Button Name="btnAddOneHour" Click="btnAddOneHour_Click" Content="+ 1 Hour" 
+                            Style="{StaticResource PrimaryButton}"
+                            IsEnabled="{Binding IsSimulatorRunning, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolInverterConverter}}"/>
+
+                    <Button Name="btnAddOneDay" Click="btnAddOneDay_Click" Content="+ 1 Day" 
+                            Style="{StaticResource PrimaryButton}"
+                            IsEnabled="{Binding IsSimulatorRunning, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolInverterConverter}}"/>
+
+                    <Button Name="btnAddOneMonth" Click="btnAddOneMonth_Click" Content="+ 1 Month" 
+                            Style="{StaticResource PrimaryButton}"
+                            IsEnabled="{Binding IsSimulatorRunning, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolInverterConverter}}"/>
+
+                    <Button Name="btnAddOneYear" Click="btnAddOneYear_Click" Content="+ 1 Year" 
+                            Style="{StaticResource PrimaryButton}"
+                            IsEnabled="{Binding IsSimulatorRunning, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolInverterConverter}}"/>
                 </StackPanel>
 
-                <!-- Simulator Controls - MOVED HERE -->
+                <!-- Simulator Controls -->
                 <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="15,0,0,0">
                     <Border Background="{StaticResource AppBackgroundColor}" CornerRadius="4" Padding="8,4" Margin="0,0,5,0">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="⏱️" FontSize="14" VerticalAlignment="Center" Margin="0,0,5,0"/>
                             <TextBox x:Name="txtSimulatorInterval" 
                                      Width="45" 
-                                     Text="10" 
+                                     Text="{Binding Interval, RelativeSource={RelativeSource AncestorType=Window}}"
                                      VerticalAlignment="Center"
                                      Style="{StaticResource TextBoxRegular}"
                                      FontSize="12"
                                      Padding="4,2"
-                                     ToolTip="Interval in minutes"/>
+                                     ToolTip="Interval in minutes"
+                                     IsEnabled="{Binding IsSimulatorRunning, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolInverterConverter}}"/>
                             <TextBlock Text="min" FontSize="11" VerticalAlignment="Center" Margin="3,0,0,0" 
                                        Foreground="{StaticResource LightTextColor}"/>
                         </StackPanel>
                     </Border>
                     <Button x:Name="btnToggleSimulator" 
-                            Content="▶ Start" 
-                            Width="80"
                             Click="btnToggleSimulator_Click"
+                            Width="120"
                             Style="{StaticResource PrimaryButton}"
                             Padding="10,6"
-                            FontSize="12"/>
+                            FontSize="12"
+                            Content="{Binding IsSimulatorRunning, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource SimulatorButtonTextConverter}}"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -302,16 +290,16 @@
                 </Border>
 
                 <!-- Configuration Panel -->
-                <Border Grid.Row="1" Style="{StaticResource RoundedBorderWithShadow}" Padding="20" Margin="0,0,0,15">
+                <Border Grid.Row="1" Style="{StaticResource RoundedBorderWithShadow}" Padding="10" Margin="0,0,0,15">
                     <StackPanel>
                         <TextBlock Text="⚙️ Configuration" Style="{StaticResource SubtitleHeader}"/>
 
                         <Label Content="Max Delivery Distance (km):" Style="{StaticResource LabelHeader}"/>
                         <TextBox Text="{Binding Configuration.MaxDeliveryDistance, RelativeSource={RelativeSource AncestorType=Window}, UpdateSourceTrigger=PropertyChanged}" 
                                  Style="{StaticResource TextBoxRegular}"/>
-
                         <Button Content="💾 Update Config" Click="btnUpdateConfig_Click" 
-                                Style="{StaticResource SecondaryButton}" Margin="0,15,0,0"/>
+                                Style="{StaticResource SecondaryButton}" Margin="0,15,0,0"
+                                IsEnabled="{Binding IsSimulatorRunning, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolInverterConverter}}"/>
                     </StackPanel>
                 </Border>
 
@@ -320,8 +308,10 @@
                     <StackPanel>
                         <TextBlock Text="🗄️ Database" Style="{StaticResource SubtitleHeader}"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Button Content="🔄 Initialize" Click="btnInitializeDB_Click" Style="{StaticResource SecondaryButton}" Width="100"/>
-                            <Button Content="🗑️ Reset" Click="btnResetDB_Click" Style="{StaticResource DeleteButtonStyle}" Width="100" Margin="10,0,0,0"/>
+                            <Button Content="🔄 Initialize" Click="btnInitializeDB_Click" Style="{StaticResource SecondaryButton}" Width="110"
+                                    IsEnabled="{Binding IsSimulatorRunning, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolInverterConverter}}"/>
+                            <Button Content="🗑️ Reset" Click="btnResetDB_Click" Style="{StaticResource DeleteButtonStyle}" Width="100" Margin="10,0,0,0"
+                                    IsEnabled="{Binding IsSimulatorRunning, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolInverterConverter}}"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>

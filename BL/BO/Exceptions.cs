@@ -43,3 +43,10 @@ public class BLOperationFailedException : BLException
     public BLOperationFailedException(string message) : base(message) { }
     public BLOperationFailedException(string message, Exception innerException) : base(message, innerException) { }
 }
+
+[Serializable]
+public class BLTemporaryNotAvailableException : BLException
+{
+    public BLTemporaryNotAvailableException(string message) : base(message) { }
+    public BLTemporaryNotAvailableException(string message, Exception innerException) : base(message, innerException) { }
+}

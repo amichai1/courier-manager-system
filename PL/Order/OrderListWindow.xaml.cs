@@ -4,6 +4,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Threading.Tasks;
 
 namespace PL.Order
 {
@@ -13,6 +14,9 @@ namespace PL.Order
 
         private static OrderListWindow? _instance = null;
         private BO.OrderStatus? _initialFilter = null;
+
+        // Stage 7 - Observer Mutex for thread-safe updates
+        private readonly PL.Helpers.ObserverMutex _orderListMutex = new();
 
         private OrderListWindow(BO.OrderStatus? filterStatus = null)
         {
@@ -118,18 +122,27 @@ namespace PL.Order
 
         private void OrderListObserver()
         {
+            #region Stage 7 - Thread-safe observer with non-blocking mutex
+            if (_orderListMutex.CheckAndSetLoadInProgressOrRestartRequired())
+                return;
+
             if (_instance == null || !_instance.IsLoaded)
             {
+                _orderListMutex.UnsetLoadInProgressAndCheckRestartRequested().Wait();
                 return;
             }
 
-            Dispatcher.BeginInvoke(new Action(() =>
+            Dispatcher.BeginInvoke(async () =>
             {
                 if (_instance != null && _instance.IsLoaded)
                 {
                     QueryOrderList();
                 }
-            }), System.Windows.Threading.DispatcherPriority.DataBind);
+
+                if (await _orderListMutex.UnsetLoadInProgressAndCheckRestartRequested())
+                    OrderListObserver();
+            });
+            #endregion
         }
 
         #endregion
@@ -154,31 +167,48 @@ namespace PL.Order
             QueryOrderList();
         }
 
-        private void QueryOrderList()
+        // Fetches orders off the UI thread to avoid freezing; marshals results back for UI updates
+        private async void QueryOrderList()
         {
             try
             {
-                IEnumerable<BO.OrderInList> orders = s_bl.Orders.GetOrderList();
+                var orders = await Task.Run(() => s_bl.Orders.GetOrderList()).ConfigureAwait(false);
 
-                // Apply filter
-                if (cbxStatusFilter.SelectedItem is ComboBoxItem selectedItem)
+                Dispatcher.BeginInvoke(new Action(() =>
                 {
-                    string filterText = selectedItem.Content?.ToString() ?? "All Statuses";
-
-                    if (filterText != "All Statuses" && Enum.TryParse<BO.OrderStatus>(filterText, out var status))
+                    try
                     {
-                        orders = orders.Where(o => o.OrderStatus == status);
+                        IEnumerable<BO.OrderInList> filtered = orders;
+
+                        // Apply filter
+                        if (cbxStatusFilter.SelectedItem is ComboBoxItem selectedItem)
+                        {
+                            string filterText = selectedItem.Content?.ToString() ?? "All Statuses";
+
+                            if (filterText != "All Statuses" && Enum.TryParse<BO.OrderStatus>(filterText, out var status))
+                            {
+                                filtered = filtered.Where(o => o.OrderStatus == status);
+                            }
+                        }
+
+                        // Apply sorting
+                        filtered = ApplySorting(filtered);
+
+                        OrderList = filtered.ToList();
                     }
-                }
-
-                // Apply sorting
-                orders = ApplySorting(orders);
-
-                OrderList = orders.ToList();
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Error loading orders: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }), System.Windows.Threading.DispatcherPriority.DataBind);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading orders: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                // If fetching in background failed, show message on UI thread
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    MessageBox.Show($"Error loading orders: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }));
             }
         }
 

@@ -13,6 +13,9 @@ namespace PL.Courier
 
         private static CourierListWindow? _instance = null;
 
+        // Stage 7 - Observer Mutex for thread-safe updates
+        private readonly PL.Helpers.ObserverMutex _courierListMutex = new();
+
         private CourierListWindow()
         {
             InitializeComponent();
@@ -88,18 +91,27 @@ namespace PL.Courier
 
         private void CourierListObserver()
         {
+            #region Stage 7 - Thread-safe observer with non-blocking mutex
+            if (_courierListMutex.CheckAndSetLoadInProgressOrRestartRequired())
+                return;
+
             if (_instance == null || !_instance.IsLoaded)
             {
+                _courierListMutex.UnsetLoadInProgressAndCheckRestartRequested().Wait();
                 return;
             }
 
-            Dispatcher.BeginInvoke(new Action(() =>
+            Dispatcher.BeginInvoke(async () =>
             {
                 if (_instance != null && _instance.IsLoaded)
                 {
                     QueryCourierList();
                 }
-            }), System.Windows.Threading.DispatcherPriority.DataBind);
+
+                if (await _courierListMutex.UnsetLoadInProgressAndCheckRestartRequested())
+                    CourierListObserver();
+            });
+            #endregion
         }
 
         #endregion

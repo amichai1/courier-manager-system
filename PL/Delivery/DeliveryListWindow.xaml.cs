@@ -4,6 +4,7 @@ using System.Linq;
 using System.Windows;
 using BlApi;
 using BO;
+using System.Threading.Tasks;
 
 namespace PL.Delivery
 {
@@ -70,28 +71,34 @@ namespace PL.Delivery
             _instance = null;
         }
 
-        private void DeliveryListObserver() => Dispatcher.Invoke(QueryDeliveryList);
+        private void DeliveryListObserver() => Dispatcher.BeginInvoke(new Action(QueryDeliveryList));
 
         #endregion
 
         #region Query & Actions
 
-        private void QueryDeliveryList()
+        private async void QueryDeliveryList()
         {
             try
             {
-                // LINQ Method Syntax - demonstrates: Where, ToList with lambda
-                var allDeliveries = s_bl.Deliveries.ReadAll()
+                var allDeliveries = await Task.Run(() => s_bl.Deliveries.ReadAll()
                     .Where(d => !d.Status.Equals(BO.OrderStatus.Delivered))
-                    .ToList();
+                    .ToList()).ConfigureAwait(false);
 
-                DeliveryList = allDeliveries;
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    DeliveryList = allDeliveries;
 
-                lblStatus.Content = $"Total Active Deliveries: {DeliveryList?.Count() ?? 0}";
+                    if (lblStatus != null)
+                        lblStatus.Content = $"Total Active Deliveries: {DeliveryList?.Count() ?? 0}";
+                }));
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading deliveries: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    MessageBox.Show($"Error loading deliveries: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }));
             }
         }
 
