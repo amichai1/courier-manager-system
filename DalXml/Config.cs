@@ -145,7 +145,7 @@ internal static class Config
         // Resetting General Config
         Clock = new DateTime(2025, 1, 1, 8, 0, 0); // Start Clock based on original config
         ManagerId = 123456789;
-        ManagerPassword = "123456789";  // ✅ CHANGED: Manager password is now flexible (1-9)
+        ManagerPassword = "123456789";
 
         // Reset company address and coordinates
         CompanyAddress = null;

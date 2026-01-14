@@ -137,7 +137,7 @@ internal static class Config
         
         // Reset manager credentials
         ManagerId = 123456789;
-        ManagerPassword = "Admin123!";
+        ManagerPassword = "123456789";
         
         // Reset company address and coordinates
         CompanyAddress = null;
