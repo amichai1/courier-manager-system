@@ -14,7 +14,7 @@ namespace PL.Order
     {
         private static readonly IBI s_bl = BL.Factory.Get();
         private int _orderId = 0;
-        private bool _isAddMode = true;
+        private bool _isAddMode = true;  
         private BO.Order? _originalOrder;
         private string? _originalAddress;
 
@@ -370,6 +370,7 @@ namespace PL.Order
         private void UpdateCancelOrderVisibility()
         {
             if (!_isAddMode && CurrentOrder != null &&
+                !CurrentOrder.CourierId.HasValue &&  // NEW: Only show if NO courier assigned
                 CurrentOrder.OrderStatus != OrderStatus.Delivered &&
                 CurrentOrder.OrderStatus != OrderStatus.Canceled &&
                 CurrentOrder.OrderStatus != OrderStatus.OrderRefused)
@@ -513,12 +514,8 @@ namespace PL.Order
                     return;
                 }
 
-                string message = CurrentOrder.CourierId.HasValue
-                    ? $"Are you sure you want to cancel Order #{CurrentOrder.Id}?\n\nThe assigned courier will be released and notified by email."
-                    : $"Are you sure you want to cancel Order #{CurrentOrder.Id}?";
-                
                 var result = MessageBox.Show(
-                    message,
+                    $"Are you sure you want to cancel Order #{CurrentOrder.Id}?",
                     "Confirm Cancel Order",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Warning);
