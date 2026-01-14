@@ -1,2 +1,1441 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ArrayOfOrder xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" />
+<ArrayOfOrder xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Order>
+    <Id>1</Id>
+    <CreatedAt>2026-01-21T09:51:00</CreatedAt>
+    <OrderType>Groceries</OrderType>
+    <Description>Order #1 - Groceries</Description>
+    <Address>Herzl 45, Tel Aviv, Israel</Address>
+    <Latitude>32.0853</Latitude>
+    <Longitude>34.7818</Longitude>
+    <CustomerName>Dan Israeli</CustomerName>
+    <CustomerPhone>052-0215670</CustomerPhone>
+    <Weight>6.389214768951894</Weight>
+    <Volume>1.071982808232761</Volume>
+    <IsFragile>true</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>2</Id>
+    <CreatedAt>2026-01-21T11:24:00</CreatedAt>
+    <OrderType>Groceries</OrderType>
+    <Description>Order #2 - Groceries</Description>
+    <Address>Ben Gurion 12, Ramat Gan, Israel</Address>
+    <Latitude>32.08</Latitude>
+    <Longitude>34.813</Longitude>
+    <CustomerName>Maya Katz</CustomerName>
+    <CustomerPhone>052-2845743</CustomerPhone>
+    <Weight>15.744906898151957</Weight>
+    <Volume>1.1233403410701206</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>3</Id>
+    <CreatedAt>2026-01-21T10:55:00</CreatedAt>
+    <OrderType>Groceries</OrderType>
+    <Description>Order #3 - Groceries</Description>
+    <Address>Rothschild 88, Tel Aviv, Israel</Address>
+    <Latitude>32.0668</Latitude>
+    <Longitude>34.7748</Longitude>
+    <CustomerName>Ori Levy</CustomerName>
+    <CustomerPhone>0505795341</CustomerPhone>
+    <Weight>14.689739356011906</Weight>
+    <Volume>1.0225978186721023</Volume>
+    <IsFragile>true</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>4</Id>
+    <CreatedAt>2026-01-21T11:02:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>Order #4 - Retail</Description>
+    <Address>Dizengoff 120, Tel Aviv, Israel</Address>
+    <Latitude>32.0827</Latitude>
+    <Longitude>34.7753</Longitude>
+    <CustomerName>Shani Cohen</CustomerName>
+    <CustomerPhone>0506235441</CustomerPhone>
+    <Weight>7.481599199699408</Weight>
+    <Volume>1.0612496277963201</Volume>
+    <IsFragile>true</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>5</Id>
+    <CreatedAt>2026-01-21T12:17:00</CreatedAt>
+    <OrderType>Groceries</OrderType>
+    <Description>Order #5 - Groceries</Description>
+    <Address>Sokolov 22, Ramat Gan, Israel</Address>
+    <Latitude>32.0891</Latitude>
+    <Longitude>34.8237</Longitude>
+    <CustomerName>Eyal Mizrahi</CustomerName>
+    <CustomerPhone>0545189588</CustomerPhone>
+    <Weight>8.038204584539049</Weight>
+    <Volume>1.0203990614997474</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>6</Id>
+    <CreatedAt>2026-01-21T09:33:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>Order #6 - Retail</Description>
+    <Address>Arlozorov 50, Tel Aviv, Israel</Address>
+    <Latitude>32.0809</Latitude>
+    <Longitude>34.7806</Longitude>
+    <CustomerName>Gal Sharabi</CustomerName>
+    <CustomerPhone>0581009052</CustomerPhone>
+    <Weight>8.90894752775129</Weight>
+    <Volume>1.0177757410818749</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>7</Id>
+    <CreatedAt>2026-01-21T10:53:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Order #7 - RestaurantFood</Description>
+    <Address>Begin 18, Petah Tikva, Israel</Address>
+    <Latitude>32.0879</Latitude>
+    <Longitude>34.8825</Longitude>
+    <CustomerName>Liora Amar</CustomerName>
+    <CustomerPhone>051-5198768</CustomerPhone>
+    <Weight>3.3526014210336936</Weight>
+    <Volume>1.0231060334619027</Volume>
+    <IsFragile>true</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>8</Id>
+    <CreatedAt>2026-01-21T09:43:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Order #8 - RestaurantFood</Description>
+    <Address>HaShalom 25, Tel Aviv, Israel</Address>
+    <Latitude>32.0668</Latitude>
+    <Longitude>34.7821</Longitude>
+    <CustomerName>Ron Goldberg</CustomerName>
+    <CustomerPhone>0531243835</CustomerPhone>
+    <Weight>3.7357077887169603</Weight>
+    <Volume>1.026372936219715</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-21T10:03:00</PickupDate>
+    <DeliveryDate xsi:nil="true" />
+    <CourierId>896524584</CourierId>
+    <CourierAssociatedDate>2026-01-21T09:54:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>9</Id>
+    <CreatedAt>2026-01-21T13:35:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>Order #9 - Retail</Description>
+    <Address>Allenby 88, Tel Aviv, Israel</Address>
+    <Latitude>32.0644</Latitude>
+    <Longitude>34.7716</Longitude>
+    <CustomerName>Yael Shapiro</CustomerName>
+    <CustomerPhone>055-1792365</CustomerPhone>
+    <Weight>2.775720657804741</Weight>
+    <Volume>1.0754203831328677</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-21T13:53:00</PickupDate>
+    <DeliveryDate xsi:nil="true" />
+    <CourierId>636227233</CourierId>
+    <CourierAssociatedDate>2026-01-21T13:46:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>10</Id>
+    <CreatedAt>2026-01-21T08:51:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Order #10 - RestaurantFood</Description>
+    <Address>Ibn Gabirol 71, Tel Aviv, Israel</Address>
+    <Latitude>32.085</Latitude>
+    <Longitude>34.7825</Longitude>
+    <CustomerName>Amit Ben-Zvi</CustomerName>
+    <CustomerPhone>0556007587</CustomerPhone>
+    <Weight>1.1614337169863767</Weight>
+    <Volume>1.0167616425774297</Volume>
+    <IsFragile>true</IsFragile>
+    <PickupDate>2026-01-21T09:09:00</PickupDate>
+    <DeliveryDate xsi:nil="true" />
+    <CourierId>697885457</CourierId>
+    <CourierAssociatedDate>2026-01-21T09:03:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>11</Id>
+    <CreatedAt>2026-01-21T14:00:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Order #11 - RestaurantFood</Description>
+    <Address>Weizmann 30, Rehovot, Israel</Address>
+    <Latitude>31.8969</Latitude>
+    <Longitude>34.8186</Longitude>
+    <CustomerName>Tamar Avraham</CustomerName>
+    <CustomerPhone>0537954147</CustomerPhone>
+    <Weight>3.739902267307267</Weight>
+    <Volume>1.0087232056943856</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-21T14:14:00</PickupDate>
+    <DeliveryDate xsi:nil="true" />
+    <CourierId>378215115</CourierId>
+    <CourierAssociatedDate>2026-01-21T14:07:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>12</Id>
+    <CreatedAt>2026-01-21T11:36:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Order #12 - RestaurantFood</Description>
+    <Address>Nordau 33, Netanya, Israel</Address>
+    <Latitude>32.3215</Latitude>
+    <Longitude>34.8532</Longitude>
+    <CustomerName>Noam Klein</CustomerName>
+    <CustomerPhone>051-5094395</CustomerPhone>
+    <Weight>2.6393949751725545</Weight>
+    <Volume>1.0398824082493217</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>13</Id>
+    <CreatedAt>2026-01-21T10:46:00</CreatedAt>
+    <OrderType>Groceries</OrderType>
+    <Description>Order #13 - Groceries</Description>
+    <Address>King George 88, Tel Aviv, Israel</Address>
+    <Latitude>32.071</Latitude>
+    <Longitude>34.7727</Longitude>
+    <CustomerName>Shir Malka</CustomerName>
+    <CustomerPhone>0510185552</CustomerPhone>
+    <Weight>4.839913616753471</Weight>
+    <Volume>1.1169601382785308</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-21T11:01:00</PickupDate>
+    <DeliveryDate xsi:nil="true" />
+    <CourierId>601174311</CourierId>
+    <CourierAssociatedDate>2026-01-21T10:54:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>15</Id>
+    <CreatedAt>2026-01-21T13:53:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>Order #15 - Retail</Description>
+    <Address>Yehuda HaMaccabi 45, Tel Aviv, Israel</Address>
+    <Latitude>32.0978</Latitude>
+    <Longitude>34.787</Longitude>
+    <CustomerName>Noa Biton</CustomerName>
+    <CustomerPhone>0525187587</CustomerPhone>
+    <Weight>1.2989431454116973</Weight>
+    <Volume>1.085872318670602</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-21T14:13:00</PickupDate>
+    <DeliveryDate xsi:nil="true" />
+    <CourierId>310237110</CourierId>
+    <CourierAssociatedDate>2026-01-21T14:04:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>16</Id>
+    <CreatedAt>2026-01-21T08:53:00</CreatedAt>
+    <OrderType>Groceries</OrderType>
+    <Description>Order #16 - Groceries</Description>
+    <Address>Moshe Sneh 8, Petah Tikva, Israel</Address>
+    <Latitude>32.0845</Latitude>
+    <Longitude>34.8715</Longitude>
+    <CustomerName>Uri Dahan</CustomerName>
+    <CustomerPhone>052-9615381</CustomerPhone>
+    <Weight>14.239218820340314</Weight>
+    <Volume>1.099020497457687</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-21T09:04:00</PickupDate>
+    <DeliveryDate xsi:nil="true" />
+    <CourierId>378215115</CourierId>
+    <CourierAssociatedDate>2026-01-21T08:58:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>17</Id>
+    <CreatedAt>2026-01-21T08:05:00</CreatedAt>
+    <OrderType>Groceries</OrderType>
+    <Description>Order #17 - Groceries</Description>
+    <Address>Simtat Natan 12, Petah Tikva, Israel</Address>
+    <Latitude>32.0921</Latitude>
+    <Longitude>34.8654</Longitude>
+    <CustomerName>Hila Golan</CustomerName>
+    <CustomerPhone>0518078044</CustomerPhone>
+    <Weight>8.822594400747565</Weight>
+    <Volume>1.0247805766516407</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-21T08:23:00</PickupDate>
+    <DeliveryDate xsi:nil="true" />
+    <CourierId>896524584</CourierId>
+    <CourierAssociatedDate>2026-01-21T08:17:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>18</Id>
+    <CreatedAt>2026-01-21T13:41:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Order #18 - RestaurantFood</Description>
+    <Address>Yitzhak Hanasi 17, Petah Tikva, Israel</Address>
+    <Latitude>32.0897</Latitude>
+    <Longitude>34.8782</Longitude>
+    <CustomerName>Rotem Azulay</CustomerName>
+    <CustomerPhone>0556250509</CustomerPhone>
+    <Weight>2.091574967236778</Weight>
+    <Volume>1.001963015887952</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>19</Id>
+    <CreatedAt>2026-01-21T12:33:00</CreatedAt>
+    <OrderType>Groceries</OrderType>
+    <Description>Order #19 - Groceries</Description>
+    <Address>Sirkin 45, Petah Tikva, Israel</Address>
+    <Latitude>32.0812</Latitude>
+    <Longitude>34.8598</Longitude>
+    <CustomerName>Adi Berkovich</CustomerName>
+    <CustomerPhone>051-0918120</CustomerPhone>
+    <Weight>5.978763815000357</Weight>
+    <Volume>1.084992399158206</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-21T12:50:00</PickupDate>
+    <DeliveryDate xsi:nil="true" />
+    <CourierId>606203438</CourierId>
+    <CourierAssociatedDate>2026-01-21T12:41:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>20</Id>
+    <CreatedAt>2026-01-21T12:56:00</CreatedAt>
+    <OrderType>Groceries</OrderType>
+    <Description>Order #20 - Groceries</Description>
+    <Address>HaShikma 22, Petah Tikva, Israel</Address>
+    <Latitude>32.0956</Latitude>
+    <Longitude>34.8704</Longitude>
+    <CustomerName>Yoni Hadad</CustomerName>
+    <CustomerPhone>052-1219989</CustomerPhone>
+    <Weight>10.260288669072654</Weight>
+    <Volume>1.1096674514805518</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-21T13:09:00</PickupDate>
+    <DeliveryDate xsi:nil="true" />
+    <CourierId>310237110</CourierId>
+    <CourierAssociatedDate>2026-01-21T13:01:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>21</Id>
+    <CreatedAt>2026-01-21T12:26:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Order #21 - RestaurantFood</Description>
+    <Address>Bialik 115, Ramat Gan, Israel</Address>
+    <Latitude>32.0856</Latitude>
+    <Longitude>34.8142</Longitude>
+    <CustomerName>Michal Gabay</CustomerName>
+    <CustomerPhone>0520260829</CustomerPhone>
+    <Weight>1.9157185432807382</Weight>
+    <Volume>1.0101016865468477</Volume>
+    <IsFragile>true</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>22</Id>
+    <CreatedAt>2026-01-21T11:27:00</CreatedAt>
+    <OrderType>Groceries</OrderType>
+    <Description>Order #22 - Groceries</Description>
+    <Address>Jabotinsky 85, Ramat Gan, Israel</Address>
+    <Latitude>32.0723</Latitude>
+    <Longitude>34.8235</Longitude>
+    <CustomerName>Shai Ohayon</CustomerName>
+    <CustomerPhone>0580852092</CustomerPhone>
+    <Weight>2.8783903609880506</Weight>
+    <Volume>1.0725377799355087</Volume>
+    <IsFragile>true</IsFragile>
+    <PickupDate>2026-01-21T11:38:00</PickupDate>
+    <DeliveryDate xsi:nil="true" />
+    <CourierId>606203438</CourierId>
+    <CourierAssociatedDate>2026-01-21T11:33:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>23</Id>
+    <CreatedAt>2026-01-21T09:02:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Order #23 - RestaurantFood</Description>
+    <Address>Henrietta Szold 8, Ramat Gan, Israel</Address>
+    <Latitude>32.0801</Latitude>
+    <Longitude>34.8089</Longitude>
+    <CustomerName>Liat Vaknin</CustomerName>
+    <CustomerPhone>0534426937</CustomerPhone>
+    <Weight>3.519959819328193</Weight>
+    <Volume>1.0008463243766703</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>24</Id>
+    <CreatedAt>2026-01-21T10:15:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>Order #24 - Retail</Description>
+    <Address>Arlozorov 11, Ramat Gan, Israel</Address>
+    <Latitude>32.0889</Latitude>
+    <Longitude>34.8195</Longitude>
+    <CustomerName>Elad Mizrachi</CustomerName>
+    <CustomerPhone>0516148941</CustomerPhone>
+    <Weight>6.311451625313599</Weight>
+    <Volume>1.0258090035710912</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>25</Id>
+    <CreatedAt>2026-01-21T13:45:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Order #25 - RestaurantFood</Description>
+    <Address>Einstein 7, Ramat Gan, Israel</Address>
+    <Latitude>32.0865</Latitude>
+    <Longitude>34.8167</Longitude>
+    <CustomerName>Roni Caspi</CustomerName>
+    <CustomerPhone>053-4624090</CustomerPhone>
+    <Weight>1.5525172663871765</Weight>
+    <Volume>1.0136899608497003</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>26</Id>
+    <CreatedAt>2026-01-21T13:50:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Order #26 - RestaurantFood</Description>
+    <Address>Rabbi Akiva 88, Bnei Brak, Israel</Address>
+    <Latitude>32.085</Latitude>
+    <Longitude>34.8384</Longitude>
+    <CustomerName>Moran Eliyahu</CustomerName>
+    <CustomerPhone>0559462137</CustomerPhone>
+    <Weight>2.73417553150224</Weight>
+    <Volume>1.0117442349008903</Volume>
+    <IsFragile>true</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>27</Id>
+    <CreatedAt>2026-01-21T12:59:00</CreatedAt>
+    <OrderType>Groceries</OrderType>
+    <Description>Order #27 - Groceries</Description>
+    <Address>Jabotinsky 144, Bnei Brak, Israel</Address>
+    <Latitude>32.0879</Latitude>
+    <Longitude>34.8296</Longitude>
+    <CustomerName>Itay Ben-David</CustomerName>
+    <CustomerPhone>050-6115003</CustomerPhone>
+    <Weight>14.649648925652144</Weight>
+    <Volume>1.0328827291298155</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>28</Id>
+    <CreatedAt>2026-01-21T11:06:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>Order #28 - Retail</Description>
+    <Address>Rashi 12, Bnei Brak, Israel</Address>
+    <Latitude>32.0911</Latitude>
+    <Longitude>34.8321</Longitude>
+    <CustomerName>Osnat Shavit</CustomerName>
+    <CustomerPhone>053-3419523</CustomerPhone>
+    <Weight>1.6229705921021784</Weight>
+    <Volume>1.0560508951284275</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>29</Id>
+    <CreatedAt>2026-01-21T09:46:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>Order #29 - Retail</Description>
+    <Address>Katznelson 41, Givatayim, Israel</Address>
+    <Latitude>32.0737</Latitude>
+    <Longitude>34.8114</Longitude>
+    <CustomerName>Yuval Saar</CustomerName>
+    <CustomerPhone>0548736925</CustomerPhone>
+    <Weight>4.429649058885637</Weight>
+    <Volume>1.0403058316358806</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-21T10:01:00</PickupDate>
+    <DeliveryDate xsi:nil="true" />
+    <CourierId>378215115</CourierId>
+    <CourierAssociatedDate>2026-01-21T09:53:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>30</Id>
+    <CreatedAt>2026-01-21T11:44:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Order #30 - RestaurantFood</Description>
+    <Address>Weizmann 77, Givatayim, Israel</Address>
+    <Latitude>32.0685</Latitude>
+    <Longitude>34.8156</Longitude>
+    <CustomerName>Tal Kaplan</CustomerName>
+    <CustomerPhone>0580998205</CustomerPhone>
+    <Weight>1.3338485374083457</Weight>
+    <Volume>1.0095118140235306</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>31</Id>
+    <CreatedAt>2026-01-06T14:00:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>Historical Order - Delivered by David Cohen</Description>
+    <Address>Sokolov 22, Ramat Gan, Israel</Address>
+    <Latitude>32.0891</Latitude>
+    <Longitude>34.8237</Longitude>
+    <CustomerName>History Customer 1</CustomerName>
+    <CustomerPhone>0509878253</CustomerPhone>
+    <Weight>1.5488536033180331</Weight>
+    <Volume>1.042153007083779</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-06T14:20:00</PickupDate>
+    <DeliveryDate>2026-01-06T17:53:00</DeliveryDate>
+    <CourierId>697885457</CourierId>
+    <CourierAssociatedDate>2026-01-06T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>32</Id>
+    <CreatedAt>2025-12-27T14:00:00</CreatedAt>
+    <OrderType>Groceries</OrderType>
+    <Description>Historical Order - Delivered by David Cohen</Description>
+    <Address>Ben Gurion 12, Ramat Gan, Israel</Address>
+    <Latitude>32.08</Latitude>
+    <Longitude>34.813</Longitude>
+    <CustomerName>History Customer 2</CustomerName>
+    <CustomerPhone>0548914210</CustomerPhone>
+    <Weight>2.380802671270626</Weight>
+    <Volume>1.1572843792653487</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2025-12-27T14:20:00</PickupDate>
+    <DeliveryDate>2025-12-27T18:45:00</DeliveryDate>
+    <CourierId>697885457</CourierId>
+    <CourierAssociatedDate>2025-12-27T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>33</Id>
+    <CreatedAt>2025-12-17T14:00:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>Historical Order - Delivered by Sarah Levi</Description>
+    <Address>Dizengoff 120, Tel Aviv, Israel</Address>
+    <Latitude>32.0827</Latitude>
+    <Longitude>34.7753</Longitude>
+    <CustomerName>History Customer 3</CustomerName>
+    <CustomerPhone>050-1194782</CustomerPhone>
+    <Weight>1.7842969371633628</Weight>
+    <Volume>1.1775932291582973</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2025-12-17T14:20:00</PickupDate>
+    <DeliveryDate>2025-12-17T16:13:00</DeliveryDate>
+    <CourierId>460984214</CourierId>
+    <CourierAssociatedDate>2025-12-17T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>34</Id>
+    <CreatedAt>2025-12-13T14:00:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Historical Order - Canceled by Sarah Levi</Description>
+    <Address>Sokolov 22, Ramat Gan, Israel</Address>
+    <Latitude>32.0891</Latitude>
+    <Longitude>34.8237</Longitude>
+    <CustomerName>History Customer 1</CustomerName>
+    <CustomerPhone>053-6834648</CustomerPhone>
+    <Weight>3.4625492608024917</Weight>
+    <Volume>1.1491271593894916</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>35</Id>
+    <CreatedAt>2026-01-03T14:00:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>Historical Order - Delivered by Sarah Levi</Description>
+    <Address>Sokolov 22, Ramat Gan, Israel</Address>
+    <Latitude>32.0891</Latitude>
+    <Longitude>34.8237</Longitude>
+    <CustomerName>History Customer 2</CustomerName>
+    <CustomerPhone>0508101004</CustomerPhone>
+    <Weight>3.944582531695279</Weight>
+    <Volume>1.3131260706481036</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-03T14:20:00</PickupDate>
+    <DeliveryDate>2026-01-03T19:08:00</DeliveryDate>
+    <CourierId>460984214</CourierId>
+    <CourierAssociatedDate>2026-01-03T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>36</Id>
+    <CreatedAt>2025-12-19T14:00:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Historical Order - Delivered by Sarah Levi</Description>
+    <Address>Sokolov 22, Ramat Gan, Israel</Address>
+    <Latitude>32.0891</Latitude>
+    <Longitude>34.8237</Longitude>
+    <CustomerName>History Customer 2</CustomerName>
+    <CustomerPhone>0557307585</CustomerPhone>
+    <Weight>4.42390880791349</Weight>
+    <Volume>1.0056067167952687</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2025-12-19T14:20:00</PickupDate>
+    <DeliveryDate>2025-12-19T16:55:00</DeliveryDate>
+    <CourierId>460984214</CourierId>
+    <CourierAssociatedDate>2025-12-19T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>37</Id>
+    <CreatedAt>2026-01-02T14:00:00</CreatedAt>
+    <OrderType>Groceries</OrderType>
+    <Description>Historical Order - Delivered by Michael Amir</Description>
+    <Address>Dizengoff 120, Tel Aviv, Israel</Address>
+    <Latitude>32.0827</Latitude>
+    <Longitude>34.7753</Longitude>
+    <CustomerName>History Customer 1</CustomerName>
+    <CustomerPhone>0548693037</CustomerPhone>
+    <Weight>3.6211488912200998</Weight>
+    <Volume>1.478661397842189</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-02T14:20:00</PickupDate>
+    <DeliveryDate>2026-01-02T17:08:00</DeliveryDate>
+    <CourierId>713758886</CourierId>
+    <CourierAssociatedDate>2026-01-02T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>38</Id>
+    <CreatedAt>2025-12-07T14:00:00</CreatedAt>
+    <OrderType>Groceries</OrderType>
+    <Description>Historical Order - Delivered by Michael Amir</Description>
+    <Address>Dizengoff 120, Tel Aviv, Israel</Address>
+    <Latitude>32.0827</Latitude>
+    <Longitude>34.7753</Longitude>
+    <CustomerName>History Customer 1</CustomerName>
+    <CustomerPhone>055-4509909</CustomerPhone>
+    <Weight>3.7158598963504748</Weight>
+    <Volume>1.2088040423520279</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2025-12-07T14:20:00</PickupDate>
+    <DeliveryDate>2025-12-07T15:25:00</DeliveryDate>
+    <CourierId>713758886</CourierId>
+    <CourierAssociatedDate>2025-12-07T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>40</Id>
+    <CreatedAt>2026-01-14T14:00:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Historical Order - Delivered by Rachel Israeli</Description>
+    <Address>Herzl 45, Tel Aviv, Israel</Address>
+    <Latitude>32.0853</Latitude>
+    <Longitude>34.7818</Longitude>
+    <CustomerName>History Customer 1</CustomerName>
+    <CustomerPhone>0525303952</CustomerPhone>
+    <Weight>3.285922346239328</Weight>
+    <Volume>1.4967277171419986</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-14T14:20:00</PickupDate>
+    <DeliveryDate>2026-01-14T17:46:00</DeliveryDate>
+    <CourierId>310237110</CourierId>
+    <CourierAssociatedDate>2026-01-14T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>41</Id>
+    <CreatedAt>2026-01-12T14:00:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Historical Order - Delivered by Rachel Israeli</Description>
+    <Address>Ben Gurion 12, Ramat Gan, Israel</Address>
+    <Latitude>32.08</Latitude>
+    <Longitude>34.813</Longitude>
+    <CustomerName>History Customer 2</CustomerName>
+    <CustomerPhone>0501056091</CustomerPhone>
+    <Weight>2.252495266053505</Weight>
+    <Volume>1.3685744031186267</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-12T14:20:00</PickupDate>
+    <DeliveryDate>2026-01-12T18:06:00</DeliveryDate>
+    <CourierId>310237110</CourierId>
+    <CourierAssociatedDate>2026-01-12T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>42</Id>
+    <CreatedAt>2025-12-04T14:00:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>Historical Order - Delivered by Yossi Mizrahi</Description>
+    <Address>Dizengoff 120, Tel Aviv, Israel</Address>
+    <Latitude>32.0827</Latitude>
+    <Longitude>34.7753</Longitude>
+    <CustomerName>History Customer 1</CustomerName>
+    <CustomerPhone>053-4655855</CustomerPhone>
+    <Weight>4.149484310813004</Weight>
+    <Volume>1.0360002198092633</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2025-12-04T14:20:00</PickupDate>
+    <DeliveryDate>2025-12-04T17:24:00</DeliveryDate>
+    <CourierId>137244521</CourierId>
+    <CourierAssociatedDate>2025-12-04T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>43</Id>
+    <CreatedAt>2025-12-15T14:00:00</CreatedAt>
+    <OrderType>Groceries</OrderType>
+    <Description>Historical Order - Delivered by Yossi Mizrahi</Description>
+    <Address>Sokolov 22, Ramat Gan, Israel</Address>
+    <Latitude>32.0891</Latitude>
+    <Longitude>34.8237</Longitude>
+    <CustomerName>History Customer 3</CustomerName>
+    <CustomerPhone>058-7804597</CustomerPhone>
+    <Weight>5.3325277799067035</Weight>
+    <Volume>1.1692886708787522</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2025-12-15T14:20:00</PickupDate>
+    <DeliveryDate>2025-12-15T16:32:00</DeliveryDate>
+    <CourierId>137244521</CourierId>
+    <CourierAssociatedDate>2025-12-15T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>44</Id>
+    <CreatedAt>2025-11-23T14:00:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>Historical Order - Delivered by Yossi Mizrahi</Description>
+    <Address>Dizengoff 120, Tel Aviv, Israel</Address>
+    <Latitude>32.0827</Latitude>
+    <Longitude>34.7753</Longitude>
+    <CustomerName>History Customer 1</CustomerName>
+    <CustomerPhone>055-5371698</CustomerPhone>
+    <Weight>4.442974756680254</Weight>
+    <Volume>1.409904430032888</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2025-11-23T14:20:00</PickupDate>
+    <DeliveryDate>2025-11-23T16:57:00</DeliveryDate>
+    <CourierId>137244521</CourierId>
+    <CourierAssociatedDate>2025-11-23T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>46</Id>
+    <CreatedAt>2025-12-22T14:00:00</CreatedAt>
+    <OrderType>Groceries</OrderType>
+    <Description>Historical Order - Canceled by Tal Shapira</Description>
+    <Address>Ben Gurion 12, Ramat Gan, Israel</Address>
+    <Latitude>32.08</Latitude>
+    <Longitude>34.813</Longitude>
+    <CustomerName>History Customer 2</CustomerName>
+    <CustomerPhone>051-1502331</CustomerPhone>
+    <Weight>4.3055113036163135</Weight>
+    <Volume>1.361972316837666</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>47</Id>
+    <CreatedAt>2025-12-17T14:00:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>Historical Order - Delivered by Tal Shapira</Description>
+    <Address>Dizengoff 120, Tel Aviv, Israel</Address>
+    <Latitude>32.0827</Latitude>
+    <Longitude>34.7753</Longitude>
+    <CustomerName>History Customer 1</CustomerName>
+    <CustomerPhone>055-5884041</CustomerPhone>
+    <Weight>3.275714267154349</Weight>
+    <Volume>1.1304605282725881</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2025-12-17T14:20:00</PickupDate>
+    <DeliveryDate>2025-12-17T17:42:00</DeliveryDate>
+    <CourierId>61654224</CourierId>
+    <CourierAssociatedDate>2025-12-17T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>48</Id>
+    <CreatedAt>2026-01-05T14:00:00</CreatedAt>
+    <OrderType>Groceries</OrderType>
+    <Description>Historical Order - Canceled by Tal Shapira</Description>
+    <Address>Herzl 45, Tel Aviv, Israel</Address>
+    <Latitude>32.0853</Latitude>
+    <Longitude>34.7818</Longitude>
+    <CustomerName>History Customer 2</CustomerName>
+    <CustomerPhone>050-1197789</CustomerPhone>
+    <Weight>2.8018333477019546</Weight>
+    <Volume>1.0782226321194037</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>49</Id>
+    <CreatedAt>2025-12-26T14:00:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>Historical Order - Delivered by Tal Shapira</Description>
+    <Address>Dizengoff 120, Tel Aviv, Israel</Address>
+    <Latitude>32.0827</Latitude>
+    <Longitude>34.7753</Longitude>
+    <CustomerName>History Customer 2</CustomerName>
+    <CustomerPhone>053-1072914</CustomerPhone>
+    <Weight>4.431818522038673</Weight>
+    <Volume>1.354955242313137</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2025-12-26T14:20:00</PickupDate>
+    <DeliveryDate>2025-12-26T15:23:00</DeliveryDate>
+    <CourierId>61654224</CourierId>
+    <CourierAssociatedDate>2025-12-26T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>50</Id>
+    <CreatedAt>2026-01-04T14:00:00</CreatedAt>
+    <OrderType>Groceries</OrderType>
+    <Description>Historical Order - Delivered by Noa Goldstein</Description>
+    <Address>Rothschild 88, Tel Aviv, Israel</Address>
+    <Latitude>32.0668</Latitude>
+    <Longitude>34.7748</Longitude>
+    <CustomerName>History Customer 3</CustomerName>
+    <CustomerPhone>051-8158556</CustomerPhone>
+    <Weight>2.4217047359524884</Weight>
+    <Volume>1.067239054778606</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-04T14:20:00</PickupDate>
+    <DeliveryDate>2026-01-04T18:22:00</DeliveryDate>
+    <CourierId>393143565</CourierId>
+    <CourierAssociatedDate>2026-01-04T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>51</Id>
+    <CreatedAt>2026-01-12T14:00:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Historical Order - Delivered by Noa Goldstein</Description>
+    <Address>Ben Gurion 12, Ramat Gan, Israel</Address>
+    <Latitude>32.08</Latitude>
+    <Longitude>34.813</Longitude>
+    <CustomerName>History Customer 2</CustomerName>
+    <CustomerPhone>0533907009</CustomerPhone>
+    <Weight>3.441756212414865</Weight>
+    <Volume>1.4403698299940049</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-12T14:20:00</PickupDate>
+    <DeliveryDate>2026-01-12T19:57:00</DeliveryDate>
+    <CourierId>393143565</CourierId>
+    <CourierAssociatedDate>2026-01-12T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>52</Id>
+    <CreatedAt>2025-11-24T14:00:00</CreatedAt>
+    <OrderType>Groceries</OrderType>
+    <Description>Historical Order - Canceled by Avi Ben-David</Description>
+    <Address>Sokolov 22, Ramat Gan, Israel</Address>
+    <Latitude>32.0891</Latitude>
+    <Longitude>34.8237</Longitude>
+    <CustomerName>History Customer 1</CustomerName>
+    <CustomerPhone>050-2629778</CustomerPhone>
+    <Weight>2.107961193537557</Weight>
+    <Volume>1.4820080559459765</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>53</Id>
+    <CreatedAt>2025-12-18T14:00:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Historical Order - Canceled by Avi Ben-David</Description>
+    <Address>Dizengoff 120, Tel Aviv, Israel</Address>
+    <Latitude>32.0827</Latitude>
+    <Longitude>34.7753</Longitude>
+    <CustomerName>History Customer 2</CustomerName>
+    <CustomerPhone>053-8208847</CustomerPhone>
+    <Weight>4.195629144915589</Weight>
+    <Volume>1.4561320633495316</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>54</Id>
+    <CreatedAt>2025-12-06T14:00:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Historical Order - Delivered by Avi Ben-David</Description>
+    <Address>Herzl 45, Tel Aviv, Israel</Address>
+    <Latitude>32.0853</Latitude>
+    <Longitude>34.7818</Longitude>
+    <CustomerName>History Customer 2</CustomerName>
+    <CustomerPhone>0501235667</CustomerPhone>
+    <Weight>2.612258767317461</Weight>
+    <Volume>1.396351822342306</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2025-12-06T14:20:00</PickupDate>
+    <DeliveryDate>2025-12-06T18:01:00</DeliveryDate>
+    <CourierId>948594130</CourierId>
+    <CourierAssociatedDate>2025-12-06T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>55</Id>
+    <CreatedAt>2025-12-18T14:00:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Historical Order - Canceled by Avi Ben-David</Description>
+    <Address>Dizengoff 120, Tel Aviv, Israel</Address>
+    <Latitude>32.0827</Latitude>
+    <Longitude>34.7753</Longitude>
+    <CustomerName>History Customer 3</CustomerName>
+    <CustomerPhone>0523122510</CustomerPhone>
+    <Weight>3.8386781101381366</Weight>
+    <Volume>1.3697607409870498</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>56</Id>
+    <CreatedAt>2026-01-07T14:00:00</CreatedAt>
+    <OrderType>Groceries</OrderType>
+    <Description>Historical Order - Canceled by Shira Katz</Description>
+    <Address>Herzl 45, Tel Aviv, Israel</Address>
+    <Latitude>32.0853</Latitude>
+    <Longitude>34.7818</Longitude>
+    <CustomerName>History Customer 3</CustomerName>
+    <CustomerPhone>051-9006960</CustomerPhone>
+    <Weight>3.504911708212498</Weight>
+    <Volume>1.377538671217176</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>57</Id>
+    <CreatedAt>2025-12-04T14:00:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>Historical Order - Delivered by Shira Katz</Description>
+    <Address>Dizengoff 120, Tel Aviv, Israel</Address>
+    <Latitude>32.0827</Latitude>
+    <Longitude>34.7753</Longitude>
+    <CustomerName>History Customer 3</CustomerName>
+    <CustomerPhone>053-4569602</CustomerPhone>
+    <Weight>4.717604603489166</Weight>
+    <Volume>1.1950667389457723</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2025-12-04T14:20:00</PickupDate>
+    <DeliveryDate>2025-12-04T16:37:00</DeliveryDate>
+    <CourierId>108013418</CourierId>
+    <CourierAssociatedDate>2025-12-04T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>58</Id>
+    <CreatedAt>2026-01-12T14:00:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Historical Order - Delivered by Shira Katz</Description>
+    <Address>Sokolov 22, Ramat Gan, Israel</Address>
+    <Latitude>32.0891</Latitude>
+    <Longitude>34.8237</Longitude>
+    <CustomerName>History Customer 1</CustomerName>
+    <CustomerPhone>0533255320</CustomerPhone>
+    <Weight>2.6058023044667777</Weight>
+    <Volume>1.4619819368401605</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-12T14:20:00</PickupDate>
+    <DeliveryDate>2026-01-12T19:58:00</DeliveryDate>
+    <CourierId>108013418</CourierId>
+    <CourierAssociatedDate>2026-01-12T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>59</Id>
+    <CreatedAt>2026-01-14T14:00:00</CreatedAt>
+    <OrderType>Groceries</OrderType>
+    <Description>Historical Order - Delivered by Eitan Levy</Description>
+    <Address>Ben Gurion 12, Ramat Gan, Israel</Address>
+    <Latitude>32.08</Latitude>
+    <Longitude>34.813</Longitude>
+    <CustomerName>History Customer 2</CustomerName>
+    <CustomerPhone>0551251694</CustomerPhone>
+    <Weight>5.445834456960021</Weight>
+    <Volume>1.2035602341403604</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-14T14:20:00</PickupDate>
+    <DeliveryDate>2026-01-14T15:44:00</DeliveryDate>
+    <CourierId>888361789</CourierId>
+    <CourierAssociatedDate>2026-01-14T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>60</Id>
+    <CreatedAt>2025-12-22T14:00:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Historical Order - Delivered by Eitan Levy</Description>
+    <Address>Dizengoff 120, Tel Aviv, Israel</Address>
+    <Latitude>32.0827</Latitude>
+    <Longitude>34.7753</Longitude>
+    <CustomerName>History Customer 1</CustomerName>
+    <CustomerPhone>052-6203375</CustomerPhone>
+    <Weight>2.34584141803224</Weight>
+    <Volume>1.1782226115977328</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2025-12-22T14:20:00</PickupDate>
+    <DeliveryDate>2025-12-22T18:57:00</DeliveryDate>
+    <CourierId>888361789</CourierId>
+    <CourierAssociatedDate>2025-12-22T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>61</Id>
+    <CreatedAt>2025-12-29T14:00:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Historical Order - Delivered by Maya Friedman</Description>
+    <Address>Ben Gurion 12, Ramat Gan, Israel</Address>
+    <Latitude>32.08</Latitude>
+    <Longitude>34.813</Longitude>
+    <CustomerName>History Customer 3</CustomerName>
+    <CustomerPhone>0541393638</CustomerPhone>
+    <Weight>1.5331239609573841</Weight>
+    <Volume>1.307886679568519</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2025-12-29T14:20:00</PickupDate>
+    <DeliveryDate>2025-12-29T18:48:00</DeliveryDate>
+    <CourierId>697321172</CourierId>
+    <CourierAssociatedDate>2025-12-29T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>62</Id>
+    <CreatedAt>2025-12-13T14:00:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>Historical Order - Delivered by Maya Friedman</Description>
+    <Address>Dizengoff 120, Tel Aviv, Israel</Address>
+    <Latitude>32.0827</Latitude>
+    <Longitude>34.7753</Longitude>
+    <CustomerName>History Customer 2</CustomerName>
+    <CustomerPhone>0514689035</CustomerPhone>
+    <Weight>4.0845367265566725</Weight>
+    <Volume>1.3331027444418058</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2025-12-13T14:20:00</PickupDate>
+    <DeliveryDate>2025-12-13T17:57:00</DeliveryDate>
+    <CourierId>697321172</CourierId>
+    <CourierAssociatedDate>2025-12-13T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>64</Id>
+    <CreatedAt>2026-01-05T14:00:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>Historical Order - Delivered by Ori Peretz</Description>
+    <Address>Ben Gurion 12, Ramat Gan, Israel</Address>
+    <Latitude>32.08</Latitude>
+    <Longitude>34.813</Longitude>
+    <CustomerName>History Customer 2</CustomerName>
+    <CustomerPhone>052-6250082</CustomerPhone>
+    <Weight>5.927154059255766</Weight>
+    <Volume>1.2488312273888469</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-05T14:20:00</PickupDate>
+    <DeliveryDate>2026-01-05T15:09:00</DeliveryDate>
+    <CourierId>772766820</CourierId>
+    <CourierAssociatedDate>2026-01-05T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>65</Id>
+    <CreatedAt>2026-01-05T14:00:00</CreatedAt>
+    <OrderType>Groceries</OrderType>
+    <Description>Historical Order - Delivered by Gal Sharon</Description>
+    <Address>Rothschild 88, Tel Aviv, Israel</Address>
+    <Latitude>32.0668</Latitude>
+    <Longitude>34.7748</Longitude>
+    <CustomerName>History Customer 1</CustomerName>
+    <CustomerPhone>0550525482</CustomerPhone>
+    <Weight>2.6825628956486205</Weight>
+    <Volume>1.1501825227370701</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-05T14:20:00</PickupDate>
+    <DeliveryDate>2026-01-05T19:05:00</DeliveryDate>
+    <CourierId>583161336</CourierId>
+    <CourierAssociatedDate>2026-01-05T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>66</Id>
+    <CreatedAt>2026-01-06T14:00:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>Historical Order - Delivered by Gal Sharon</Description>
+    <Address>Herzl 45, Tel Aviv, Israel</Address>
+    <Latitude>32.0853</Latitude>
+    <Longitude>34.7818</Longitude>
+    <CustomerName>History Customer 3</CustomerName>
+    <CustomerPhone>058-3634498</CustomerPhone>
+    <Weight>2.458690206318167</Weight>
+    <Volume>1.2748330354581368</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-06T14:20:00</PickupDate>
+    <DeliveryDate>2026-01-06T19:48:00</DeliveryDate>
+    <CourierId>583161336</CourierId>
+    <CourierAssociatedDate>2026-01-06T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>67</Id>
+    <CreatedAt>2025-12-19T14:00:00</CreatedAt>
+    <OrderType>Groceries</OrderType>
+    <Description>Historical Order - Delivered by Gal Sharon</Description>
+    <Address>Dizengoff 120, Tel Aviv, Israel</Address>
+    <Latitude>32.0827</Latitude>
+    <Longitude>34.7753</Longitude>
+    <CustomerName>History Customer 2</CustomerName>
+    <CustomerPhone>0580427932</CustomerPhone>
+    <Weight>3.0571869879314613</Weight>
+    <Volume>1.2206014248358132</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2025-12-19T14:20:00</PickupDate>
+    <DeliveryDate>2025-12-19T17:46:00</DeliveryDate>
+    <CourierId>583161336</CourierId>
+    <CourierAssociatedDate>2025-12-19T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>68</Id>
+    <CreatedAt>2025-12-31T14:00:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>Historical Order - Delivered by Lior Ben-Ami</Description>
+    <Address>Herzl 45, Tel Aviv, Israel</Address>
+    <Latitude>32.0853</Latitude>
+    <Longitude>34.7818</Longitude>
+    <CustomerName>History Customer 1</CustomerName>
+    <CustomerPhone>050-1477284</CustomerPhone>
+    <Weight>3.473104749288032</Weight>
+    <Volume>1.079401412192306</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2025-12-31T14:20:00</PickupDate>
+    <DeliveryDate>2025-12-31T19:34:00</DeliveryDate>
+    <CourierId>939680484</CourierId>
+    <CourierAssociatedDate>2025-12-31T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>69</Id>
+    <CreatedAt>2026-01-09T14:00:00</CreatedAt>
+    <OrderType>Groceries</OrderType>
+    <Description>Historical Order - Delivered by Lior Ben-Ami</Description>
+    <Address>Rothschild 88, Tel Aviv, Israel</Address>
+    <Latitude>32.0668</Latitude>
+    <Longitude>34.7748</Longitude>
+    <CustomerName>History Customer 3</CustomerName>
+    <CustomerPhone>051-4470660</CustomerPhone>
+    <Weight>5.624161391215623</Weight>
+    <Volume>1.3044617243265475</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-09T14:20:00</PickupDate>
+    <DeliveryDate>2026-01-09T18:28:00</DeliveryDate>
+    <CourierId>939680484</CourierId>
+    <CourierAssociatedDate>2026-01-09T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>70</Id>
+    <CreatedAt>2025-11-26T14:00:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>Historical Order - Canceled by Dana Rosenberg</Description>
+    <Address>Rothschild 88, Tel Aviv, Israel</Address>
+    <Latitude>32.0668</Latitude>
+    <Longitude>34.7748</Longitude>
+    <CustomerName>History Customer 2</CustomerName>
+    <CustomerPhone>0508175048</CustomerPhone>
+    <Weight>5.489919557774123</Weight>
+    <Volume>1.2044825958926109</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>71</Id>
+    <CreatedAt>2025-11-29T14:00:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>Historical Order - Delivered by Dana Rosenberg</Description>
+    <Address>Ben Gurion 12, Ramat Gan, Israel</Address>
+    <Latitude>32.08</Latitude>
+    <Longitude>34.813</Longitude>
+    <CustomerName>History Customer 3</CustomerName>
+    <CustomerPhone>050-9448625</CustomerPhone>
+    <Weight>1.9968982666432435</Weight>
+    <Volume>1.1585742019244023</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2025-11-29T14:20:00</PickupDate>
+    <DeliveryDate>2025-11-29T17:12:00</DeliveryDate>
+    <CourierId>896524584</CourierId>
+    <CourierAssociatedDate>2025-11-29T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>72</Id>
+    <CreatedAt>2026-01-13T14:00:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>Historical Order - Delivered by Dana Rosenberg</Description>
+    <Address>Dizengoff 120, Tel Aviv, Israel</Address>
+    <Latitude>32.0827</Latitude>
+    <Longitude>34.7753</Longitude>
+    <CustomerName>History Customer 2</CustomerName>
+    <CustomerPhone>0542808429</CustomerPhone>
+    <Weight>2.8726141806268948</Weight>
+    <Volume>1.3624842668172115</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-13T14:20:00</PickupDate>
+    <DeliveryDate>2026-01-13T19:51:00</DeliveryDate>
+    <CourierId>896524584</CourierId>
+    <CourierAssociatedDate>2026-01-13T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>73</Id>
+    <CreatedAt>2026-01-10T14:00:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>Historical Order - Delivered by Alon Har-Even</Description>
+    <Address>Herzl 45, Tel Aviv, Israel</Address>
+    <Latitude>32.0853</Latitude>
+    <Longitude>34.7818</Longitude>
+    <CustomerName>History Customer 3</CustomerName>
+    <CustomerPhone>0588280429</CustomerPhone>
+    <Weight>5.227917043184917</Weight>
+    <Volume>1.3164529882778049</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-10T14:20:00</PickupDate>
+    <DeliveryDate>2026-01-10T18:19:00</DeliveryDate>
+    <CourierId>606203438</CourierId>
+    <CourierAssociatedDate>2026-01-10T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>74</Id>
+    <CreatedAt>2026-01-12T14:00:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>Historical Order - Delivered by Alon Har-Even</Description>
+    <Address>Ben Gurion 12, Ramat Gan, Israel</Address>
+    <Latitude>32.08</Latitude>
+    <Longitude>34.813</Longitude>
+    <CustomerName>History Customer 3</CustomerName>
+    <CustomerPhone>0516048811</CustomerPhone>
+    <Weight>2.837777904188584</Weight>
+    <Volume>1.4764587778611389</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-12T14:20:00</PickupDate>
+    <DeliveryDate>2026-01-12T15:22:00</DeliveryDate>
+    <CourierId>606203438</CourierId>
+    <CourierAssociatedDate>2026-01-12T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>75</Id>
+    <CreatedAt>2025-11-24T14:00:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Historical Order - Delivered by Roni Avraham</Description>
+    <Address>Herzl 45, Tel Aviv, Israel</Address>
+    <Latitude>32.0853</Latitude>
+    <Longitude>34.7818</Longitude>
+    <CustomerName>History Customer 1</CustomerName>
+    <CustomerPhone>0580867795</CustomerPhone>
+    <Weight>2.000225154182888</Weight>
+    <Volume>1.151779767080591</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2025-11-24T14:20:00</PickupDate>
+    <DeliveryDate>2025-11-24T17:09:00</DeliveryDate>
+    <CourierId>937840825</CourierId>
+    <CourierAssociatedDate>2025-11-24T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>76</Id>
+    <CreatedAt>2025-12-06T14:00:00</CreatedAt>
+    <OrderType>Groceries</OrderType>
+    <Description>Historical Order - Canceled by Roni Avraham</Description>
+    <Address>Rothschild 88, Tel Aviv, Israel</Address>
+    <Latitude>32.0668</Latitude>
+    <Longitude>34.7748</Longitude>
+    <CustomerName>History Customer 2</CustomerName>
+    <CustomerPhone>055-0305475</CustomerPhone>
+    <Weight>3.5753569042347175</Weight>
+    <Volume>1.1461693453578063</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>78</Id>
+    <CreatedAt>2025-12-06T14:00:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Historical Order - Delivered by Chen Segal</Description>
+    <Address>Dizengoff 120, Tel Aviv, Israel</Address>
+    <Latitude>32.0827</Latitude>
+    <Longitude>34.7753</Longitude>
+    <CustomerName>History Customer 1</CustomerName>
+    <CustomerPhone>053-5192583</CustomerPhone>
+    <Weight>1.2559191686037077</Weight>
+    <Volume>1.4371324969734316</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2025-12-06T14:20:00</PickupDate>
+    <DeliveryDate>2025-12-06T19:25:00</DeliveryDate>
+    <CourierId>601174311</CourierId>
+    <CourierAssociatedDate>2025-12-06T14:10:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>77</Id>
+    <CreatedAt>2025-12-22T14:00:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>Historical Order - Canceled by Chen Segal</Description>
+    <Address>Rothschild 88, Tel Aviv, Israel</Address>
+    <Latitude>32.0668</Latitude>
+    <Longitude>34.7748</Longitude>
+    <CustomerName>History Customer 2</CustomerName>
+    <CustomerPhone>050-4764624</CustomerPhone>
+    <Weight>5.142826714177915</Weight>
+    <Volume>1.2121055411481674</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId>108013418</CourierId>
+    <CourierAssociatedDate>2026-01-21T14:00:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>39</Id>
+    <CreatedAt>2025-12-07T14:00:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Description>Historical Order - Canceled by Rachel Israeli</Description>
+    <Address>Sokolov 22, Ramat Gan, Israel</Address>
+    <Latitude>32.0891</Latitude>
+    <Longitude>34.8237</Longitude>
+    <CustomerName>History Customer 2</CustomerName>
+    <CustomerPhone>0588574861</CustomerPhone>
+    <Weight>5.9420709536534</Weight>
+    <Volume>1.1176004420389254</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-21T14:00:00</PickupDate>
+    <DeliveryDate>2026-01-21T14:00:00</DeliveryDate>
+    <CourierId>137244521</CourierId>
+    <CourierAssociatedDate>2026-01-21T14:00:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>14</Id>
+    <CreatedAt>2026-01-21T10:48:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Order #14 - RestaurantFood</Description>
+    <Address>Frishman 38, Tel Aviv, Israel</Address>
+    <Latitude>32.0776</Latitude>
+    <Longitude>34.7691</Longitude>
+    <CustomerName>Ido Peretz</CustomerName>
+    <CustomerPhone>052-0666564</CustomerPhone>
+    <Weight>2.3306984221307894</Weight>
+    <Volume>1.0246340489508214</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-21T14:00:00</PickupDate>
+    <DeliveryDate>2026-01-21T14:00:00</DeliveryDate>
+    <CourierId>61654224</CourierId>
+    <CourierAssociatedDate>2026-01-21T14:00:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>79</Id>
+    <CreatedAt>2026-01-21T14:00:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Address>יונה גרין 9 פתח תקווה</Address>
+    <Latitude>32.0984273</Latitude>
+    <Longitude>34.899401</Longitude>
+    <CustomerName>fhgjhk</CustomerName>
+    <CustomerPhone>0512345678</CustomerPhone>
+    <Weight>20</Weight>
+    <Volume>20</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+  <Order>
+    <Id>45</Id>
+    <CreatedAt>2025-12-19T14:00:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Historical Order - Canceled by Yossi Mizrahi</Description>
+    <Address>Dizengoff 120, Tel Aviv, Israel</Address>
+    <Latitude>32.0827</Latitude>
+    <Longitude>34.7753</Longitude>
+    <CustomerName>History Customer 2</CustomerName>
+    <CustomerPhone>052-1974123</CustomerPhone>
+    <Weight>2.980483463828833</Weight>
+    <Volume>1.1116694292856861</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-21T14:00:00</PickupDate>
+    <DeliveryDate>2026-01-21T14:00:00</DeliveryDate>
+    <CourierId>61654224</CourierId>
+    <CourierAssociatedDate>2026-01-21T14:00:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>63</Id>
+    <CreatedAt>2025-12-07T14:00:00</CreatedAt>
+    <OrderType>RestaurantFood</OrderType>
+    <Description>Historical Order - Canceled by Ori Peretz</Description>
+    <Address>Rothschild 88, Tel Aviv, Israel</Address>
+    <Latitude>32.0668</Latitude>
+    <Longitude>34.7748</Longitude>
+    <CustomerName>History Customer 2</CustomerName>
+    <CustomerPhone>0526587051</CustomerPhone>
+    <Weight>4.353960289946463</Weight>
+    <Volume>1.0262643206471607</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate>2026-01-21T14:00:00</PickupDate>
+    <DeliveryDate>2026-01-21T14:00:00</DeliveryDate>
+    <CourierId>61654224</CourierId>
+    <CourierAssociatedDate>2026-01-21T14:00:00</CourierAssociatedDate>
+  </Order>
+  <Order>
+    <Id>80</Id>
+    <CreatedAt>2026-01-21T14:00:00</CreatedAt>
+    <OrderType>Retail</OrderType>
+    <Address>יונה גרין פתח תקווה</Address>
+    <Latitude>32.0984273</Latitude>
+    <Longitude>34.899401</Longitude>
+    <CustomerName>היחלח</CustomerName>
+    <CustomerPhone>0512345678</CustomerPhone>
+    <Weight>10</Weight>
+    <Volume>10</Volume>
+    <IsFragile>false</IsFragile>
+    <PickupDate xsi:nil="true" />
+    <DeliveryDate xsi:nil="true" />
+    <CourierId xsi:nil="true" />
+    <CourierAssociatedDate xsi:nil="true" />
+  </Order>
+</ArrayOfOrder>

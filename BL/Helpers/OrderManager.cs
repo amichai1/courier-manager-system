@@ -11,7 +11,7 @@ namespace BL.Helpers;
 
 /// <summary>
 /// Stage 7 - Business Logic Manager for Orders
-/// Handles all order-related operations with async network requests (Geocoding, Email).
+/// Handles all order-related operations with async network requests (Geocoding).
 /// Uses async/await all the way to keep UI responsive.
 /// </summary>
 internal static class OrderManager
@@ -295,6 +295,10 @@ internal static class OrderManager
     }
 
     // --- ACTIONS ---
+    /// <summary>
+    /// Associates a courier to an order.
+    /// Stage 7: Order association simplified (no email notifications).
+    /// </summary>
     public static void AssociateCourierToOrder(int orderId, int courierId)
     {
         lock (AdminManager.BlMutex) //stage 7
@@ -447,6 +451,10 @@ internal static class OrderManager
         Observers.NotifyListUpdated();
     }
 
+    /// <summary>
+    /// Cancels an order.
+    /// Stage 7: Order cancellation simplified (no email notifications).
+    /// </summary>
     public static void CancelOrder(int orderId)
     {
         lock (AdminManager.BlMutex) //stage 7
@@ -744,7 +752,7 @@ internal static class OrderManager
 
     /// <summary>
     /// Creates an order with asynchronous geocoding.
-    /// Stage 7 - Type A: Single entity network request (Geocoding)
+    /// Stage 7 - Type A: Single entity network request (Geocoding).
     /// 
     /// Flow:
     /// 1. Geocode the address asynchronously (await)
@@ -752,7 +760,6 @@ internal static class OrderManager
     /// 3. If InvalidAddress: Reject order (throw error)
     /// 4. If NetworkError: Use estimated coordinates (continue)
     /// 5. Create order in DB
-    /// 6. Send email notifications asynchronously (fire & forget)
     /// </summary>
     public static async Task<(bool success, string? errorMessage, GeocodingService.GeocodingStatus geocodeStatus)> CreateOrderAsync(BO.Order order)
     {
@@ -819,15 +826,11 @@ internal static class OrderManager
                 Observers.NotifyListUpdated();
             }
 
-            // ✅ Fire-and-forget email notification (doesn't affect success)
-            _ = EmailHelper.SendNewOrderNotificationToNearbyCouriersAsync(order).ConfigureAwait(false);
-
             return (true, null, geocodeStatus);
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[ORDER ERROR] CreateOrderAsync failed: {ex.Message}");
-            // ✅ Order is NOT created if we reach here (because creation happens after all validation)
             return (false, $"Error creating order: {ex.Message}", GeocodingService.GeocodingStatus.NetworkError);
         }
     }
