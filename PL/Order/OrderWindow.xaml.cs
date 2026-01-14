@@ -136,6 +136,35 @@ namespace PL.Order
             LoadOrder();
             UpdateCourierInfoVisibility();
             UpdateCancelOrderVisibility();
+
+            // Register for order-specific updates (Stage 7 - Observer)
+            if (!_isAddMode && _orderId > 0)
+            {
+                try
+                {
+                    s_bl.Orders.AddObserver(_orderId, OrderUpdatedObserver);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[OrderWindow] Failed to register observer: {ex.Message}");
+                }
+            }
+        }
+
+        private void Window_Closed(object sender, EventArgs e)
+        {
+            // Unregister from order updates
+            if (!_isAddMode && _orderId > 0)
+            {
+                try
+                {
+                    s_bl.Orders.RemoveObserver(_orderId, OrderUpdatedObserver);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[OrderWindow] Failed to unregister observer: {ex.Message}");
+                }
+            }
         }
 
         #endregion
@@ -390,7 +419,6 @@ namespace PL.Order
 
                 // Show loading indicator
                 IsLoading = true;
-                LoadingMessage = _isAddMode ? "Creating order and verifying address..." : "Updating order...";
                 Mouse.OverrideCursor = Cursors.Wait;
                 btnActionOrSave.IsEnabled = false;
 
@@ -400,7 +428,7 @@ namespace PL.Order
                     {
                         BO.Order orderToSend = CloneOrder(CurrentOrder);
 
-                        // Use async method with geocoding
+
                         var (success, error, geocodeStatus) = await s_bl.Orders.CreateOrderAsync(orderToSend);
 
                         if (!success)
@@ -420,6 +448,7 @@ namespace PL.Order
                         }
 
                         MessageBox.Show(message, "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                        Close();
                     }
                     else
                     {
@@ -451,9 +480,8 @@ namespace PL.Order
                         }
 
                         MessageBox.Show(message, "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                        Close();
                     }
-
-                    Close();
                 }
                 finally
                 {
@@ -461,14 +489,6 @@ namespace PL.Order
                     Mouse.OverrideCursor = null;
                     btnActionOrSave.IsEnabled = true;
                 }
-            }
-            catch (BLAlreadyExistsException)
-            {
-                MessageBox.Show($"Order ID {CurrentOrder?.Id} already exists.", "Duplicate Order", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-            catch (BLException ex)
-            {
-                MessageBox.Show($"Error: {ex.Message}", "Operation Failed", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             catch (Exception ex)
             {
@@ -524,6 +544,49 @@ namespace PL.Order
         private void btnCancel_Click(object sender, RoutedEventArgs e)
         {
             Close();
+        }
+
+        #endregion
+
+        #region Observers - Stage 7
+
+        /// <summary>
+        /// Called when the order is updated externally (status changes, etc.)
+        /// Refreshes the order data and UI accordingly.
+        /// </summary>
+        private void OrderUpdatedObserver()
+        {
+            try
+            {
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (!_isAddMode && _orderId > 0 && IsLoaded)
+                    {
+                        try
+                        {
+                            // Reload the updated order from database
+                            CurrentOrder = s_bl.Orders.Read(_orderId);
+                            
+                            // Refresh delivery history
+                            LoadDeliveryHistory();
+                            
+                            // Update UI state based on new status
+                            UpdateCourierInfoVisibility();
+                            UpdateCancelOrderVisibility();
+                            
+                            System.Diagnostics.Debug.WriteLine($"[OrderWindow] Order #{_orderId} updated via observer");
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[OrderWindow] Error refreshing order: {ex.Message}");
+                        }
+                    }
+                }), System.Windows.Threading.DispatcherPriority.DataBind);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[OrderWindow] Observer error: {ex.Message}");
+            }
         }
 
         #endregion

@@ -9,6 +9,11 @@ using System.Threading.Tasks;
 
 namespace BL.Helpers;
 
+/// <summary>
+/// Stage 7 - Business Logic Manager for Orders
+/// Handles all order-related operations with async network requests (Geocoding, Email).
+/// Uses async/await all the way to keep UI responsive.
+/// </summary>
 internal static class OrderManager
 {
     private static readonly IDal s_dal = DalApi.Factory.Get;
@@ -115,7 +120,6 @@ internal static class OrderManager
         if (config.CompanyLatitude is null || config.CompanyLongitude is null)
             return 0;
 
-        // FIXED: Using BO.Order function as requested
         return BO.Order.CalculateAirDistance(
             config.CompanyLatitude.Value, config.CompanyLongitude.Value,
             doOrder.Latitude, doOrder.Longitude);
@@ -161,12 +165,15 @@ internal static class OrderManager
             {
                 string cName = "Unknown";
                 DO.DeliveryType dType = DO.DeliveryType.Car;
-                try {
-                     if (delivery.CourierId > 0) {
-                         var c = s_dal.Courier.Read(delivery.CourierId);
-                         if(c!=null) { cName = c.Name; dType = c.DeliveryType; }
-                     }
-                } catch { }
+                try
+                {
+                    if (delivery.CourierId > 0)
+                    {
+                        var c = s_dal.Courier.Read(delivery.CourierId);
+                        if (c != null) { cName = c.Name; dType = c.DeliveryType; }
+                    }
+                }
+                catch { }
 
                 deliveryHistory.Add(new BO.DeliveryPerOrderInList
                 {
@@ -185,10 +192,11 @@ internal static class OrderManager
         catch { return new List<BO.DeliveryPerOrderInList>(); }
     }
 
-    // --- CRUD ---
+    // --- CRUD OPERATIONS ---
+
     public static void CreateOrder(BO.Order order)
     {
-        lock (AdminManager.BlMutex) //stage 7
+        lock (AdminManager.BlMutex)
         {
             DO.Order doOrder = ConvertBOToDO(order);
             s_dal.Order.Create(doOrder);
@@ -245,7 +253,11 @@ internal static class OrderManager
             DO.Order d = s_dal.Order.Read(orderId)!;
             var c = s_dal.Courier.Read(courierId)!;
             s_dal.Order.Update(d with { CourierId = courierId, CourierAssociatedDate = AdminManager.Now });
-            s_dal.Delivery.Create(new DO.Delivery(0, orderId, courierId, (DO.DeliveryType)c.DeliveryType, AdminManager.Now, 0) { CompletionStatus = null, EndTime = null });
+            s_dal.Delivery.Create(new DO.Delivery(0, orderId, courierId, (DO.DeliveryType)c.DeliveryType, AdminManager.Now, 0) 
+            { 
+                CompletionStatus = null, 
+                EndTime = null 
+            });
         }
         
         Observers.NotifyItemUpdated(orderId);
@@ -312,7 +324,13 @@ internal static class OrderManager
                 if (ad != null)
                     s_dal.Delivery.Update(ad with { CompletionStatus = DO.DeliveryStatus.Cancelled, EndTime = AdminManager.Now });
             }
-            s_dal.Order.Update(s_dal.Order.Read(orderId)! with { CourierId = null, CourierAssociatedDate = null, PickupDate = null, DeliveryDate = null });
+            s_dal.Order.Update(s_dal.Order.Read(orderId)! with 
+            { 
+                CourierId = null, 
+                CourierAssociatedDate = null, 
+                PickupDate = null, 
+                DeliveryDate = null 
+            });
         }
         
         Observers.NotifyItemUpdated(orderId);
@@ -389,7 +407,17 @@ internal static class OrderManager
         lock (AdminManager.BlMutex) //stage 7
         {
             var all = ReadAllOrders();
-            return new BO.OrderStatusSummary { OpenCount = all.Count(o => o.OrderStatus == BO.OrderStatus.Open) };
+            return new BO.OrderStatusSummary
+            {
+                OpenCount = all.Count(o => o.OrderStatus == BO.OrderStatus.Open),
+                InProgressCount = all.Count(o => o.OrderStatus == BO.OrderStatus.InProgress),
+                DeliveredCount = all.Count(o => o.OrderStatus == BO.OrderStatus.Delivered),
+                OrderRefusedCount = all.Count(o => o.OrderStatus == BO.OrderStatus.OrderRefused),
+                CanceledCount = all.Count(o => o.OrderStatus == BO.OrderStatus.Canceled),
+                OnTimeCount = all.Count(o => o.ScheduleStatus == BO.ScheduleStatus.OnTime),
+                InRiskCount = all.Count(o => o.ScheduleStatus == BO.ScheduleStatus.InRisk),
+                LateCount = all.Count(o => o.ScheduleStatus == BO.ScheduleStatus.Late)
+            };
         }
     }
 
@@ -399,7 +427,8 @@ internal static class OrderManager
             return s_dal.Order.ReadAll(o => o.CourierId == courierId).Select(ConvertDOToBO).ToList();
     }
 
-    // --- PERIODIC UPDATES (Stage 7) - תיקון: הוספת sync version ---
+    // --- PERIODIC UPDATES (Stage 7) ---
+
     internal static void PeriodicOrderUpdates(DateTime oldClock, DateTime newClock)
     {
         if (s_periodicMutex.CheckAndSetInProgress())
@@ -533,14 +562,313 @@ internal static class OrderManager
         }
     }
 
-    #region Async / Stage 7
-    public static async Task<(bool success, string? errorMessage, GeocodingService.GeocodingStatus geocodeStatus)> CreateOrderAsync(BO.Order o) {
-        var r = await GeocodingService.GeocodeAddressAsync(o.Address); if(r.status==GeocodingService.GeocodingStatus.Success){o.Latitude=r.lat;o.Longitude=r.lon;} CreateOrder(o); return (true,null,r.status);
+    #region ========== STAGE 7: ASYNC NETWORK OPERATIONS ==========
+
+    /// <summary>
+    /// Creates an order with asynchronous geocoding.
+    /// Stage 7 - Type A: Single entity network request (Geocoding)
+    /// 
+    /// Flow:
+    /// 1. Geocode the address asynchronously (await)
+    /// 2. If Success: Use actual coordinates
+    /// 3. If InvalidAddress: Reject order (throw error)
+    /// 4. If NetworkError: Use estimated coordinates (continue)
+    /// 5. Create order in DB
+    /// 6. Send email notifications asynchronously (fire & forget)
+    /// </summary>
+    public static async Task<(bool success, string? errorMessage, GeocodingService.GeocodingStatus geocodeStatus)> CreateOrderAsync(BO.Order order)
+    {
+        try
+        {
+            // Step 1: Validate address is not empty before geocoding
+            if (string.IsNullOrWhiteSpace(order.Address))
+            {
+                return (false, "Address is required. Please enter a valid address.", GeocodingService.GeocodingStatus.InvalidAddress);
+            }
+
+            // Step 2: Geocode address asynchronously - await the geocoding service
+            var (lat, lon, geocodeStatus) = await GeocodingService.GeocodeAddressAsync(order.Address).ConfigureAwait(false);
+
+            // Step 3: Handle geocoding results
+            if (geocodeStatus == GeocodingService.GeocodingStatus.Success)
+            {
+                // Use actual coordinates
+                order.Latitude = lat;
+                order.Longitude = lon;
+                System.Diagnostics.Debug.WriteLine($"[ORDER] Geocoding successful for: {order.Address}");
+            }
+            else if (geocodeStatus == GeocodingService.GeocodingStatus.InvalidAddress)
+            {
+                return (false, $"Address '{order.Address}' could not be found. Please verify the address is correct.", geocodeStatus);
+            }
+            else if (geocodeStatus == GeocodingService.GeocodingStatus.NetworkError)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ORDER] Geocoding network error for: {order.Address}. Using estimated location.");
+            }
+
+            await Task.CompletedTask.ConfigureAwait(true);
+
+            CreateOrderWithoutNotification(order);
+            System.Diagnostics.Debug.WriteLine($"[ORDER] Order created successfully with ID: {order.Id}");
+
+            Observers.NotifyListUpdated();
+
+            _ = EmailHelper.SendNewOrderNotificationToNearbyCouriersAsync(order).ConfigureAwait(false);
+
+            return (true, null, geocodeStatus);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ORDER ERROR] CreateOrderAsync failed: {ex.Message}");
+            return (false, $"Error creating order: {ex.Message}", GeocodingService.GeocodingStatus.NetworkError);
+        }
     }
-    public static async Task<(bool success, string? errorMessage, GeocodingService.GeocodingStatus geocodeStatus)> UpdateOrderAsync(BO.Order o, string? prev) {
-         var s = GeocodingService.GeocodingStatus.NotAttempted; if(o.Address!=prev){var r=await GeocodingService.GeocodeAddressAsync(o.Address);s=r.status;if(r.status==0){o.Latitude=r.lat;o.Longitude=r.lon;}} UpdateOrder(o); return (true,null,s);
+
+    /// <summary>
+    /// Helper method - creates order without triggering observers
+    /// Used by CreateOrderAsync to avoid lock contention
+    /// </summary>
+    private static void CreateOrderWithoutNotification(BO.Order order)
+    {
+        lock (AdminManager.BlMutex)
+        {
+            DO.Order doOrder = ConvertBOToDO(order);
+            s_dal.Order.Create(doOrder);
+        }
     }
-    public static async Task<IEnumerable<BO.Order>> GetAvailableOrdersWithRouteDistanceAsync(int id) => GetAvailableOrdersForCourier(id);
-    public static async Task<IEnumerable<BO.OrderInList>> GetOrderListWithRouteDistancesAsync() => GetOrderList();
+
+    /// <summary>
+    /// Updates an order with asynchronous geocoding if address changed.
+    /// Stage 7 - Type A: Single entity network request (Geocoding)
+    /// 
+    /// Flow:
+    /// 1. Check if address was changed
+    /// 2. If changed: Geocode new address asynchronously (await)
+    /// 3. Handle geocoding results (same logic as CreateOrderAsync)
+    /// 4. Update order in DB
+    /// </summary>
+    public static async Task<(bool success, string? errorMessage, GeocodingService.GeocodingStatus geocodeStatus)> UpdateOrderAsync(BO.Order order, string? originalAddress)
+    {
+        try
+        {
+            GeocodingService.GeocodingStatus geocodeStatus = GeocodingService.GeocodingStatus.NotAttempted;
+
+            // Step 1: Check if address changed
+            if (order.Address != originalAddress && !string.IsNullOrWhiteSpace(order.Address))
+            {
+                System.Diagnostics.Debug.WriteLine($"[ORDER] Address changed from '{originalAddress}' to '{order.Address}'");
+
+                // Step 2: Geocode new address asynchronously - await
+                var (lat, lon, status) = await GeocodingService.GeocodeAddressAsync(order.Address).ConfigureAwait(false);
+                geocodeStatus = status;
+
+                // Step 3: Handle geocoding results
+                if (geocodeStatus == GeocodingService.GeocodingStatus.Success)
+                {
+                    order.Latitude = lat;
+                    order.Longitude = lon;
+                    System.Diagnostics.Debug.WriteLine($"[ORDER] New address geocoded successfully");
+                }
+                else if (geocodeStatus == GeocodingService.GeocodingStatus.InvalidAddress)
+                {
+                    // Invalid address - DO NOT update the order
+                    System.Diagnostics.Debug.WriteLine($"[ORDER] New address is invalid: {order.Address}");
+                    return (false, $"New address '{order.Address}' could not be found. Please verify.", geocodeStatus);
+                }
+                else if (geocodeStatus == GeocodingService.GeocodingStatus.NetworkError)
+                {
+                    // Network error - update with existing coordinates
+                    System.Diagnostics.Debug.WriteLine($"[ORDER] Geocoding network error. Using existing coordinates.");
+                }
+            }
+            else if (order.Address == originalAddress)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ORDER] Address unchanged, skipping geocoding");
+            }
+
+            // ✅ Step 4: CRITICAL - Return to Main Thread before calling Observers
+            await Task.CompletedTask.ConfigureAwait(true);
+
+            // ✅ Step 5: Update WITHOUT notification (without Observers!)
+            UpdateOrderWithoutNotification(order);
+            System.Diagnostics.Debug.WriteLine($"[ORDER] Order updated successfully");
+
+            // ✅ Step 6: Notify observers AFTER update
+            Observers.NotifyItemUpdated(order.Id);
+            Observers.NotifyListUpdated();
+
+            return (true, null, geocodeStatus);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ORDER ERROR] UpdateOrderAsync failed: {ex.Message}");
+            return (false, $"Error updating order: {ex.Message}", GeocodingService.GeocodingStatus.NetworkError);
+        }
+    }
+
+    /// <summary>
+    /// Helper method - updates order without triggering observers
+    /// Used by UpdateOrderAsync to avoid lock contention
+    /// </summary>
+    private static void UpdateOrderWithoutNotification(BO.Order order)
+    {
+        lock (AdminManager.BlMutex)
+        {
+            s_dal.Order.Update(ConvertBOToDO(order));
+        }
+    }
+
+    /// <summary>
+    /// Gets available orders for a courier with actual route distances.
+    /// Stage 7 - Type B: Collection query with network requests (Distance Calculation)
+    /// 
+    /// Flow:
+    /// 1. Get all available orders
+    /// 2. For each order: Calculate route distance asynchronously in parallel (Task.WhenAll)
+    /// 3. Filter by max delivery distance
+    /// 4. Return sorted by distance
+    /// 
+    /// Improvements:
+    /// - Uses Task.WhenAll for parallel distance calculations
+    /// - Uses ConcurrentDictionary cache in GeocodingService to avoid duplicate API calls
+    /// </summary>
+    public static async Task<IEnumerable<BO.Order>> GetAvailableOrdersWithRouteDistanceAsync(int courierId)
+    {
+        try
+        {
+            var courier = CourierManager.ReadCourier(courierId);
+            var availableOrders = GetAvailableOrdersForCourier(courierId).ToList();
+
+            if (!availableOrders.Any())
+            {
+                return availableOrders;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[ORDER] Calculating distances for {availableOrders.Count} orders");
+
+            // Step 1: Calculate distances for all orders in parallel
+            // This is Type B: Multiple async network requests in parallel
+            var distanceTasks = availableOrders.Select(async order =>
+            {
+                try
+                {
+                    // Determine if driving or walking based on delivery type
+                    bool isDriving = courier.DeliveryType == BO.DeliveryType.Car || 
+                                   courier.DeliveryType == BO.DeliveryType.Motorcycle;
+
+                    // Get route distance asynchronously (uses cache internally)
+                    var (distance, isActualRoute) = await GeocodingService.GetRouteDistanceAsync(
+                        courier.Location.Latitude, courier.Location.Longitude,
+                        order.Latitude, order.Longitude,
+                        isDriving
+                    ).ConfigureAwait(false);
+
+                    order.ArialDistance = distance;
+                    System.Diagnostics.Debug.WriteLine($"[ORDER] Distance for order {order.Id}: {distance:F2} km");
+                    return order;
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ORDER ERROR] Distance calculation failed for order {order.Id}: {ex.Message}");
+                    return order; // Return order with existing distance
+                }
+            });
+
+            // Step 2: Wait for all distance calculations to complete
+            var ordersWithDistances = await Task.WhenAll(distanceTasks).ConfigureAwait(false);
+
+            // Step 3: Filter by max delivery distance and sort
+            if (courier.MaxDeliveryDistance.HasValue)
+            {
+                return ordersWithDistances
+                    .Where(o => o.ArialDistance <= courier.MaxDeliveryDistance.Value)
+                    .OrderBy(o => o.ArialDistance)
+                    .ToList();
+            }
+
+            return ordersWithDistances.OrderBy(o => o.ArialDistance).ToList();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ORDER ERROR] GetAvailableOrdersWithRouteDistanceAsync failed: {ex.Message}");
+            // Fallback to non-async version with air distance
+            return GetAvailableOrdersForCourier(courierId);
+        }
+    }
+
+    /// <summary>
+    /// Gets order list with route distances calculated asynchronously.
+    /// Stage 7 - Type B: Collection query with network requests (Distance Calculation)
+    /// 
+    /// Uses same parallel approach as GetAvailableOrdersWithRouteDistanceAsync
+    /// </summary>
+    public static async Task<IEnumerable<BO.OrderInList>> GetOrderListWithRouteDistancesAsync()
+    {
+        try
+        {
+            var orderList = GetOrderList().ToList();
+            var config = AdminManager.GetConfig();
+
+            if (!config.CompanyLatitude.HasValue || !config.CompanyLongitude.HasValue)
+            {
+                System.Diagnostics.Debug.WriteLine("[ORDER] Company location not set, returning air distances");
+                return orderList;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[ORDER] Calculating route distances for {orderList.Count} orders");
+
+            // Calculate distances for all orders in parallel
+            var distanceTasks = orderList.Select(async orderInList =>
+            {
+                try
+                {
+                    // Read full order to get coordinates
+                    var fullOrder = ReadOrder(orderInList.OrderId);
+                    
+                    // Get route distance asynchronously (uses cache internally)
+                    var (distance, isActualRoute) = await GeocodingService.GetRouteDistanceAsync(
+                        config.CompanyLatitude.Value, config.CompanyLongitude.Value,
+                        fullOrder.Latitude, fullOrder.Longitude,
+                        isDriving: true // From company to customer, assume driving
+                    ).ConfigureAwait(false);
+
+                    // ✅ Create NEW object with updated Distance (not mutate existing)
+                    return new BO.OrderInList
+                    {
+                        OrderId = orderInList.OrderId,
+                        DeliveryId = orderInList.DeliveryId,
+                        OrderType = orderInList.OrderType,
+                        Distance = distance,  
+                        OrderStatus = orderInList.OrderStatus,
+                        ScheduleStatus = orderInList.ScheduleStatus,
+                        OrderCompletionTime = orderInList.OrderCompletionTime,
+                        HandlingTime = orderInList.HandlingTime,
+                        TotalDeliveries = orderInList.TotalDeliveries,
+                        CustomerName = orderInList.CustomerName,
+                        CustomerPhone = orderInList.CustomerPhone,
+                        Address = orderInList.Address,
+                        CourierName = orderInList.CourierName,
+                        CreatedAt = orderInList.CreatedAt
+                    };
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ORDER ERROR] Distance calculation failed for order {orderInList.OrderId}: {ex.Message}");
+                    return orderInList; // Return original with existing distance
+                }
+            });
+
+            // Wait for all calculations
+            var ordersWithDistances = await Task.WhenAll(distanceTasks).ConfigureAwait(false);
+            return ordersWithDistances;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ORDER ERROR] GetOrderListWithRouteDistancesAsync failed: {ex.Message}");
+            // Fallback to non-async version
+            return GetOrderList();
+        }
+    }
+
     #endregion
 }
