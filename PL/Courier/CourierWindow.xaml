@@ -136,21 +136,45 @@
                     </Grid>
                 </ScrollViewer>
 
-                <!-- Buttons -->
-                <Border Grid.Row="2" BorderBrush="{StaticResource BorderColor}" BorderThickness="0,1,0,0" Padding="0,15,0,0" Margin="0,15,0,0">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="Delete"
-                                Style="{StaticResource DeleteButtonStyle}"
-                                Visibility="{Binding DeleteVisibility}"
-                                Click="btnDelete_Click"
-                                Margin="0,0,10,0"/>
-                        <Button Content="{Binding ButtonText}" 
-                                Style="{StaticResource PrimaryButton}"
-                                Visibility="{Binding SaveButtonVisibility}" 
-                                Click="btnAddUpdate_Click"/>
-                        <Button Content="Cancel" 
-                               Style="{StaticResource SecondaryButton}"
-                               Click="btnClose_Click"/>
+                <!-- Salary Display Section -->
+                <Border Grid.Row="2" BorderBrush="{StaticResource BorderColor}" BorderThickness="0,1,0,0" Padding="0,15,0,0" Margin="0,15,0,0"
+                        Visibility="{Binding SalaryVisibility}">
+                    <StackPanel>
+                        <TextBlock Text="💰 Current Salary" Style="{StaticResource SubtitleHeader}" Margin="0,0,0,10"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="15"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Monthly Salary" FontSize="11" Foreground="{StaticResource LightTextColor}"/>
+                                <TextBlock Text="{Binding SalaryAmount, StringFormat='₪{0:F2}'}" FontWeight="SemiBold" FontSize="14" Foreground="{StaticResource TextColor}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Completed Deliveries" FontSize="11" Foreground="{StaticResource LightTextColor}"/>
+                                <TextBlock FontWeight="SemiBold" FontSize="14" Foreground="{StaticResource TextColor}">
+                                    <Run Text="{Binding DeliveredCount}"/>
+                                    <Run Text=" orders"/>
+                                </TextBlock>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- ✅ Update Button under salary -->
+                        <Border BorderBrush="{StaticResource BorderColor}" BorderThickness="0,1,0,0" Padding="0,15,0,0" Margin="0,15,0,0">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button Content="Save" 
+                                        Style="{StaticResource PrimaryButton}"
+                                        Click="btnAddUpdate_Click"
+                                        Width="100"
+                                        Margin="0,0,5,0"
+                                        Visibility="{Binding SaveButtonVisibility}"/>
+                                <Button Content="Cancel" 
+                                        Style="{StaticResource SecondaryButton}"
+                                        Click="btnClose_Click"
+                                        Width="100"/>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </Border>
             </Grid>
@@ -255,7 +279,7 @@
                                Visibility="{Binding NoCurrentOrderVisibility}"/>
 
                     <!-- Status Promotion Button (shown only if CurrentOrder exists) -->
-                    <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0"
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0"
                                 Visibility="{Binding PromoteStatusButtonVisibility}">
                         
                         <!-- Refuse Button -->

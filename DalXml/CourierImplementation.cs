@@ -20,7 +20,9 @@ internal class CourierImplementation : ICourier
             Password = (string?)s.Element("Password") ?? "",
             IsActive = (bool?)s.Element("IsActive") ?? false,
             MaxDeliveryDistance = s.ToDoubleNullable("MaxDeliveryDistance"),
-            DeliveryType = s.ToEnumNullable<DeliveryType>("DeliveryType") ?? DeliveryType.OnFoot
+            DeliveryType = s.ToEnumNullable<DeliveryType>("DeliveryType") ?? DeliveryType.OnFoot,
+            AddressLatitude = s.ToDoubleNullable("AddressLatitude") ?? 0,
+            AddressLongitude = s.ToDoubleNullable("AddressLongitude") ?? 0
         };
 
     static XElement createCourierElement(Courier item)
@@ -33,7 +35,9 @@ internal class CourierImplementation : ICourier
             new XElement("Password", item.Password),
             new XElement("IsActive", item.IsActive),
             new XElement("DeliveryType", item.DeliveryType.ToString()),
-            new XElement("StartWorkingDate", item.StartWorkingDate.ToString("o"))
+            new XElement("StartWorkingDate", item.StartWorkingDate.ToString("o")),
+            new XElement("AddressLatitude", item.AddressLatitude.ToString()),
+            new XElement("AddressLongitude", item.AddressLongitude.ToString())
         );
         if (item.MaxDeliveryDistance.HasValue)
             elem.Add(new XElement("MaxDeliveryDistance", item.MaxDeliveryDistance.Value));

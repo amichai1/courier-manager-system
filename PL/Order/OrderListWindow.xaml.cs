@@ -30,6 +30,7 @@ namespace PL.Order
             {
                 _instance = new OrderListWindow();
                 _instance.Show();
+                BringToFront();
             }
             else
             {
@@ -43,6 +44,7 @@ namespace PL.Order
             {
                 _instance = new OrderListWindow(status);
                 _instance.Show();
+                BringToFront();
             }
             else
             {
@@ -54,6 +56,7 @@ namespace PL.Order
 
         /// <summary>
         /// Forces the window to appear above other windows without affecting other windows
+        /// Uses Activate() to bring to front at OS level
         /// </summary>
         private static void BringToFront()
         {
@@ -64,8 +67,12 @@ namespace PL.Order
                 _instance.WindowState = WindowState.Normal;
             }
 
-            // Use Focus() instead of Activate() + Topmost trick
-            _instance.Focus();
+            // Defer activation to ensure window is rendered first
+            _instance.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                _instance?.Activate();
+                _instance?.Focus();
+            }), System.Windows.Threading.DispatcherPriority.Input);
         }
 
         #region Dependency Properties

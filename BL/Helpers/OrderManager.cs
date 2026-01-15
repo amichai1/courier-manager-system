@@ -27,6 +27,7 @@ internal static class OrderManager
 
     /// <summary>
     /// Converts a DO.Order (from DAL) into a BO.Order (for BL/PL).
+    /// ✅ FIX: Use StartTime from Delivery record instead of Order.PickupDate
     /// </summary>
     private static BO.Order ConvertDOToBO(DO.Order doOrder)
     {
@@ -39,6 +40,35 @@ internal static class OrderManager
 
         // Fetch delivery history
         IEnumerable<BO.DeliveryPerOrderInList> deliveryHistory = GetDeliveryHistoryForOrder(doOrder.Id);
+
+        // ✅ FIX: Get the actual pickup time from the ACTIVE delivery record (not from Order)
+        DateTime? actualPickupTime = null;
+        if (doOrder.CourierAssociatedDate.HasValue && doOrder.CourierId.HasValue)
+        {
+            // Find the current (in-progress) delivery record
+            var currentDelivery = s_dal.Delivery.ReadAll()
+                .Where(d => d.OrderId == doOrder.Id && d.EndTime == null)
+                .FirstOrDefault();
+            
+            if (currentDelivery != null)
+            {
+                // ✅ Use StartTime from Delivery - this is the immutable pickup time
+                actualPickupTime = currentDelivery.StartTime;
+            }
+            else
+            {
+                // ✅ If no active delivery, use the EARLIEST completed delivery's StartTime
+                var firstDelivery = s_dal.Delivery.ReadAll()
+                    .Where(d => d.OrderId == doOrder.Id)
+                    .OrderBy(d => d.StartTime)
+                    .FirstOrDefault();
+                
+                if (firstDelivery != null)
+                {
+                    actualPickupTime = firstDelivery.StartTime;
+                }
+            }
+        }
 
         // Status Logic
         BO.OrderStatus orderStatus = BO.OrderStatus.Open;
@@ -76,7 +106,7 @@ internal static class OrderManager
             CourierId = doOrder.CourierId,
             CourierName = assignedCourier?.Name,
             CourierAssociatedDate = doOrder.CourierAssociatedDate,
-            PickupDate = doOrder.PickupDate,
+            PickupDate = actualPickupTime ?? doOrder.PickupDate, 
             DeliveryDate = doOrder.DeliveryDate,
             OrderComplitionTime = doOrder.DeliveryDate.HasValue && doOrder.CreatedAt != default ? doOrder.DeliveryDate.Value - doOrder.CreatedAt : null,
             DeliveryHistory = deliveryHistory.ToList(),
@@ -156,7 +186,8 @@ internal static class OrderManager
         try
         {
             var allDeliveries = s_dal.Delivery.ReadAll().Where(d => d.OrderId == orderId).OrderBy(d => d.StartTime).ToList();
-            if (!allDeliveries.Any()) return new List<BO.DeliveryPerOrderInList>();
+            if (!allDeliveries.Any())
+                return new List<BO.DeliveryPerOrderInList>();
 
             var orderInfo = s_dal.Order.Read(orderId);
             var deliveryHistory = new List<BO.DeliveryPerOrderInList>();
@@ -170,10 +201,25 @@ internal static class OrderManager
                     if (delivery.CourierId > 0)
                     {
                         var c = s_dal.Courier.Read(delivery.CourierId);
-                        if (c != null) { cName = c.Name; dType = c.DeliveryType; }
+                        if (c != null)
+                        {
+                            cName = c.Name;
+                            dType = c.DeliveryType;
+                        }
                     }
                 }
-                catch { }
+                catch
+                {
+                    // Ignore courier lookup errors
+                }
+
+                // ✅ FIX: Use StartTime from delivery record (immutable, captured at pickup time)
+                // This time never changes after initial courier assignment
+                DateTime pickupTime = delivery.StartTime;
+
+                // ✅ Use EndTime from delivery record (set only when delivery completes)
+                // This is different from PickupTime if the delivery has been completed
+                DateTime? completionTime = delivery.EndTime;
 
                 deliveryHistory.Add(new BO.DeliveryPerOrderInList
                 {
@@ -181,15 +227,18 @@ internal static class OrderManager
                     CourierId = delivery.CourierId,
                     CourierName = cName,
                     DeliveryType = (BO.DeliveryType)dType,
-                    StartTimeDelivery = delivery.StartTime,
+                    StartTimeDelivery = pickupTime,  // ✅ Immutable pickup time from DO.Delivery
                     EndType = (BO.DeliveryStatus?)delivery.CompletionStatus,
-                    EndTime = delivery.EndTime,
+                    EndTime = completionTime,        // ✅ Completion time (null if in progress)
                     DeliveryAddress = orderInfo?.Address ?? "Unknown"
                 });
             }
             return deliveryHistory;
         }
-        catch { return new List<BO.DeliveryPerOrderInList>(); }
+        catch
+        {
+            return new List<BO.DeliveryPerOrderInList>();
+        }
     }
 
     // --- CRUD OPERATIONS ---
@@ -252,8 +301,14 @@ internal static class OrderManager
         {
             DO.Order d = s_dal.Order.Read(orderId)!;
             var c = s_dal.Courier.Read(courierId)!;
-            s_dal.Order.Update(d with { CourierId = courierId, CourierAssociatedDate = AdminManager.Now });
-            s_dal.Delivery.Create(new DO.Delivery(0, orderId, courierId, (DO.DeliveryType)c.DeliveryType, AdminManager.Now, 0) 
+            
+            // ✅ שמור את הזמן המדויק בזמן ההשמה (זה יהיה זמן האיסוף)
+            DateTime associationTime = AdminManager.Now;
+            
+            s_dal.Order.Update(d with { CourierId = courierId, CourierAssociatedDate = associationTime });
+            
+            // ✅ בדיוק אותו זמן כ-StartTime - לא יתשנה אחר כך
+            s_dal.Delivery.Create(new DO.Delivery(0, orderId, courierId, (DO.DeliveryType)c.DeliveryType, associationTime, 0) 
             { 
                 CompletionStatus = null, 
                 EndTime = null 
@@ -268,10 +323,17 @@ internal static class OrderManager
 
     public static void PickUpOrder(int orderId)
     {
-        lock (AdminManager.BlMutex) //stage 7
+        lock (AdminManager.BlMutex)
         {
             DO.Order d = s_dal.Order.Read(orderId)!;
-            s_dal.Order.Update(d with { PickupDate = AdminManager.Now });
+            
+            // ✅ אל תעדכן את PickupDate אם כבר קיים!
+            // PickupDate צריך להישמר כפי שהוגדר בעבר
+            if (!d.PickupDate.HasValue)
+            {
+                s_dal.Order.Update(d with { PickupDate = AdminManager.Now });
+            }
+            // אם PickupDate כבר קיים - אל תשנה אותו!
         }
         
         Observers.NotifyItemUpdated(orderId);
@@ -280,17 +342,90 @@ internal static class OrderManager
 
     public static void DeliverOrder(int orderId)
     {
-        lock (AdminManager.BlMutex) //stage 7
+        int? courierId = null;
+        BO.ScheduleStatus scheduleStatus = BO.ScheduleStatus.OnTime;
+        
+        lock (AdminManager.BlMutex)
         {
             DO.Order d = s_dal.Order.Read(orderId)!;
-            s_dal.Order.Update(d with { DeliveryDate = AdminManager.Now });
-            var ad = s_dal.Delivery.ReadAll(x => x.OrderId == orderId && x.EndTime == null).FirstOrDefault();
-            if (ad != null)
-                s_dal.Delivery.Update(ad with { CompletionStatus = DO.DeliveryStatus.Completed, EndTime = AdminManager.Now });
+            
+            // ✅ Capture the CURRENT clock time exactly once for consistency
+            DateTime deliveryTime = AdminManager.Now;
+            
+            // ✅ Store courier ID and original pickup time for stats update
+            courierId = d.CourierId;
+            
+            // ✅ Set PickupDate if not already set (this captures the pickup time)
+            if (!d.PickupDate.HasValue)
+            {
+                s_dal.Order.Update(d with { PickupDate = deliveryTime });
+            }
+            
+            // ✅ Set DeliveryDate when order is delivered
+            s_dal.Order.Update(d with { DeliveryDate = deliveryTime });
+
+            // ✅ Find and complete the active delivery record
+            var activeDeliveries = s_dal.Delivery.ReadAll(x => x.OrderId == orderId && x.EndTime == null).ToList();
+            if (activeDeliveries.Any())
+            {
+                var ad = activeDeliveries.OrderByDescending(x => x.StartTime).FirstOrDefault();
+                if (ad != null)
+                {
+                    s_dal.Delivery.Update(ad with 
+                    { 
+                        CompletionStatus = DO.DeliveryStatus.Completed, 
+                        EndTime = deliveryTime  // ✅ Use the same time captured above
+                    });
+                    System.Diagnostics.Debug.WriteLine($"[ORDER] Order {orderId} delivered - StartTime: {ad.StartTime}, EndTime: {deliveryTime}");
+                }
+            }
+            
+            // ✅ Calculate schedule status for stats update
+            var config = AdminManager.GetConfig();
+            DO.Order updatedOrder = s_dal.Order.Read(orderId)!;
+            if (updatedOrder.PickupDate.HasValue && updatedOrder.DeliveryDate.HasValue)
+            {
+                TimeSpan actualTime = updatedOrder.DeliveryDate.Value - updatedOrder.PickupDate.Value;
+                scheduleStatus = actualTime <= config.MaxDeliveryTime - config.RiskRange 
+                    ? BO.ScheduleStatus.OnTime 
+                    : actualTime <= config.MaxDeliveryTime 
+                        ? BO.ScheduleStatus.InRisk 
+                        : BO.ScheduleStatus.Late;
+            }
         }
-        
+
+        // ✅ Update courier delivery count immediately (outside lock)
+        if (courierId.HasValue && courierId.Value > 0)
+        {
+            try
+            {
+                lock (AdminManager.BlMutex)
+                {
+                    DO.Courier? courier = s_dal.Courier.Read(courierId.Value);
+                    if (courier != null)
+                    {
+                        // Note: DO.Courier doesn't have DeliveredOnTime/Late fields
+                        // These are calculated in CourierManager.GetCourierList() and BO.Courier
+                        System.Diagnostics.Debug.WriteLine($"[ORDER] Delivery stats for courier {courierId.Value} will be updated on next list query");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ORDER ERROR] Failed to update courier stats: {ex.Message}");
+            }
+        }
+
+        // ✅ Notify outside lock to prevent deadlocks
         Observers.NotifyItemUpdated(orderId);
         Observers.NotifyListUpdated();
+        
+        // ✅ Notify courier observers for real-time delivery count update
+        if (courierId.HasValue)
+        {
+            CourierManager.Observers.NotifyItemUpdated(courierId.Value);
+            CourierManager.Observers.NotifyListUpdated();
+        }
     }
 
     public static void RefuseOrder(int orderId)

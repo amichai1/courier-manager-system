@@ -22,8 +22,9 @@ namespace PL
         private static MainWindow? s_instance = null;
         public static bool IsAdminWindowOpen => s_instance != null;
 
-        // Flag to prevent window activation during observer updates
+        // Flag to prevent window activation during operations
         private bool _suppressActivation = false;
+        private bool _isInitializing = false;
 
         // Stage 7 - Observer Mutexes for thread-safe updates
         private readonly PL.Helpers.ObserverMutex _clockMutex = new();
@@ -198,27 +199,42 @@ namespace PL
 
         private void OpenOrders_Click(object sender, MouseButtonEventArgs e)
         {
+            _suppressActivation = true;
             PL.Order.OrderListWindow.ShowListFiltered(BO.OrderStatus.Open);
+            Dispatcher.BeginInvoke(new Action(() => _suppressActivation = false), 
+                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
 
         private void InProgressOrders_Click(object sender, MouseButtonEventArgs e)
         {
+            _suppressActivation = true;
             PL.Order.OrderListWindow.ShowListFiltered(BO.OrderStatus.InProgress);
+            Dispatcher.BeginInvoke(new Action(() => _suppressActivation = false), 
+                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
 
         private void DeliveredOrders_Click(object sender, MouseButtonEventArgs e)
         {
+            _suppressActivation = true;
             PL.Order.OrderListWindow.ShowListFiltered(BO.OrderStatus.Delivered);
+            Dispatcher.BeginInvoke(new Action(() => _suppressActivation = false), 
+                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
 
         private void RefusedOrders_Click(object sender, MouseButtonEventArgs e)
         {
+            _suppressActivation = true;
             PL.Order.OrderListWindow.ShowListFiltered(BO.OrderStatus.OrderRefused);
+            Dispatcher.BeginInvoke(new Action(() => _suppressActivation = false), 
+                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
 
         private void CanceledOrders_Click(object sender, MouseButtonEventArgs e)
         {
+            _suppressActivation = true;
             PL.Order.OrderListWindow.ShowListFiltered(BO.OrderStatus.Canceled);
+            Dispatcher.BeginInvoke(new Action(() => _suppressActivation = false), 
+                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
 
         #endregion
@@ -227,17 +243,26 @@ namespace PL
 
         private void btnDeliveries_Click(object sender, RoutedEventArgs e)
         {
+            _suppressActivation = true;
             PL.Delivery.DeliveryListWindow.ShowList();
+            Dispatcher.BeginInvoke(new Action(() => _suppressActivation = false), 
+                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
 
         private void btnOrders_Click(object sender, RoutedEventArgs e)
         {
+            _suppressActivation = true;
             PL.Order.OrderListWindow.ShowList();
+            Dispatcher.BeginInvoke(new Action(() => _suppressActivation = false), 
+                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
 
         private void btnCouriers_Click(object sender, RoutedEventArgs e)
         {
+            _suppressActivation = true;
             PL.Courier.CourierListWindow.ShowList();
+            Dispatcher.BeginInvoke(new Action(() => _suppressActivation = false), 
+                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
 
         #endregion
@@ -255,22 +280,39 @@ namespace PL
                     CloseAllWindowsExceptMainAndLogin();
                     
                     _suppressActivation = true;
-                    s_bl.Admin.InitializeDB();
-                    RefreshAllData();
-                    _suppressActivation = false;
-                    
-                    Mouse.OverrideCursor = null;
-                    MessageBox.Show("Database initialized successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _isInitializing = true;
+
+                    try
+                    {
+                        s_bl.Admin.InitializeDB();
+                        
+                        // Force file handles to close
+                        System.GC.Collect();
+                        System.GC.WaitForPendingFinalizers();
+                        System.Threading.Thread.Sleep(500);
+                        
+                        RefreshAllData();
+                        MessageBox.Show("Database initialized successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                    finally
+                    {
+                        _suppressActivation = false;
+                        _isInitializing = false;
+                        Mouse.OverrideCursor = null;
+                    }
                 }
             }
             catch (BO.BLTemporaryNotAvailableException ex)
             {
+                _suppressActivation = false;
+                _isInitializing = false;
                 Mouse.OverrideCursor = null;
                 MessageBox.Show($"Cannot perform operation: {ex.Message}", "Simulator Running", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             catch (Exception ex)
             {
                 _suppressActivation = false;
+                _isInitializing = false;
                 Mouse.OverrideCursor = null;
                 MessageBox.Show($"Error initializing database: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -287,22 +329,39 @@ namespace PL
                     CloseAllWindowsExceptMainAndLogin();
                     
                     _suppressActivation = true;
-                    s_bl.Admin.ResetDB();
-                    RefreshAllData();
-                    _suppressActivation = false;
-                    
-                    Mouse.OverrideCursor = null;
-                    MessageBox.Show("Database reset successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _isInitializing = true;
+
+                    try
+                    {
+                        s_bl.Admin.ResetDB();
+                        
+                        // Force file handles to close
+                        System.GC.Collect();
+                        System.GC.WaitForPendingFinalizers();
+                        System.Threading.Thread.Sleep(500);
+                        
+                        RefreshAllData();
+                        MessageBox.Show("Database reset successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                    finally
+                    {
+                        _suppressActivation = false;
+                        _isInitializing = false;
+                        Mouse.OverrideCursor = null;
+                    }
                 }
             }
             catch (BO.BLTemporaryNotAvailableException ex)
             {
+                _suppressActivation = false;
+                _isInitializing = false;
                 Mouse.OverrideCursor = null;
                 MessageBox.Show($"Cannot perform operation: {ex.Message}", "Simulator Running", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             catch (Exception ex)
             {
                 _suppressActivation = false;
+                _isInitializing = false;
                 Mouse.OverrideCursor = null;
                 MessageBox.Show($"Error resetting database: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -361,7 +420,7 @@ namespace PL
         // Override to prevent activation when suppressed
         protected override void OnActivated(EventArgs e)
         {
-            if (_suppressActivation)
+            if (_suppressActivation || _isInitializing)
             {
                 return;
             }
@@ -380,7 +439,7 @@ namespace PL
             
             Dispatcher.BeginInvoke(async () =>
             {
-                if (IsLoaded && !_suppressActivation)
+                if (IsLoaded && !_suppressActivation && !_isInitializing)
                 {
                     CurrentTime = s_bl.Admin.GetClock();
                 }
@@ -399,7 +458,7 @@ namespace PL
             
             Dispatcher.BeginInvoke(async () =>
             {
-                if (IsLoaded && !_suppressActivation)
+                if (IsLoaded && !_suppressActivation && !_isInitializing)
                 {
                     var cfg = s_bl.Admin.GetConfig();
                     Configuration = cfg;
@@ -420,7 +479,7 @@ namespace PL
             
             Dispatcher.BeginInvoke(async () =>
             {
-                if (IsLoaded && !_suppressActivation)
+                if (IsLoaded && !_suppressActivation && !_isInitializing)
                 {
                     var summary = s_bl.Orders.GetOrderStatusSummary();
                     OrderSummary = summary;

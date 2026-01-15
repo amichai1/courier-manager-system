@@ -27,6 +27,7 @@ namespace PL.Courier
             {
                 _instance = new CourierListWindow();
                 _instance.Show();
+                BringToFront();
             }
             else
             {
@@ -36,6 +37,7 @@ namespace PL.Courier
 
         /// <summary>
         /// Forces the window to appear above other windows without affecting other windows
+        /// Uses Activate() deferred to ensure window is rendered first
         /// </summary>
         private static void BringToFront()
         {
@@ -46,8 +48,12 @@ namespace PL.Courier
                 _instance.WindowState = WindowState.Normal;
             }
 
-            // Use Focus() instead of Activate() + Topmost trick
-            _instance.Focus();
+            // Defer activation to ensure window is rendered first
+            _instance.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                _instance?.Activate();
+                _instance?.Focus();
+            }), System.Windows.Threading.DispatcherPriority.Input);
         }
 
         #region Dependency Properties

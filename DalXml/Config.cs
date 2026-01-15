@@ -1,4 +1,4 @@
-﻿namespace Dal;
+namespace Dal;
 using System;
 using System.Xml.Linq;
 using static XMLTools;
@@ -145,7 +145,7 @@ internal static class Config
         // Resetting General Config
         Clock = new DateTime(2025, 1, 1, 8, 0, 0); // Start Clock based on original config
         ManagerId = 123456789;
-        ManagerPassword = "Admin123!";
+        ManagerPassword = "123456789";  // ✅ CHANGED: Manager password is now flexible (1-9)
 
         // Reset company address and coordinates
         CompanyAddress = null;

@@ -11,7 +11,9 @@
         Background="{StaticResource AppBackgroundColor}"
         Loaded="Window_Loaded"
         Closed="Window_Closed"
-        DataContext="{Binding RelativeSource={RelativeSource Mode=Self}}">
+        DataContext="{Binding RelativeSource={RelativeSource Mode=Self}}"
+        Topmost="False"
+        ShowInTaskbar="True">
 
     <Window.Resources>
         <converters:StatusToColorConverter x:Key="StatusToColorConverter"/>

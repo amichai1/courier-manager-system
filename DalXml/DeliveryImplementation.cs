@@ -5,9 +5,42 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Xml.Linq;
 
 internal class DeliveryImplementation : IDelivery
 {
+    static Delivery getDelivery(XElement s)
+        => new Delivery(
+            s.ToIntNullable("Id") ?? throw new FormatException("can't convert id"),
+            s.ToIntNullable("OrderId") ?? throw new FormatException("can't convert OrderId"),
+            s.ToIntNullable("CourierId") ?? throw new FormatException("can't convert CourierId"),
+            s.ToEnumNullable<DeliveryType>("DeliveryType") ?? DeliveryType.OnFoot,
+            s.ToDateTimeNullable("StartTime") ?? default,
+            s.ToDoubleNullable("ActualDistance")
+        )
+        {
+            CompletionStatus = s.ToEnumNullable<DeliveryStatus>("CompletionStatus"),
+            EndTime = s.ToDateTimeNullable("EndTime")
+        };
+
+    static XElement createDeliveryElement(Delivery item)
+    {
+        var elem = new XElement("Delivery",
+            new XElement("Id", item.Id),
+            new XElement("OrderId", item.OrderId),
+            new XElement("CourierId", item.CourierId),
+            new XElement("DeliveryType", item.DeliveryType.ToString()),
+            new XElement("StartTime", item.StartTime.ToString("o"))
+        );
+        if (item.ActualDistance.HasValue)
+            elem.Add(new XElement("ActualDistance", item.ActualDistance.Value));
+        if (item.CompletionStatus.HasValue)
+            elem.Add(new XElement("CompletionStatus", item.CompletionStatus.Value.ToString()));
+        if (item.EndTime.HasValue)
+            elem.Add(new XElement("EndTime", item.EndTime.Value.ToString("o")));
+        return elem;
+    }
+
     [MethodImpl(MethodImplOptions.Synchronized)]
     public void Create(Delivery item)
     {

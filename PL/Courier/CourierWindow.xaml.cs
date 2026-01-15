@@ -167,6 +167,30 @@ public partial class CourierWindow : Window
     public static readonly DependencyProperty IsDeliveryTypeEnabledProperty =
         DependencyProperty.Register("IsDeliveryTypeEnabled", typeof(bool), typeof(CourierWindow), new PropertyMetadata(true));
 
+    public double SalaryAmount
+    {
+        get => (double)GetValue(SalaryAmountProperty);
+        set => SetValue(SalaryAmountProperty, value);
+    }
+    public static readonly DependencyProperty SalaryAmountProperty =
+        DependencyProperty.Register("SalaryAmount", typeof(double), typeof(CourierWindow), new PropertyMetadata(0.0));
+
+    public int DeliveredCount
+    {
+        get => (int)GetValue(DeliveredCountProperty);
+        set => SetValue(DeliveredCountProperty, value);
+    }
+    public static readonly DependencyProperty DeliveredCountProperty =
+        DependencyProperty.Register("DeliveredCount", typeof(int), typeof(CourierWindow), new PropertyMetadata(0));
+
+    public Visibility SalaryVisibility
+    {
+        get => (Visibility)GetValue(SalaryVisibilityProperty);
+        set => SetValue(SalaryVisibilityProperty, value);
+    }
+    public static readonly DependencyProperty SalaryVisibilityProperty =
+        DependencyProperty.Register("SalaryVisibility", typeof(Visibility), typeof(CourierWindow), new PropertyMetadata(Visibility.Collapsed));
+
     #endregion
 
     #region Lifecycle
@@ -224,6 +248,7 @@ public partial class CourierWindow : Window
                     AverageDeliveryTime = "—"
                 };
                 _originalCourier = CloneCourier(CurrentCourier);
+                SalaryVisibility = Visibility.Collapsed;
             }
             else
             {
@@ -237,6 +262,23 @@ public partial class CourierWindow : Window
 
                 CurrentCourier.AverageDeliveryTime = s_bl.Couriers.CalculateAverageDeliveryTime(_courierId);
                 CurrentPassword = CurrentCourier.Password;
+
+                // ✅ Calculate and display salary
+                try
+                {
+                    var startOfMonth = new DateTime(s_bl.Admin.GetClock().Year, s_bl.Admin.GetClock().Month, 1);
+                    var endOfMonth = startOfMonth.AddMonths(1).AddSeconds(-1);
+                    var salary = s_bl.Couriers.CalculateSalary(_courierId, startOfMonth, endOfMonth);
+                    
+                    SalaryAmount = salary.NetSalary;
+                    DeliveredCount = salary.TotalDeliveries;
+                    SalaryVisibility = Visibility.Visible;
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error calculating salary: {ex.Message}");
+                    SalaryVisibility = Visibility.Collapsed;
+                }
 
                 _originalCourier = CloneCourier(CurrentCourier);
                 try { s_bl.Couriers.AddObserver(CourierObserver); } catch { }
