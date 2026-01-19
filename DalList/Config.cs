@@ -133,7 +133,7 @@ internal static class Config
         nextDeliveyId = startDeliveryId;
         
         // Reset system clock
-        Clock = new DateTime(2025, 1, 1, 8, 0, 0);
+        Clock = new DateTime(2026, 1, 21, 14, 0, 0);
         
         // Reset manager credentials
         ManagerId = 123456789;

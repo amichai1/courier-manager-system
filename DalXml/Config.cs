@@ -143,7 +143,7 @@ internal static class Config
         NextDeliveryId = 1;
 
         // Resetting General Config
-        Clock = new DateTime(2025, 1, 1, 8, 0, 0); // Start Clock based on original config
+        Clock = new DateTime(2026, 1, 21, 14, 0, 0); // Start Clock based on original config
         ManagerId = 123456789;
         ManagerPassword = "123456789";
 
