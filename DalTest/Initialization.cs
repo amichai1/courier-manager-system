@@ -54,10 +54,6 @@ public static class Initialization
 
     private static void CreateConfig()
     {
-        // Set clock to January 21, 2026 at 2:00 PM (14:00)
-        s_dal!.Config.Clock = new DateTime(2026, 1, 21, 14, 0, 0); 
-        s_dal.Config.ManagerId = 123456789;
-        s_dal.Config.ManagerPassword = "123456789";
         s_dal.Config.CompanyAddress = WOLT_ADDRESS;
         s_dal.Config.CompanyLatitude = WOLT_LATITUDE;
         s_dal.Config.CompanyLongitude = WOLT_LONGITUDE;

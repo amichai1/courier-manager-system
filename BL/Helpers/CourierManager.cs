@@ -714,7 +714,7 @@ internal static class CourierManager
             {
                 TimeSpan maxInactivityTime = AdminManager.GetConfig().InactivityRange;
                 bool courierUpdated = false;
-                
+                List<int> deactivatedCourierIds = new(); // ✅ הוסף רשימה
                 // LINQ Method Syntax - get only active couriers
                 var activeCouriersToCheck = s_dal.Courier.ReadAll()
                     .Where(c => c.IsActive)
@@ -746,6 +746,7 @@ internal static class CourierManager
                         s_dal.Courier.Update(updatedCourier);
                         System.Diagnostics.Debug.WriteLine($"[INFO] Courier {doCourier.Id} marked as Inactive - worked for more than {maxInactivityTime.TotalDays} days");
                         courierUpdated = true; // Stage 5
+                        deactivatedCourierIds.Add(doCourier.Id); 
                     }
                     catch (Exception ex)
                     {
@@ -753,7 +754,12 @@ internal static class CourierManager
                     }
                 }
 
-                if (courierUpdated) // Stage 5
+                foreach (var courierId in deactivatedCourierIds)
+                {
+                    Observers.NotifyItemUpdated(courierId);
+                }
+
+                if (courierUpdated)
                 {
                     Observers.NotifyListUpdated(); // Stage 5
                 }

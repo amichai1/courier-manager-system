@@ -53,7 +53,6 @@ internal static class AdminManager
             try
             {
                 s_dal.ResetDB();
-                UpdateClock(new DateTime(2026, 1, 1, 11, 0, 0));
             }
             finally
             {
@@ -283,8 +282,9 @@ internal static class AdminManager
             OrderManager.PeriodicOrderUpdates(oldClock, newClock);
             DeliveryManager.PeriodicDeliveryUpdates(oldClock, newClock);
             
-            // DISABLED: Prevent expiration status changes
-             //OrderManager.CheckAndUpdateExpiredOrders();
+            CourierManager.Observers.NotifyListUpdated();
+            OrderManager.Observers.NotifyListUpdated();
+
         }
         catch (Exception ex)
         {
