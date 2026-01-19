@@ -13,14 +13,14 @@
 
 ---
 
-## 🇮🇱 תיאור כללי (עברית)
+## תיאור התוספות (עברית) 🇮🇱 
 
 ### 🧱 שכבת DAL (Data Access Layer)
 
 - **שדה סיסמה ביישויות הנתונים (Courier & Config)**  
   - לשכבת הנתונים יש שדה `Password` לישויות השליחים (`Courier`) וכן שדה `ManagerPassword` בקונפיגורציה.  
 
-- **Parsing בטוח בקונסולה (BlTest / DalTest)**  
+- **שימוש ב Parsing בטוח בקונסולה (BlTest / DalTest)**  
   - בפרויקטי הבדיקה (`BlTest`, `DalTest`) נעשה שימוש נרחב ב-`TryParse` (`int.TryParse`, `double.TryParse`, `Enum.TryParse` וכו') יחד עם בדיקת ערך החזרה.  
   - מונע קריסות בקלט מהמשתמש ומאפשר חוויית בדיקה יציבה יותר.
 
@@ -50,12 +50,12 @@
 #### ✅ ולידציה וחוויית משתמש
 
 - **ולידציה חזותית (Input Validation with Visual Feedback)**  
-  - `TextBox`‑ים משתמשים ב־`Validation.ErrorTemplate` ובטריגרים של `Validation.HasError` כדי להציג:  
+  - שדות `TextBox`‑ים משתמשים ב־`Validation.ErrorTemplate` ובטריגרים של `Validation.HasError` כדי להציג:  
     - מסגרת אדומה ורקע בהיר לשגיאה.  
     - אייקון “!” קטן עם `ToolTip` של הודעת השגיאה.  
   - נותן למשתמש פידבק מיידי וברור על שדות שגויים.
 
-- **Converters ו־MultiValueConverters**  
+- **שימוש ב- Converters ו־ MultiValueConverters**  
   - שימוש נרחב ב־`IValueConverter` ו־`IMultiValueConverter` לצורך:  
     - עיצוב מספרים (משקל, נפח, מרחק).  
     - ולידציה לוגית (טלפון, אימייל, ת״ז וכו') לפני שמירה.  
@@ -64,11 +64,11 @@
 
 - **טריגרים (Triggers) – Property, Data ו-Event**  
   - שימוש ב־`EventTrigger` לאנימציות Hover על כרטיסיות ו־Buttons.  
-  - `DataTrigger`‑ים מדגישים כרטיסיות לפי מספר הזמנות פתוחות / בסיכון.  
+  - שימוש ב-`DataTrigger`‑ים מדגישים כרטיסיות לפי מספר הזמנות פתוחות / בסיכון.  
   - טריגרים בתבניות בקרה משנים צבעים/מסגרות במצב Hover, Focus או שגיאה.
 
-- **ControlTemplate מותאם אישית**  
-  - `TextBox`, `PasswordBox`, `Button` ועוד – עם `ControlTemplate`ים מלאים ליצירת UI מודרני (פינות מעוגלות, אפקטי Shadow, אנימציות קליק).  
+- **יצירת ControlTemplate מותאם אישית**  
+  - שדות `TextBox`, `PasswordBox`, `Button` ועוד – עם `ControlTemplate`ים מלאים ליצירת UI מודרני (פינות מעוגלות, אפקטי Shadow, אנימציות קליק).  
   - לחצני מחיקה ופעולה עוצבו עם תבניות ייעודיות המפרידות בין מצבי Hover/Pressed.
 
 - **גרפיקה וצורות (Shapes)**  
@@ -98,18 +98,18 @@
 
 ### ⏱️ סימולטור ו-Asynchronicity
 
-- **UI אסינכרוני ובלתי חוסם (Async UI)**  
+- **ביצוע UI אסינכרוני ובלתי חוסם (Async UI)**  
   - טעינת רשימות (כמו רשימת ההזמנות) מתבצעת ב־**Thread רקע** באמצעות `Task.Run(...)` ולאחר מכן חזרה ל־UI באמצעות `Dispatcher.BeginInvoke(...)`.  
   - שימוש ב־`ObserverMutex` ו־Observers בשכבת BL כדי לוודא שהעדכונים מ־Simulator / BL אינם חוסמים את ה־UI ואינם יוצרים מרוצי תהליכים.  
   - גישת “fire-and-forget” עם Task.Run ב־BL (למשל בעדכוני שעון וסימולציה) שומרת על תגובתיות הממשק גם בזמן סימולציה רציפה.
 
 - **סימולטור זמן (Clock Simulator) – ריצה ברקע**  
-  - Thread ייעודי מריץ “שעון מערכת” המתקדם במרווחים קבועים, קורא ל־BL לעדכוני סטטוסים תקופתיים (הזמנות/שליחים/משלוחים).  
+  - קיים Thread ייעודי שמריץ “שעון מערכת” המתקדם במרווחים קבועים, קורא ל־BL לעדכוני סטטוסים תקופתיים (הזמנות/שליחים/משלוחים).  
   - פרמטרי סימולטור (כמו אינטרוול בדקות) ניתנים להגדרה מתוך ה־UI, תוך שמירה על thread-safety בעזרת מנעולים ו־AsyncMutex.
 </div>
 ---
 
-## 🇺🇸 Overview (English)
+## 🇺🇸 Overview of the additions (English)
 
 ### 🧱 DAL – Data Access Layer
 
