@@ -1,4 +1,4 @@
-﻿namespace Dal;
+namespace Dal;
 
 using DO;
 using System.Xml;
@@ -104,13 +104,22 @@ static class XMLTools
     public static void SetConfigIntVal(string xmlFileName, string elemName, int elemVal)
     {
         XElement root = XMLTools.LoadListFromXMLElement(xmlFileName);
-        root.Element(elemName)?.SetValue((elemVal).ToString());
+
+        root.Elements(elemName).Remove();
+        
+        root.Add(new XElement(elemName, elemVal.ToString()));
+        
         XMLTools.SaveListToXMLElement(root, xmlFileName);
     }
     public static void SetConfigDateVal(string xmlFileName, string elemName, DateTime elemVal)
     {
         XElement root = XMLTools.LoadListFromXMLElement(xmlFileName);
-        root.Element(elemName)?.SetValue((elemVal).ToString());
+        
+        root.Elements(elemName).Remove();
+        
+
+        root.Add(new XElement(elemName, elemVal.ToString()));
+        
         XMLTools.SaveListToXMLElement(root, xmlFileName);
     }
     public static string GetConfigStringVal(string xmlFileName, string elemName)
@@ -126,16 +135,11 @@ static class XMLTools
     public static void SetConfigStringVal(string xmlFileName, string elemName, string elemVal)
     {
         XElement root = XMLTools.LoadListFromXMLElement(xmlFileName);
-        XElement? element = root.Element(elemName);
-
-        if (element == null)
-        {
-            root.Add(new XElement(elemName, elemVal));
-        }
-        else
-        {
-            element.SetValue(elemVal);
-        }
+        
+        root.Elements(elemName).Remove();
+       
+        root.Add(new XElement(elemName, elemVal));
+        
         XMLTools.SaveListToXMLElement(root, xmlFileName); 
     }
     public static TimeSpan GetConfigTimeSpanVal(string xmlFileName, string elemName)
@@ -152,17 +156,15 @@ static class XMLTools
     public static void SetConfigTimeSpanVal(string xmlFileName, string elemName, TimeSpan elemVal)
     {
         XElement root = XMLTools.LoadListFromXMLElement(xmlFileName);
-        XElement? element = root.Element(elemName);
+        
+      
+        root.Elements(elemName).Remove();
+        
         string timeSpanStr = elemVal.ToString();
-
-        if (element == null)
-        {
-            root.Add(new XElement(elemName, timeSpanStr));
-        }
-        else
-        {
-            element.SetValue(timeSpanStr);
-        }
+        
+       
+        root.Add(new XElement(elemName, timeSpanStr));
+        
         XMLTools.SaveListToXMLElement(root, xmlFileName);
     }
     public static double? GetConfigDoubleNullableVal(string xmlFileName, string elemName)
@@ -173,23 +175,17 @@ static class XMLTools
     public static void SetConfigDoubleNullableVal(string xmlFileName, string elemName, double? elemVal)
     {
         XElement root = XMLTools.LoadListFromXMLElement(xmlFileName);
-        XElement? element = root.Element(elemName);
 
-        if (elemVal.HasValue) // if theres a value:
+        // delete old element
+        root.Elements(elemName).Remove();
+
+        if (elemVal.HasValue)
         {
-            if (element == null)
-            {
-                root.Add(new XElement(elemName, elemVal.Value.ToString()));
-            }
-            else
-            {
-                element.SetValue(elemVal.Value.ToString());
-            }
+            // add new element only if elemVal is not null
+            root.Add(new XElement(elemName, elemVal.Value.ToString()));
         }
-        else 
-        {
-            element?.Remove();
-        }
+        // if elemVal is null, we just removed the old element and do not add a new one
+
         XMLTools.SaveListToXMLElement(root, xmlFileName);
     }
     public static double GetConfigDoubleVal(string xmlFileName, string elemName)
@@ -201,16 +197,13 @@ static class XMLTools
     public static void SetConfigDoubleVal(string xmlFileName, string elemName, double elemVal)
     {
         XElement root = XMLTools.LoadListFromXMLElement(xmlFileName);
-        XElement? element = root.Element(elemName);
 
-        if (element == null)
-        {
-            root.Add(new XElement(elemName, elemVal.ToString()));
-        }
-        else
-        {
-            element.SetValue(elemVal.ToString());
-        }
+        //remove old element
+        root.Elements(elemName).Remove();
+
+        //add new element
+        root.Add(new XElement(elemName, elemVal.ToString()));
+        
         XMLTools.SaveListToXMLElement(root, xmlFileName);
     }
     #endregion

@@ -53,7 +53,7 @@ internal static class AdminManager
             try
             {
                 s_dal.ResetDB();
-                s_dal.Config.Clock = DateTime.Now;
+                UpdateClock(new DateTime(2026, 1, 1, 11, 0, 0));
             }
             finally
             {
