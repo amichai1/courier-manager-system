@@ -30,155 +30,161 @@
         </Grid.ColumnDefinitions>
 
         <!-- Left Panel - Courier Details -->
-        <Border Grid.Column="0" Style="{StaticResource RoundedBorderWithShadow}" Padding="25">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
+        <Grid Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-                <!-- Header -->
-                <StackPanel Grid.Row="0" Margin="0,0,0,15">
-                    <TextBlock Text="Courier Details" Style="{StaticResource SectionHeader}"/>
-                    <Rectangle Height="2" Fill="{StaticResource PrimaryColor}" HorizontalAlignment="Left" Width="60"/>
-                </StackPanel>
+            <!-- Courier Details Border -->
+            <Border Grid.Row="0" Style="{StaticResource RoundedBorderWithShadow}" Padding="25">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-                <!-- Form Fields -->
-                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,10,0">
-                    <Grid IsEnabled="{Binding IsFieldsEnabled}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="140"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
+                    <!-- Header -->
+                    <StackPanel Grid.Row="0" Margin="0,0,0,15">
+                        <TextBlock Text="Courier Details" Style="{StaticResource SectionHeader}"/>
+                        <Rectangle Height="2" Fill="{StaticResource PrimaryColor}" HorizontalAlignment="Left" Width="60"/>
+                    </StackPanel>
 
-                        <!-- Id -->
-                        <Label Grid.Row="0" Grid.Column="0" Content="Courier ID:" Style="{StaticResource LabelHeader}"/>
-                        <TextBox Grid.Row="0" Grid.Column="1" 
-                                x:Name="courierIdTextBox"
-                                Text="{Binding CurrentCourier.Id, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IsraeliIdConverterKey}}" 
-                                Style="{StaticResource TextBoxRegular}" Margin="0,0,0,10"
-                                ToolTip="Must be 9 digits (Israeli ID)"/>
-
-                        <!-- Password -->
-                        <Label Grid.Row="1" Grid.Column="0" Content="Password:" Style="{StaticResource LabelHeader}"
-                               Visibility="{Binding PasswordFieldVisibility}"/>
-                        <TextBox Grid.Row="1" Grid.Column="1"
-                                x:Name="passwordBox"
-                                Text="{Binding CurrentPassword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                Style="{StaticResource TextBoxRegular}"
-                                Margin="0,0,0,10"
-                                Visibility="{Binding PasswordFieldVisibility}"
-                                ToolTip="At least 8 chars: uppercase, lowercase, digit, special char"/>
-
-                        <!-- Name -->
-                        <Label Grid.Row="2" Grid.Column="0" Content="Full Name:" Style="{StaticResource LabelHeader}"/>
-                        <TextBox Grid.Row="2" Grid.Column="1" 
-                                Text="{Binding CurrentCourier.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                                Style="{StaticResource TextBoxRegular}" Margin="0,0,0,10"/>
-
-                        <!-- Phone -->
-                        <Label Grid.Row="3" Grid.Column="0" Content="Phone:" Style="{StaticResource LabelHeader}"/>
-                        <TextBox Grid.Row="3" Grid.Column="1" 
-                                Text="{Binding CurrentCourier.Phone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource PhoneConverterKey}}" 
-                                Style="{StaticResource TextBoxRegular}" Margin="0,0,0,10"
-                                ToolTip="Format: 05XXXXXXXX (10 digits)"/>
-
-                        <!-- Email -->
-                        <Label Grid.Row="4" Grid.Column="0" Content="Email:" Style="{StaticResource LabelHeader}"/>
-                        <TextBox Grid.Row="4" Grid.Column="1" 
-                                Text="{Binding CurrentCourier.Email, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource EmailConverterKey}}" 
-                                Style="{StaticResource TextBoxRegular}" Margin="0,0,0,10"/>
-
-                        <!-- Max Distance -->
-                        <Label Grid.Row="5" Grid.Column="0" Content="Max Distance:" Style="{StaticResource LabelHeader}"/>
-                        <TextBox Grid.Row="5" Grid.Column="1" 
-                                Text="{Binding CurrentCourier.MaxDeliveryDistance, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource MaxDistanceConverterKey}}" 
-                                Style="{StaticResource TextBoxRegular}" Margin="0,0,0,10"
-                                ToolTip="Minimum 10 km"/>
-
-                        <!-- Delivery Type -->
-                        <Label Grid.Row="6" Grid.Column="0" Content="Delivery Type:" Style="{StaticResource LabelHeader}"/>
-                        <ComboBox Grid.Row="6" Grid.Column="1" 
-                                  ItemsSource="{StaticResource CourierDeliveryTypesKey}"
-                                  SelectedValue="{Binding CurrentCourier.DeliveryType, Mode=TwoWay}" 
-                                  Style="{StaticResource ComboBoxRegular}" Margin="0,0,0,10"
-                                  IsEnabled="{Binding IsDeliveryTypeEnabled}"
-                                  ToolTip="Cannot change delivery type while handling an order"/>
-
-                        <!-- Start Date -->
-                        <Label Grid.Row="7" Grid.Column="0" Content="Start Date:" Style="{StaticResource LabelHeader}"/>
-                        <DatePicker Grid.Row="7" Grid.Column="1" 
-                                   SelectedDate="{Binding CurrentCourier.StartWorkingDate, Mode=TwoWay}" 
-                                   Style="{StaticResource DatePickerRegular}" Margin="0,0,0,10"/>
-
-                        <!-- Is Active -->
-                        <Label Grid.Row="8" Grid.Column="0" Content="Active:" Style="{StaticResource LabelHeader}"/>
-                        <CheckBox Grid.Row="8" Grid.Column="1"
-                                  IsChecked="{Binding CurrentCourier.IsActive, Mode=TwoWay}"
-                                  VerticalAlignment="Center"
-                                  Margin="5,0,0,0">
-                            <CheckBox.LayoutTransform>
-                                <ScaleTransform ScaleX="1.2" ScaleY="1.2"/>
-                            </CheckBox.LayoutTransform>
-                        </CheckBox>
-                    </Grid>
-                </ScrollViewer>
-
-                <!-- Salary Display Section -->
-                <Border Grid.Row="2" BorderBrush="{StaticResource BorderColor}" BorderThickness="0,1,0,0" Padding="0,15,0,0" Margin="0,15,0,0"
-                        Visibility="{Binding SalaryVisibility}">
-                    <StackPanel>
-                        <TextBlock Text="💰 Current Salary" Style="{StaticResource SubtitleHeader}" Margin="0,0,0,10"/>
-                        <Grid>
+                    <!-- Form Fields -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,10,0">
+                        <Grid IsEnabled="{Binding IsFieldsEnabled}">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="15"/>
+                                <ColumnDefinition Width="140"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="Monthly Salary" FontSize="11" Foreground="{StaticResource LightTextColor}"/>
-                                <TextBlock Text="{Binding SalaryAmount, StringFormat='₪{0:F2}'}" FontWeight="SemiBold" FontSize="14" Foreground="{StaticResource TextColor}"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="2">
-                                <TextBlock Text="Completed Deliveries" FontSize="11" Foreground="{StaticResource LightTextColor}"/>
-                                <TextBlock FontWeight="SemiBold" FontSize="14" Foreground="{StaticResource TextColor}">
-                                    <Run Text="{Binding DeliveredCount}"/>
-                                    <Run Text=" orders"/>
-                                </TextBlock>
-                            </StackPanel>
-                        </Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
 
-                        <!-- ✅ Update Button under salary -->
-                        <Border BorderBrush="{StaticResource BorderColor}" BorderThickness="0,1,0,0" Padding="0,15,0,0" Margin="0,15,0,0">
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                <Button Content="Save" 
-                                        Style="{StaticResource PrimaryButton}"
-                                        Click="btnAddUpdate_Click"
-                                        Width="100"
-                                        Margin="0,0,5,0"
-                                        Visibility="{Binding SaveButtonVisibility}"/>
-                                <Button Content="Cancel" 
-                                        Style="{StaticResource SecondaryButton}"
-                                        Click="btnClose_Click"
-                                        Width="100"/>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-                </Border>
-            </Grid>
-        </Border>
+                            <!-- Id -->
+                            <Label Grid.Row="0" Grid.Column="0" Content="Courier ID:" Style="{StaticResource LabelHeader}"/>
+                            <TextBox Grid.Row="0" Grid.Column="1" 
+                                    x:Name="courierIdTextBox"
+                                    Text="{Binding CurrentCourier.Id, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource IsraeliIdConverterKey}}" 
+                                    Style="{StaticResource TextBoxRegular}" Margin="0,0,0,10"
+                                    ToolTip="Must be 9 digits (Israeli ID)"/>
+
+                            <!-- Password -->
+                            <Label Grid.Row="1" Grid.Column="0" Content="Password:" Style="{StaticResource LabelHeader}"
+                                   Visibility="{Binding PasswordFieldVisibility}"/>
+                            <TextBox Grid.Row="1" Grid.Column="1"
+                                    x:Name="passwordBox"
+                                    Text="{Binding CurrentPassword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Style="{StaticResource TextBoxRegular}"
+                                    Margin="0,0,0,10"
+                                    Visibility="{Binding PasswordFieldVisibility}"
+                                    ToolTip="At least 8 chars: uppercase, lowercase, digit, special char"/>
+
+                            <!-- Name -->
+                            <Label Grid.Row="2" Grid.Column="0" Content="Full Name:" Style="{StaticResource LabelHeader}"/>
+                            <TextBox Grid.Row="2" Grid.Column="1" 
+                                    Text="{Binding CurrentCourier.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                    Style="{StaticResource TextBoxRegular}" Margin="0,0,0,10"/>
+
+                            <!-- Phone -->
+                            <Label Grid.Row="3" Grid.Column="0" Content="Phone:" Style="{StaticResource LabelHeader}"/>
+                            <TextBox Grid.Row="3" Grid.Column="1" 
+                                    Text="{Binding CurrentCourier.Phone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource PhoneConverterKey}}" 
+                                    Style="{StaticResource TextBoxRegular}" Margin="0,0,0,10"
+                                    ToolTip="Format: 05XXXXXXXX (10 digits)"/>
+
+                            <!-- Email -->
+                            <Label Grid.Row="4" Grid.Column="0" Content="Email:" Style="{StaticResource LabelHeader}"/>
+                            <TextBox Grid.Row="4" Grid.Column="1" 
+                                    Text="{Binding CurrentCourier.Email, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource EmailConverterKey}}" 
+                                    Style="{StaticResource TextBoxRegular}" Margin="0,0,0,10"/>
+
+                            <!-- Max Distance -->
+                            <Label Grid.Row="5" Grid.Column="0" Content="Max Distance:" Style="{StaticResource LabelHeader}"/>
+                            <TextBox Grid.Row="5" Grid.Column="1" 
+                                    Text="{Binding CurrentCourier.MaxDeliveryDistance, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource MaxDistanceConverterKey}}" 
+                                    Style="{StaticResource TextBoxRegular}" Margin="0,0,0,10"
+                                    ToolTip="Minimum 10 km"/>
+
+                            <!-- Delivery Type -->
+                            <Label Grid.Row="6" Grid.Column="0" Content="Delivery Type:" Style="{StaticResource LabelHeader}"/>
+                            <ComboBox Grid.Row="6" Grid.Column="1" 
+                                      ItemsSource="{StaticResource CourierDeliveryTypesKey}"
+                                      SelectedValue="{Binding CurrentCourier.DeliveryType, Mode=TwoWay}" 
+                                      Style="{StaticResource ComboBoxRegular}" Margin="0,0,0,10"
+                                      IsEnabled="{Binding IsDeliveryTypeEnabled}"
+                                      ToolTip="Cannot change delivery type while handling an order"/>
+
+                            <!-- Start Date -->
+                            <Label Grid.Row="7" Grid.Column="0" Content="Start Date:" Style="{StaticResource LabelHeader}"/>
+                            <DatePicker Grid.Row="7" Grid.Column="1" 
+                                       SelectedDate="{Binding CurrentCourier.StartWorkingDate, Mode=TwoWay}" 
+                                       Style="{StaticResource DatePickerRegular}" Margin="0,0,0,10"/>
+
+                            <!-- Is Active -->
+                            <Label Grid.Row="8" Grid.Column="0" Content="Active:" Style="{StaticResource LabelHeader}"/>
+                            <CheckBox Grid.Row="8" Grid.Column="1"
+                                      IsChecked="{Binding CurrentCourier.IsActive, Mode=TwoWay}"
+                                      VerticalAlignment="Center"
+                                      Margin="5,0,0,0">
+                                <CheckBox.LayoutTransform>
+                                    <ScaleTransform ScaleX="1.2" ScaleY="1.2"/>
+                                </CheckBox.LayoutTransform>
+                            </CheckBox>
+                        </Grid>
+                    </ScrollViewer>
+
+                    <!-- Salary Display Section (NO buttons here) -->
+                    <Border Grid.Row="2" BorderBrush="{StaticResource BorderColor}" BorderThickness="0,1,0,0" Padding="0,15,0,0" Margin="0,15,0,0"
+                            Visibility="{Binding SalaryVisibility}">
+                        <StackPanel>
+                            <TextBlock Text="💰 Current Salary" Style="{StaticResource SubtitleHeader}" Margin="0,0,0,10"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="15"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Monthly Salary" FontSize="11" Foreground="{StaticResource LightTextColor}"/>
+                                    <TextBlock Text="{Binding SalaryAmount, StringFormat='₪{0:F2}'}" FontWeight="SemiBold" FontSize="14" Foreground="{StaticResource TextColor}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Completed Deliveries" FontSize="11" Foreground="{StaticResource LightTextColor}"/>
+                                    <TextBlock FontWeight="SemiBold" FontSize="14" Foreground="{StaticResource TextColor}">
+                                        <Run Text="{Binding DeliveredCount}"/>
+                                        <Run Text=" orders"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- Action Buttons - ALWAYS VISIBLE (outside the salary section) -->
+            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+                <Button Content="Save" 
+                        Style="{StaticResource PrimaryButton}"
+                        Click="btnAddUpdate_Click"
+                        Width="100"
+                        Margin="0,0,5,0"
+                        Visibility="{Binding SaveButtonVisibility}"/>
+                <Button Content="Cancel" 
+                        Style="{StaticResource SecondaryButton}"
+                        Click="btnClose_Click"
+                        Width="100"/>
+            </StackPanel>
+        </Grid>
 
         <!-- Right Panel - Current Order & Action Buttons (for couriers only) -->
         <Grid Grid.Column="2">

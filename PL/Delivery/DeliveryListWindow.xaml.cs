@@ -15,6 +15,9 @@ namespace PL.Delivery
         // --- Singleton Implementation Start ---
         private static DeliveryListWindow? _instance = null;
 
+        // ✅ הוסף את ObserverMutex - משמר מ-thread safety
+        private readonly PL.Helpers.ObserverMutex _deliveryListMutex = new();
+
         // Add this field to declare lblStatus
         private System.Windows.Controls.Label? lblStatus;
 
@@ -71,7 +74,31 @@ namespace PL.Delivery
             _instance = null;
         }
 
-        private void DeliveryListObserver() => Dispatcher.BeginInvoke(new Action(QueryDeliveryList));
+        // ✅ שנה את DeliveryListObserver להשתמש ב-ObserverMutex (בדיוק כמו CourierListWindow)
+        private void DeliveryListObserver()
+        {
+            #region Stage 7 - Thread-safe observer with non-blocking mutex
+            if (_deliveryListMutex.CheckAndSetLoadInProgressOrRestartRequired())
+                return;
+
+            if (_instance == null || !_instance.IsLoaded)
+            {
+                _deliveryListMutex.UnsetLoadInProgressAndCheckRestartRequested().Wait();
+                return;
+            }
+
+            Dispatcher.BeginInvoke(async () =>
+            {
+                if (_instance != null && _instance.IsLoaded)
+                {
+                    QueryDeliveryList();
+                }
+
+                if (await _deliveryListMutex.UnsetLoadInProgressAndCheckRestartRequested())
+                    DeliveryListObserver();
+            });
+            #endregion
+        }
 
         #endregion
 

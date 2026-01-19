@@ -15,7 +15,7 @@ internal class CourierImplementation : IBICourier
     // --- CRUD Operations ---
     public void Create(BO.Courier courier) 
     {
-        // Allow creating courier while simulator runs
+        AdminManager.ThrowOnSimulatorIsRunning(); //stage 7
         CourierManager.CreateCourier(courier);
     }
 
@@ -28,26 +28,26 @@ internal class CourierImplementation : IBICourier
     
     public void Update(BO.Courier courier) 
     {
-        // Allow updating while simulator runs
+        AdminManager.ThrowOnSimulatorIsRunning(); //stage 7
         CourierManager.UpdateCourier(courier);
     }
     
     public void Delete(int id) 
     {
-        // Allow deletion while simulator runs
+        AdminManager.ThrowOnSimulatorIsRunning(); //stage 7
         CourierManager.DeleteCourier(id);
     }
 
     // --- Specific Operations ---
     public void UpdateLocation(int courierId, BO.Location newLocation)
     {
-        // Allow updating location while simulator runs
+        AdminManager.ThrowOnSimulatorIsRunning(); //stage 7
         CourierManager.UpdateCourierLocation(courierId, newLocation);
     }
         
     public void SetCourierStatus(int courierId, BO.CourierStatus status)
     {
-        // Allow setting status while simulator runs
+        AdminManager.ThrowOnSimulatorIsRunning(); //stage 7
         CourierManager.SetCourierStatus(courierId, status);
     }
 

@@ -1,161 +1,278 @@
 namespace Dal;
+using System.Runtime.CompilerServices;
+using System;
 
 /// <summary>
-/// Static configuration class containing system-wide environment variables and settings.
+/// In-memory configuration for DalList implementation.
+/// Stage 7: All ID and Clock properties synchronized for thread-safe access during simulator.
 /// </summary>
-/// <remarks>
-/// This class manages auto-incrementing IDs, system clock, and various operational parameters
-/// for the delivery management system. All properties are static as there is only one instance.
-/// </remarks>
 internal static class Config
 {
     // Running ID Configuration for Order
     internal const int startOrderId = 1;
     private static int nextOrderId = startOrderId;
-    internal static int NextOrderId { get => nextOrderId++; }
+    
+    /// <summary>
+    /// Gets the next order ID and increments for next time.
+    /// Stage 7: Thread-safe access during simulator execution.
+    /// </summary>
+    internal static int NextOrderId 
+    { 
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        get => nextOrderId++;
+    }
 
     // Running ID Configuration for Delivery
     internal const int startDeliveryId = 1;
-    private static int nextDeliveyId = startDeliveryId;
-    internal static int NextDeliveryId { get => nextDeliveyId++; }
+    private static int nextDeliveryId = startDeliveryId;
+    
+    /// <summary>
+    /// Gets the next delivery ID and increments for next time.
+    /// Stage 7: Thread-safe access during simulator execution.
+    /// </summary>
+    internal static int NextDeliveryId 
+    { 
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        get => nextDeliveryId++;
+    }
 
     /// <summary>
-    /// System clock for the delivery simulation
+    /// System clock for the delivery simulation.
+    /// Stage 7: Thread-safe access - updated by simulator thread.
     /// </summary>
-    /// <remarks>
-    /// Maintained separately from the computer's real clock.
-    /// Can be initialized and advanced by the manager or simulator.
-    /// </remarks>
-    internal static DateTime Clock { get; set; } = new DateTime (2025, 01, 01, 8,0,0);
+    private static DateTime _clock = new DateTime(2026, 1, 21, 14, 0, 0);
+    
+    internal static DateTime Clock
+    {
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        get => _clock;
+        
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        set => _clock = value;
+    }
 
-    // Manager Credentials     
+    // Manager Credentials
     /// <summary>
-    /// Manager's credentials - initially set during initialization, can be updated later by manager
+    /// Manager ID - Stage 7: Thread-safe access
     /// </summary>
-    internal static int ManagerId { get; set; } = 123456789;
-    internal static string ManagerPassword { get; set; } = "123456789";
+    private static int _managerId = 123456789;
+    
+    internal static int ManagerId
+    {
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        get => _managerId;
+        
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        set => _managerId = value;
+    }
+
+    /// <summary>
+    /// Manager Password - Stage 7: Thread-safe access
+    /// </summary>
+    private static string _managerPassword = "123456789";
+    
+    internal static string ManagerPassword
+    {
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        get => _managerPassword;
+        
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        set => _managerPassword = value;
+    }
 
     // Company Address and Coordinates
     /// <summary>
-    /// Full valid address of the company headquarters
+    /// Company address - Stage 7: Thread-safe access
     /// </summary>
-    /// <remarks>
-    /// All couriers depart from and return to this address.
-    /// Null until a valid address is set. Orders cannot be opened while null.
-    /// Format example: "HaNesiim 7, Petah Tikva, Israel"
-    /// </remarks>
-    internal static string? CompanyAddress { get; set; } = null;
+    private static string? _companyAddress = null;
+    
+    internal static string? CompanyAddress
+    {
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        get => _companyAddress;
+        
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        set => _companyAddress = value;
+    }
 
     /// <summary>
-    /// Latitude coordinate of the company address
+    /// Company latitude - Stage 7: Thread-safe access
     /// </summary>
-    /// <remarks>
-    /// Automatically updated by the business layer when company address changes.
-    /// Null while address is invalid.
-    /// </remarks>
-    internal static double? CompanyLatitude { get; set; } = null;
+    private static double? _companyLatitude = null;
+    
+    internal static double? CompanyLatitude
+    {
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        get => _companyLatitude;
+        
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        set => _companyLatitude = value;
+    }
 
     /// <summary>
-    /// Longitude coordinate of the company address
+    /// Company longitude - Stage 7: Thread-safe access
     /// </summary>
-    /// <remarks>
-    /// Automatically updated by the business layer when company address changes.
-    /// Null while address is invalid.
-    /// </remarks>
-    internal static double? CompanyLongitude { get; set; } = null;
+    private static double? _companyLongitude = null;
+    
+    internal static double? CompanyLongitude
+    {
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        get => _companyLongitude;
+        
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        set => _companyLongitude = value;
+    }
 
     // Distance Limitations
     /// <summary>
-    /// Maximum general delivery distance in kilometers (air distance)
+    /// Max delivery distance - Stage 7: Thread-safe access
     /// </summary>
-    /// <remarks>
-    /// Maximum air distance between company address and order address.
-    /// Only orders within this range will be accepted.
-    /// Null means no distance limitation.
-    /// </remarks>
-    internal static double? MaxDeliveryDistance { get; set; } = 50.0;
+    private static double? _maxDeliveryDistance = 50.0;
+    
+    internal static double? MaxDeliveryDistance
+    {
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        get => _maxDeliveryDistance;
+        
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        set => _maxDeliveryDistance = value;
+    }
 
     // Average Speeds by Delivery Type (km/h)
     /// <summary>
-    /// Average speed in km/h
+    /// Car speed - Stage 7: Thread-safe access
     /// </summary>
-    /// <remarks>
-    /// Used for calculating delivery times and actual distances.
-    /// </remarks>
-    internal static double CarSpeed { get; set; } = 30.0;
-    internal static double MotorcycleSpeed { get; set; } = 35.0;
-    internal static double BicycleSpeed { get; set; } = 15.0;
-    internal static double OnFootSpeed { get; set; } = 4.0;
+    private static double _carSpeed = 30.0;
+    
+    internal static double CarSpeed
+    {
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        get => _carSpeed;
+        
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        set => _carSpeed = value;
+    }
+
+    /// <summary>
+    /// Motorcycle speed - Stage 7: Thread-safe access
+    /// </summary>
+    private static double _motorcycleSpeed = 35.0;
+    
+    internal static double MotorcycleSpeed
+    {
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        get => _motorcycleSpeed;
+        
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        set => _motorcycleSpeed = value;
+    }
+
+    /// <summary>
+    /// Bicycle speed - Stage 7: Thread-safe access
+    /// </summary>
+    private static double _bicycleSpeed = 15.0;
+    
+    internal static double BicycleSpeed
+    {
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        get => _bicycleSpeed;
+        
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        set => _bicycleSpeed = value;
+    }
+
+    /// <summary>
+    /// On-foot speed - Stage 7: Thread-safe access
+    /// </summary>
+    private static double _onFootSpeed = 4.0;
+    
+    internal static double OnFootSpeed
+    {
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        get => _onFootSpeed;
+        
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        set => _onFootSpeed = value;
+    }
 
     // Time Ranges
     /// <summary>
-    /// Maximum delivery time commitment
+    /// Max delivery time - Stage 7: Thread-safe access
     /// </summary>
-    /// <remarks>
-    /// Company's commitment for delivery time to all customers.
-    /// Helps calculate if an order is at risk and track on-time deliveries.
-    /// Time units (hours/days) determined by company type.
-    /// </remarks>
-    internal static TimeSpan MaxDeliveryTime { get; set; } = TimeSpan.FromHours(2);
+    private static TimeSpan _maxDeliveryTime = TimeSpan.FromHours(2);
+    
+    internal static TimeSpan MaxDeliveryTime
+    {
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        get => _maxDeliveryTime;
+        
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        set => _maxDeliveryTime = value;
+    }
 
     /// <summary>
-    /// Risk time range threshold
+    /// Risk range - Stage 7: Thread-safe access
     /// </summary>
-    /// <remarks>
-    /// Time range from which an order is considered at risk.
-    /// Order is approaching maximum delivery time but hasn't been delivered yet.
-    /// Time units (hours/days) determined by company type.
-    /// </remarks>
-    internal static TimeSpan RiskRange { get; set; } = TimeSpan.FromMinutes(90);
+    private static TimeSpan _riskRange = TimeSpan.FromMinutes(90);
+    
+    internal static TimeSpan RiskRange
+    {
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        get => _riskRange;
+        
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        set => _riskRange = value;
+    }
 
     /// <summary>
-    /// Inactivity time range threshold
+    /// Inactivity range - Stage 7: Thread-safe access
     /// </summary>
-    /// <remarks>
-    /// Time range with no courier activity after which courier is automatically set as inactive.
-    /// Courier hasn't completed any deliveries during this time range.
-    /// Time units (hours/days) determined by company type.
-    /// </remarks>
-    internal static TimeSpan InactivityRange { get; set; } = TimeSpan.FromDays(30);
+    private static TimeSpan _inactivityRange = TimeSpan.FromDays(30);
+    
+    internal static TimeSpan InactivityRange
+    {
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        get => _inactivityRange;
+        
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        set => _inactivityRange = value;
+    }
 
-    // Reset Method
     /// <summary>
-    /// Resets all configuration properties to their initial values
+    /// Resets all configuration properties to their initial values.
+    /// Stage 7: Thread-safe reset during simulator operations.
     /// </summary>
-    /// <remarks>
-    /// This method restores all settings to their default state,
-    /// including resetting running ID counters.
-    /// </remarks>
-    internal static void Reset ()
+    [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+    internal static void Reset()
     {
         // Reset running IDs
         nextOrderId = startOrderId;
-        nextDeliveyId = startDeliveryId;
+        nextDeliveryId = startDeliveryId;
         
         // Reset system clock
-        Clock = new DateTime(2026, 1, 21, 14, 0, 0);
+        _clock = new DateTime(2026, 1, 21, 14, 0, 0);
         
         // Reset manager credentials
-        ManagerId = 123456789;
-        ManagerPassword = "123456789";
+        _managerId = 123456789;
+        _managerPassword = "123456789";
         
         // Reset company address and coordinates
-        CompanyAddress = null;
-        CompanyLatitude = null;
-        CompanyLongitude = null;
+        _companyAddress = null;
+        _companyLatitude = null;
+        _companyLongitude = null;
         
         // Reset distance limitation
-        MaxDeliveryDistance = 50.0;
+        _maxDeliveryDistance = 50.0;
 
         // Reset speeds
-        CarSpeed = 30.0;
-        MotorcycleSpeed = 35.0;
-        BicycleSpeed = 15.0;
-        OnFootSpeed = 4.0;
+        _carSpeed = 30.0;
+        _motorcycleSpeed = 35.0;
+        _bicycleSpeed = 15.0;
+        _onFootSpeed = 4.0;
         
         // Reset time ranges
-        MaxDeliveryTime = TimeSpan.FromHours(2);
-        RiskRange = TimeSpan.FromMinutes(90);       
-        InactivityRange = TimeSpan.FromDays(30);
+        _maxDeliveryTime = TimeSpan.FromHours(2);
+        _riskRange = TimeSpan.FromMinutes(90);       
+        _inactivityRange = TimeSpan.FromDays(30);
     }
 }

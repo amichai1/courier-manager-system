@@ -264,21 +264,7 @@ public partial class CourierWindow : Window
                 CurrentPassword = CurrentCourier.Password;
 
                 // ✅ Calculate and display salary
-                try
-                {
-                    var startOfMonth = new DateTime(s_bl.Admin.GetClock().Year, s_bl.Admin.GetClock().Month, 1);
-                    var endOfMonth = startOfMonth.AddMonths(1).AddSeconds(-1);
-                    var salary = s_bl.Couriers.CalculateSalary(_courierId, startOfMonth, endOfMonth);
-                    
-                    SalaryAmount = salary.NetSalary;
-                    DeliveredCount = salary.TotalDeliveries;
-                    SalaryVisibility = Visibility.Visible;
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Error calculating salary: {ex.Message}");
-                    SalaryVisibility = Visibility.Collapsed;
-                }
+                UpdateSalaryDisplay();
 
                 _originalCourier = CloneCourier(CurrentCourier);
                 try { s_bl.Couriers.AddObserver(CourierObserver); } catch { }
@@ -288,6 +274,31 @@ public partial class CourierWindow : Window
         {
             MessageBox.Show($"Failed to load courier: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             Close();
+        }
+    }
+
+    /// <summary>
+    /// עדכן את תצוגת השכר (משכורת וכמות הזמנות שהובילו)
+    /// </summary>
+    private void UpdateSalaryDisplay()
+    {
+        try
+        {
+            if (_courierId > 0)
+            {
+                var startOfMonth = new DateTime(s_bl.Admin.GetClock().Year, s_bl.Admin.GetClock().Month, 1);
+                var endOfMonth = startOfMonth.AddMonths(1).AddSeconds(-1);
+                var salary = s_bl.Couriers.CalculateSalary(_courierId, startOfMonth, endOfMonth);
+                
+                SalaryAmount = salary.NetSalary;
+                DeliveredCount = salary.TotalDeliveries;
+                SalaryVisibility = Visibility.Visible;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error calculating salary: {ex.Message}");
+            SalaryVisibility = Visibility.Collapsed;
         }
     }
 
@@ -555,6 +566,10 @@ public partial class CourierWindow : Window
                 CurrentPassword = CurrentCourier.Password;
                 courierIdTextBox.IsReadOnly = true;
                 _originalCourier = CloneCourier(CurrentCourier);
+
+                // ✅ עדכן את תצוגת השכר אחרי הוספה
+                UpdateSalaryDisplay();
+
                 try
                 { s_bl.Couriers.AddObserver(CourierObserver); }
                 catch { }
@@ -564,6 +579,9 @@ public partial class CourierWindow : Window
                 CurrentCourier.Password = CurrentPassword;
                 s_bl.Couriers.Update(CurrentCourier);
                 MessageBox.Show("Courier updated successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                
+                // ✅ עדכן את תצוגת השכר אחרי עדכון
+                UpdateSalaryDisplay();
             }
         }
         catch (BO.BLException boex)
@@ -655,25 +673,7 @@ public partial class CourierWindow : Window
                     CurrentPassword = updated.Password;
                     _originalCourier = CloneCourier(updated);
                     LoadCurrentOrder();
-                    if (CurrentCourier.Id > 0)
-                    {
-                        try
-                        {
-                            var startOfMonth = new DateTime(s_bl.Admin.GetClock().Year, s_bl.Admin.GetClock().Month, 1);
-                            var endOfMonth = startOfMonth.AddMonths(1).AddSeconds(-1);
-                            var salary = s_bl.Couriers.CalculateSalary(CurrentCourier.Id, startOfMonth, endOfMonth);
-                            
-                            SalaryAmount = salary.NetSalary;
-                            DeliveredCount = salary.TotalDeliveries;
-                            SalaryVisibility = Visibility.Visible;
-                            
-                            System.Diagnostics.Debug.WriteLine($"[COURIER] Salary updated: {salary.NetSalary:C}, Deliveries: {salary.TotalDeliveries}");
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"[ERROR] Failed to recalculate salary: {ex.Message}");
-                        }
-                    }
+                    UpdateSalaryDisplay();
                 }), System.Windows.Threading.DispatcherPriority.Background);
             }
         }

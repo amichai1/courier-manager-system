@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Helpers;
+using System.Threading.Tasks;
 
 namespace BL.Helpers;
 
@@ -12,6 +13,9 @@ internal static class CourierManager
 {
     private static readonly IDal s_dal = DalApi.Factory.Get;
     internal static ObserverManager Observers = new(); // Stage 5
+
+    private static readonly AsyncMutex s_simulationMutex = new(); //stage 7
+    private static readonly Random s_rand = new();
 
     // ------------------------------------
     // --- 1. CONVERSION (Mappers) ---
@@ -768,6 +772,156 @@ internal static class CourierManager
             {
                 System.Diagnostics.Debug.WriteLine($"[ERROR] Error in PeriodicCourierUpdates: {ex.Message}");
             }
+        }
+    }
+
+    /// <summary>
+    /// Simulates courier activity periodically. Called once per simulator tick.
+    /// - Fetches active couriers and pending orders under a short lock (ToList)
+    /// - For couriers without an assigned order, sometimes assigns one
+    /// - For couriers with an order, sometimes completes it based on elapsed simulated time
+    /// </summary>
+    internal static async Task SimulateCourierActivityAsync()
+    {
+        // If previous simulation still running, skip
+        if (s_simulationMutex.CheckAndSetInProgress())
+            return;
+
+        try
+        {
+            List<DO.Courier> activeCouriers;
+            List<DO.Order> pendingOrders;
+            // Snapshot needed lists under short lock
+            lock (AdminManager.BlMutex)
+            {
+                activeCouriers = s_dal.Courier.ReadAll().Where(c => c.IsActive).ToList();
+                // pending = orders not yet delivered
+                pendingOrders = s_dal.Order.ReadAll().Where(o => !o.DeliveryDate.HasValue).ToList();
+            }
+
+            if (!activeCouriers.Any() || !pendingOrders.Any())
+            {
+                await Task.Yield();
+                return;
+            }
+
+            var config = AdminManager.GetConfig();
+
+            foreach (var courier in activeCouriers)
+            {
+                try
+                {
+                    // Determine if courier currently has an assigned in-progress or queued order
+                    var currentOrder = pendingOrders.FirstOrDefault(o => o.CourierId == courier.Id && !o.DeliveryDate.HasValue);
+
+                    if (currentOrder is null)
+                    {
+                        // No current order - small chance to look for one
+                        if (s_rand.NextDouble() < 0.15)
+                        {
+                            // Choose an available order (no courier assigned)
+                            var available = pendingOrders.Where(o => !o.CourierId.HasValue).ToList();
+                            if (available.Any())
+                            {
+                                // Sometimes open the selection screen but not choose (50% chance)
+                                if (s_rand.NextDouble() < 0.5)
+                                {
+                                    var chosen = available[s_rand.Next(available.Count)];
+                                    try
+                                    {
+                                        OrderManager.AssociateCourierToOrder(chosen.Id, courier.Id);
+                                        // Remove from local pending snapshot to avoid double assignment in this run
+                                        pendingOrders.RemoveAll(o => o.Id == chosen.Id);
+                                    }
+                                    catch { /* ignore assignment failures */ }
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Courier has an order - maybe it's time to complete it
+                        DateTime startHandling = currentOrder.PickupDate ?? currentOrder.CourierAssociatedDate ?? AdminManager.Now;
+                        TimeSpan elapsed = AdminManager.Now - startHandling;
+
+                        // Estimate travel time based on aerial distance and courier speed
+                        double distanceKm = 0;
+                        if (config.CompanyLatitude.HasValue && config.CompanyLongitude.HasValue)
+                        {
+                            distanceKm = BO.Order.CalculateAirDistance(
+                                config.CompanyLatitude.Value, config.CompanyLongitude.Value,
+                                currentOrder.Latitude, currentOrder.Longitude);
+                        }
+
+                        double speed = courier.DeliveryType switch
+                        {
+                            DO.DeliveryType.Car => config.CarSpeed,
+                            DO.DeliveryType.Motorcycle => config.MotorcycleSpeed,
+                            DO.DeliveryType.Bicycle => config.BicycleSpeed,
+                            DO.DeliveryType.OnFoot => config.OnFootSpeed,
+                            _ => config.CarSpeed
+                        };
+
+                        if (speed <= 0) speed = config.CarSpeed > 0 ? config.CarSpeed : 30.0;
+
+                        // Base estimated time in minutes
+                        double estimatedMinutes = (distanceKm / speed) * 60.0;
+                        // Add some randomness to simulate delays (10-60 minutes)
+                        double randomExtra = s_rand.Next(10, 61);
+                        TimeSpan threshold = TimeSpan.FromMinutes(Math.Max(estimatedMinutes, 5) + randomExtra);
+
+                        if (elapsed >= threshold)
+                        {
+                            // Enough time passed -> complete the delivery
+                            double r = s_rand.NextDouble();
+                            try
+                            {
+                                if (r < 0.80)
+                                {
+                                    OrderManager.DeliverOrder(currentOrder.Id);
+                                }
+                                else if (r < 0.92)
+                                {
+                                    // failed
+                                    OrderManager.RefuseOrder(currentOrder.Id);
+                                }
+                                else
+                                {
+                                    // cancelled
+                                    OrderManager.CancelOrder(currentOrder.Id);
+                                }
+
+                                // Remove from local pending snapshot
+                                pendingOrders.RemoveAll(o => o.Id == currentOrder.Id);
+                            }
+                            catch { /* ignore errors */ }
+                        }
+                        else
+                        {
+                            // Not enough time yet - small chance manager cancels
+                            if (s_rand.NextDouble() < 0.10)
+                            {
+                                try
+                                {
+                                    OrderManager.CancelOrder(currentOrder.Id);
+                                    pendingOrders.RemoveAll(o => o.Id == currentOrder.Id);
+                                }
+                                catch { }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SIM-COURIER] Error simulating courier {courier.Id}: {ex.Message}");
+                }
+            }
+
+            await Task.Yield();
+        }
+        finally
+        {
+            s_simulationMutex.UnsetInProgress();
         }
     }
 }

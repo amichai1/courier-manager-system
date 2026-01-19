@@ -1,6 +1,7 @@
 namespace Dal;
 using System;
 using System.Xml.Linq;
+using System.Runtime.CompilerServices;
 using static XMLTools;
 
 /// <summary>
@@ -15,12 +16,13 @@ internal static class Config
     internal const string s_orders_xml = "orders.xml";
     internal const string s_deliveries_xml = "deliveries.xml";
 
-    // Reads, increases, and saves the next Order ID in the data-config file.
+    // ✅ Synchronized:
     internal static int NextOrderId
     {
-        // The getter reads the value, increases it by 1, and saves the new value back to XML.
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
         get => GetAndIncreaseConfigIntVal(s_data_config_xml, "NextOrderId");
-        // The setter is used only for Reset() to set a specific initial value.
+        
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
         private set => SetConfigIntVal(s_data_config_xml, "NextOrderId", value);
     }
 
@@ -28,22 +30,32 @@ internal static class Config
     internal static int NextDeliveryId
     {
         // The getter reads the value, increases it by 1, and saves the new value back to XML.
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
         get => GetAndIncreaseConfigIntVal(s_data_config_xml, "NextDeliveryId");
-        // The setter is used only for Reset().
+        
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
         private set => SetConfigIntVal(s_data_config_xml, "NextDeliveryId", value);
     }
 
-    // System clock for the delivery simulation.
+    /// <summary>
+    /// System clock for the delivery simulation - Stage 7: Thread-safe access
+    /// </summary>
     internal static DateTime Clock
     {
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
         get => GetConfigDateVal(s_data_config_xml, "Clock");
+        
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
         set => SetConfigDateVal(s_data_config_xml, "Clock", value);
     }
 
     // Manager ID for initial login (Int type).
     internal static int ManagerId
     {
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
         get => GetConfigIntVal(s_data_config_xml, "ManagerId");
+        
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
         set => SetConfigIntVal(s_data_config_xml, "ManagerId", value);
     }
 
@@ -136,6 +148,7 @@ internal static class Config
 
     
     // Resets all configuration properties to their initial values by setting the values in XML.
+    [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
     internal static void Reset()
     {
         // Resetting Auto-IDs to initial values

@@ -17,6 +17,8 @@ internal static class DeliveryManager
     private static readonly IDal s_dal = DalApi.Factory.Get;
     internal static ObserverManager Observers = new(); // Stage 5
     private const double EARTH_RADIUS_KM = 6371; // Earth radius for distance calculation
+    private static readonly AsyncMutex s_periodicMutex = new(); //stage 7
+    private static readonly AsyncMutex s_simulationMutex = new(); //stage 7
 
     // ------------------------------------
     // --- 1. GEOGRAPHICAL CALCULATION ---
@@ -519,53 +521,152 @@ internal static class DeliveryManager
     /// </summary>
     public static void PeriodicDeliveryUpdates(DateTime oldClock, DateTime newClock)
     {
-        lock (AdminManager.BlMutex)
+        if (s_periodicMutex.CheckAndSetInProgress())
+            return;
+
+        try
         {
-            try
+            lock (AdminManager.BlMutex)
             {
-                var config = AdminManager.GetConfig();
-                // If MaxDeliveryTime is zero/default, do nothing
-                if (config.MaxDeliveryTime == default)
-                    return;
-
-                // LINQ Method Syntax - demonstrates: Where, ToList
-                var inProgressDeliveries = s_dal.Delivery.ReadAll()
-                    .Where(d => !d.CompletionStatus.HasValue && d.StartTime != default)
-                    .ToList();
-
-                // Find and update deliveries that exceeded MaxDeliveryTime using LINQ
-                var expiredDeliveries = inProgressDeliveries
-                    .Where(d => (AdminManager.Now - d.StartTime) > config.MaxDeliveryTime)
-                    .ToList();
-
-                // Update each expired delivery - foreach is appropriate here due to update logic
-                foreach (var delivery in expiredDeliveries)
+                try
                 {
-                    try
+                    var config = AdminManager.GetConfig();
+                    // If MaxDeliveryTime is zero/default, do nothing
+                    if (config.MaxDeliveryTime == default)
+                        return;
+
+                    // LINQ Method Syntax - demonstrates: Where, ToList
+                    var inProgressDeliveries = s_dal.Delivery.ReadAll()
+                        .Where(d => !d.CompletionStatus.HasValue && d.StartTime != default)
+                        .ToList();
+
+                    // Find and update deliveries that exceeded MaxDeliveryTime using LINQ
+                    var expiredDeliveries = inProgressDeliveries
+                        .Where(d => (AdminManager.Now - d.StartTime) > config.MaxDeliveryTime)
+                        .ToList();
+
+                    // Update each expired delivery - foreach is appropriate here due to update logic
+                    foreach (var delivery in expiredDeliveries)
                     {
-                        // Mark delivery as failed and set end time
-                        var updatedDelivery = delivery with
+                        try
                         {
-                            CompletionStatus = DO.DeliveryStatus.Failed,
-                            EndTime = AdminManager.Now
-                        };
-                        s_dal.Delivery.Update(updatedDelivery);
-                        System.Diagnostics.Debug.WriteLine($"[INFO] Delivery {delivery.Id} marked as Failed - exceeded MaxDeliveryTime");
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"[ERROR] Failed to update delivery {delivery.Id}: {ex.Message}");
+                            // Mark delivery as failed and set end time
+                            var updatedDelivery = delivery with
+                            {
+                                CompletionStatus = DO.DeliveryStatus.Failed,
+                                EndTime = AdminManager.Now
+                            };
+                            s_dal.Delivery.Update(updatedDelivery);
+                            System.Diagnostics.Debug.WriteLine($"[INFO] Delivery {delivery.Id} marked as Failed - exceeded MaxDeliveryTime");
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[ERROR] Failed to update delivery {delivery.Id}: {ex.Message}");
+                        }
                     }
                 }
+                catch (DO.DalDoesNotExistException ex)
+                {
+                    throw new BLDoesNotExistException("PeriodicDeliveryUpdates: entity not found.", ex);
+                }
+                catch (Exception ex)
+                {
+                    throw new BLOperationFailedException($"PeriodicDeliveryUpdates failed: {ex.Message}", ex);
+                }
             }
-            catch (DO.DalDoesNotExistException ex)
+        }
+        finally
+        {
+            s_periodicMutex.UnsetInProgress();
+        }
+    }
+
+    /// <summary>
+    /// Simulates delivery activity - auto-completes deliveries after sufficient time has elapsed.
+    /// Called asynchronously by the simulator once per second.
+    /// Stage 7: Protected by AsyncMutex to prevent overlapping executions.
+    /// </summary>
+    internal static async Task SimulateDeliveryAsync()
+    {
+        if (s_simulationMutex.CheckAndSetInProgress())
+            return;
+
+        try
+        {
+            List<int> deliveriesToNotify = new();
+
+            lock (AdminManager.BlMutex)
             {
-                throw new BLDoesNotExistException("PeriodicDeliveryUpdates: entity not found.", ex);
+                try
+                {
+                    var allDeliveries = s_dal.Delivery.ReadAll()
+                        .Where(d => !d.CompletionStatus.HasValue && d.StartTime != default)
+                        .ToList();
+
+                    var config = AdminManager.GetConfig();
+                    var random = new Random();
+
+                    foreach (var delivery in allDeliveries)
+                    {
+                        // Simulate delivery completion after time elapsed
+                        TimeSpan elapsed = AdminManager.Now - delivery.StartTime;
+                        
+                        // Estimate delivery should be completed after variable time
+                        // Base: 15-45 minutes depending on conditions
+                        double estimatedMinutes = 15 + random.Next(0, 30);
+                        
+                        if (elapsed.TotalMinutes >= estimatedMinutes)
+                        {
+                            try
+                            {
+                                // 80% chance of successful completion
+                                bool isSuccessful = random.NextDouble() < 0.80;
+                                
+                                DO.DeliveryStatus status = isSuccessful 
+                                    ? DO.DeliveryStatus.Completed 
+                                    : DO.DeliveryStatus.Failed;
+
+                                var updatedDelivery = delivery with
+                                {
+                                    CompletionStatus = status,
+                                    EndTime = AdminManager.Now
+                                };
+                                
+                                s_dal.Delivery.Update(updatedDelivery);
+                                System.Diagnostics.Debug.WriteLine(
+                                    $"[DELIVERY SIM] Delivery {delivery.Id} completed with status: {status}");
+                                
+                                deliveriesToNotify.Add(delivery.Id);
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine(
+                                    $"[DELIVERY SIM ERROR] Failed to complete delivery {delivery.Id}: {ex.Message}");
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ERROR] SimulateDeliveryAsync lock block: {ex.Message}");
+                }
             }
-            catch (Exception ex)
+
+            // Notify observers OUTSIDE lock
+            if (deliveriesToNotify.Any())
             {
-                throw new BLOperationFailedException($"PeriodicDeliveryUpdates failed: {ex.Message}", ex);
+                Observers.NotifyListUpdated();
+                foreach (var deliveryId in deliveriesToNotify)
+                {
+                    Observers.NotifyItemUpdated(deliveryId);
+                }
             }
+
+            await Task.Yield();
+        }
+        finally
+        {
+            s_simulationMutex.UnsetInProgress();
         }
     }
 }

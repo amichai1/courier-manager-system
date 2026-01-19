@@ -306,8 +306,22 @@ internal static class AdminManager
            return;
 
         try
-        {   
-            await Task.Yield(); // Ensure async context
+        {
+            // Run sub-simulations in parallel and await them here so that this wrapper
+            // completes only after they finish. Each manager uses its own AsyncMutex
+            // so they will skip if already running.
+            var tasks = new List<Task>();
+            
+            // Order simulation
+            tasks.Add(OrderManager.SimulateOrdersAsync());
+            
+            // Courier simulation
+            tasks.Add(CourierManager.SimulateCourierActivityAsync());
+            
+            // ✅ ADD THIS LINE - Delivery simulation
+            tasks.Add(DeliveryManager.SimulateDeliveryAsync());
+
+            await Task.WhenAll(tasks).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
