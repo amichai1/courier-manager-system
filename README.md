@@ -19,7 +19,6 @@
 
 - **שדה סיסמה ביישויות הנתונים (Courier & Config)**  
   - לשכבת הנתונים יש שדה `Password` לישויות השליחים (`Courier`) וכן שדה `ManagerPassword` בקונפיגורציה.  
-  - מאפשר ניהול קרדנציאליים בסיסי עבור מנהל המערכת והשליחים.
 
 - **Parsing בטוח בקונסולה (BlTest / DalTest)**  
   - בפרויקטי הבדיקה (`BlTest`, `DalTest`) נעשה שימוש נרחב ב-`TryParse` (`int.TryParse`, `double.TryParse`, `Enum.TryParse` וכו') יחד עם בדיקת ערך החזרה.  
