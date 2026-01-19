@@ -655,6 +655,25 @@ public partial class CourierWindow : Window
                     CurrentPassword = updated.Password;
                     _originalCourier = CloneCourier(updated);
                     LoadCurrentOrder();
+                    if (CurrentCourier.Id > 0)
+                    {
+                        try
+                        {
+                            var startOfMonth = new DateTime(s_bl.Admin.GetClock().Year, s_bl.Admin.GetClock().Month, 1);
+                            var endOfMonth = startOfMonth.AddMonths(1).AddSeconds(-1);
+                            var salary = s_bl.Couriers.CalculateSalary(CurrentCourier.Id, startOfMonth, endOfMonth);
+                            
+                            SalaryAmount = salary.NetSalary;
+                            DeliveredCount = salary.TotalDeliveries;
+                            SalaryVisibility = Visibility.Visible;
+                            
+                            System.Diagnostics.Debug.WriteLine($"[COURIER] Salary updated: {salary.NetSalary:C}, Deliveries: {salary.TotalDeliveries}");
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[ERROR] Failed to recalculate salary: {ex.Message}");
+                        }
+                    }
                 }), System.Windows.Threading.DispatcherPriority.Background);
             }
         }

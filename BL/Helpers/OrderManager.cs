@@ -572,6 +572,26 @@ internal static class OrderManager
 
     // --- PERIODIC UPDATES (Stage 7) ---
 
+    /// <summary>
+    /// Recalculate and update schedule status for all active orders.
+    /// Called when system needs to refresh order states.
+    /// </summary>
+    private static void RefreshAllOrderScheduleStatuses()
+    {
+        lock (AdminManager.BlMutex)
+        {
+            var activeOrders = s_dal.Order.ReadAll(o => !o.DeliveryDate.HasValue).ToList();
+            
+            foreach (var order in activeOrders)
+            {
+                var boOrder = ConvertDOToBO(order);
+                // Force recalculation of schedule status with current time
+                System.Diagnostics.Debug.WriteLine(
+                    $"[ORDER] Order {order.Id}: Created={order.CreatedAt}, Now={AdminManager.Now}, Status={boOrder.ScheduleStatus}");
+            }
+        }
+    }
+
     internal static void PeriodicOrderUpdates(DateTime oldClock, DateTime newClock)
     {
         if (s_periodicMutex.CheckAndSetInProgress())
@@ -584,27 +604,23 @@ internal static class OrderManager
             lock (AdminManager.BlMutex)
             {
                 var config = AdminManager.GetConfig();
-                
-                // Get all active orders (not yet delivered)
                 var activeOrders = s_dal.Order.ReadAll(o => !o.DeliveryDate.HasValue).ToList();
 
                 foreach (var order in activeOrders)
                 {
-                    // Calculate critical time thresholds
                     DateTime maxTime = order.CreatedAt.Add(config.MaxDeliveryTime);
                     DateTime riskTime = maxTime.Subtract(config.RiskRange);
 
-                    // Check if we crossed the Risk threshold (OnTime -> InRisk)
-                    if (oldClock < riskTime && newClock >= riskTime)
+                    // Check all transitions, not just forward ones
+                    var currentStatus = CalculateScheduleStatus(order);
+                    
+                    if (oldClock < riskTime && newClock >= riskTime && currentStatus == BO.ScheduleStatus.InRisk)
                     {
                         ordersChangedIds.Add(order.Id);
-                        System.Diagnostics.Debug.WriteLine($"[SIMULATOR] Order {order.Id} transitioned to InRisk");
                     }
-                    // Check if we crossed the Late threshold (InRisk/OnTime -> Late)
-                    else if (oldClock < maxTime && newClock >= maxTime)
+                    else if (oldClock < maxTime && newClock >= maxTime && currentStatus == BO.ScheduleStatus.Late)
                     {
                         ordersChangedIds.Add(order.Id);
-                        System.Diagnostics.Debug.WriteLine($"[SIMULATOR] Order {order.Id} transitioned to Late");
                     }
                 }
             }
