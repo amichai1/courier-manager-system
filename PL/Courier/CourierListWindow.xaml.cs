@@ -226,6 +226,10 @@ namespace PL.Courier
             {
                 var window = new CourierWindow(courier.Id);
                 window.Show();
+                window.Topmost = true;
+                window.Topmost = false;
+                window.Activate();
+                window.Focus();
             }
         }
 
@@ -233,6 +237,10 @@ namespace PL.Courier
         {
             var window = new CourierWindow();
             window.Show();
+            window.Topmost = true;
+            window.Topmost = false;
+            window.Activate();
+            window.Focus();
         }
 
         private void btnRefresh_Click(object sender, RoutedEventArgs e)

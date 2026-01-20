@@ -311,14 +311,24 @@ namespace PL.Order
             if (sender is FrameworkElement element && element.DataContext is BO.OrderInList order)
             {
                 var window = new OrderWindow(order.OrderId);
+
                 window.Show();
+                window.Topmost = true;
+                window.Topmost = false;
+                window.Activate();
+                window.Focus();
             }
         }
 
         private void btnAddOrder_Click(object sender, RoutedEventArgs e)
         {
             var window = new OrderWindow();
+            
             window.Show();
+            window.Topmost = true;
+            window.Topmost = false;
+            window.Activate();
+            window.Focus();
         }
 
         private void btnRefresh_Click(object sender, RoutedEventArgs e)
@@ -332,6 +342,10 @@ namespace PL.Order
             {
                 var window = new OrderWindow(SelectedOrder.OrderId);
                 window.Show();
+                window.Topmost = true;
+                window.Topmost = false;
+                window.Activate();
+                window.Focus();
             }
         }
 

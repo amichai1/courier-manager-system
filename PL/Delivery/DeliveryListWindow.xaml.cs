@@ -74,7 +74,7 @@ namespace PL.Delivery
             _instance = null;
         }
 
-        // ✅ שנה את DeliveryListObserver להשתמש ב-ObserverMutex (בדיוק כמו CourierListWindow)
+        // ✅ change DeliveryListObserver to use ObserverMutex (just like CourierListWindow)
         private void DeliveryListObserver()
         {
             #region Stage 7 - Thread-safe observer with non-blocking mutex
@@ -134,7 +134,13 @@ namespace PL.Delivery
             if (SelectedDelivery != null)
             {
                 // Open the Order window with the associated order ID
-                new PL.Order.OrderWindow(SelectedDelivery.OrderId).Show();
+                var window = new PL.Order.OrderWindow(SelectedDelivery.OrderId);
+                
+                window.Show();
+                window.Topmost = true;
+                window.Topmost = false;
+                window.Activate();
+                window.Focus();
             }
         }
 
