@@ -36,20 +36,20 @@ internal static class CourierManager
             var allCourierOrders = s_dal.Order.ReadAll()
                 .Where(o => o.CourierId == doCourier.Id)
                 .ToList();
-            
+
             // Orders picked up but not delivered (actively being delivered)
             var inProgressOrders = allCourierOrders
                 .Where(o => o.PickupDate.HasValue && !o.DeliveryDate.HasValue)
                 .ToList();
-            
+
             // Orders associated but not picked up yet (waiting to be picked up)
             var queuedOrders = allCourierOrders
                 .Where(o => o.CourierAssociatedDate.HasValue && !o.PickupDate.HasValue)
                 .ToList();
-            
+
             // Count all orders in delivery (both in progress and queued)
             ordersInDelivery = inProgressOrders.Count + queuedOrders.Count;
-            
+
             // Set current order - prioritize in-progress, then queued
             currentOrder = inProgressOrders.FirstOrDefault() is DO.Order firstInProgress
                 ? CreateOrderInProgress(firstInProgress)
@@ -312,11 +312,11 @@ internal static class CourierManager
                 throw new BLInvalidValueException("Invalid geographical coordinates provided.");
 
             try
-            { 
+            {
                 DO.Courier? doCourier = s_dal.Courier.Read(courierId);
                 if (doCourier is null)
                     throw new BLDoesNotExistException($"Courier ID {courierId} not found for location update.");
-                    
+
                 DO.Courier updatedDoCourier = doCourier with
                 {
                     AddressLatitude = newLocation.Latitude,
@@ -361,7 +361,7 @@ internal static class CourierManager
                 DO.Courier? doCourier = s_dal.Courier.Read(courierId);
                 if (doCourier is null)
                     throw new BLDoesNotExistException($"Courier ID {courierId} not found.");
-                    
+
                 bool newIsActive = (status != BO.CourierStatus.Inactive);
                 DO.Courier updatedCourier = doCourier with { IsActive = newIsActive };
                 s_dal.Courier.Update(updatedCourier);
@@ -717,38 +717,54 @@ internal static class CourierManager
             try
             {
                 TimeSpan maxInactivityTime = AdminManager.GetConfig().InactivityRange;
-                List<int> deactivatedCourierIds = new(); // ✅ הוסף רשימה
-                // LINQ Method Syntax - get only active couriers
+                List<int> deactivatedCourierIds = new();
+
+                System.Diagnostics.Debug.WriteLine($"[PERIODIC] ⏰ Clock updated: {oldClock:g} → {newClock:g} (Δ = {(newClock - oldClock).TotalDays:F1} days)");
+                System.Diagnostics.Debug.WriteLine($"[PERIODIC] Inactivity threshold: {maxInactivityTime.TotalDays} days");
+
                 var activeCouriersToCheck = s_dal.Courier.ReadAll()
                     .Where(c => c.IsActive)
                     .ToList();
 
-                // LINQ Query Syntax - find couriers exceeding inactivity time threshold
-                var couriersToDeactivate = (from courier in activeCouriersToCheck
-                                           let timeSinceStart = newClock - courier.StartWorkingDate
-                                           where timeSinceStart > maxInactivityTime
-                                           select courier).ToList();
+                System.Diagnostics.Debug.WriteLine($"[PERIODIC] Checking {activeCouriersToCheck.Count} active couriers");
 
-                // Debug: Log details about the check
-                if (activeCouriersToCheck.Any())
-                {
-                    System.Diagnostics.Debug.WriteLine($"[COURIER] Periodic check - Current time: {newClock}, MaxInactivityTime: {maxInactivityTime.TotalDays} days");
-                    foreach (var c in activeCouriersToCheck)
-                    {
-                        TimeSpan elapsed = newClock - c.StartWorkingDate;
-                        System.Diagnostics.Debug.WriteLine($"[COURIER] Courier {c.Id} ({c.Name}) - Started: {c.StartWorkingDate}, Elapsed: {elapsed.TotalDays} days, Status: {(elapsed > maxInactivityTime ? "TO DEACTIVATE" : "OK")}");
-                    }
-                }
+                // LINQ Query Syntax - find couriers exceeding inactivity threshold
+                var couriersToDeactivate = (from courier in activeCouriersToCheck
+                                       let timeSinceStart = newClock - courier.StartWorkingDate
+                                       where courier.StartWorkingDate.Year > 1900
+                                       where timeSinceStart > maxInactivityTime
+                                       select courier).ToList();
+
+                System.Diagnostics.Debug.WriteLine($"[PERIODIC] Found {couriersToDeactivate.Count} couriers to deactivate");
 
                 // Update each inactive courier
                 foreach (var doCourier in couriersToDeactivate)
                 {
                     try
                     {
-                        DO.Courier updatedCourier = doCourier with { IsActive = false };
-                        s_dal.Courier.Update(updatedCourier);
-                        System.Diagnostics.Debug.WriteLine($"[INFO] Courier {doCourier.Id} marked as Inactive - worked for more than {maxInactivityTime.TotalDays} days");
-                        deactivatedCourierIds.Add(doCourier.Id); 
+                        // Check if courier has any active orders before deactivating
+                        bool hasActiveOrders = s_dal.Order.ReadAll()
+                            .Any(o => o.CourierId == doCourier.Id && !o.DeliveryDate.HasValue);
+
+                        if (!hasActiveOrders)
+                        {
+                            DO.Courier updatedCourier = doCourier with { IsActive = false };
+                            s_dal.Courier.Update(updatedCourier);
+
+                            System.Diagnostics.Debug.WriteLine(
+                                $"[PERIODIC] ✅ Courier {doCourier.Id} ({doCourier.Name}) deactivated - " +
+                                $"worked for {(newClock - doCourier.StartWorkingDate).TotalDays:F0} days " +
+                                $"(threshold: {maxInactivityTime.TotalDays} days)"
+                            );
+
+                            deactivatedCourierIds.Add(doCourier.Id);
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine(
+                                $"[PERIODIC] ⚠️ Courier {doCourier.Id} ({doCourier.Name}) NOT deactivated - has active orders"
+                            );
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -756,16 +772,26 @@ internal static class CourierManager
                     }
                 }
 
-                foreach (var courierId in deactivatedCourierIds)
+                // Notify observers AFTER all updates are complete
+                if (deactivatedCourierIds.Any())
                 {
-                    Observers.NotifyItemUpdated(courierId);
+                    System.Diagnostics.Debug.WriteLine($"[PERIODIC] 📢 Notifying observers about {deactivatedCourierIds.Count} deactivated couriers");
+
+                    foreach (var courierId in deactivatedCourierIds)
+                    {
+                        Observers.NotifyItemUpdated(courierId);
+                    }
+
+                    Observers.NotifyListUpdated();
                 }
-                
-                Observers.NotifyListUpdated();
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"[PERIODIC] ℹ️ No couriers to deactivate at this time");
+                }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[ERROR] Error in PeriodicCourierUpdates: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[ERROR] Error in PeriodicCourierUpdates: {ex.Message}\n{ex.StackTrace}");
             }
         }
     }
@@ -793,12 +819,12 @@ internal static class CourierManager
             lock (AdminManager.BlMutex)
             {
                 activeCouriers = s_dal.Courier.ReadAll().Where(c => c.IsActive).ToList();
-                // הזמנות שטרם נמסרו (גם Open וגם InProgress)
                 pendingOrders = s_dal.Order.ReadAll().Where(o => !o.DeliveryDate.HasValue).ToList();
             }
 
-            if (!activeCouriers.Any())
+            if (!activeCouriers.Any() || !pendingOrders.Any())
             {
+                System.Diagnostics.Debug.WriteLine($"[SIM] ❌ NO PENDING ORDERS FOUND!");
                 await Task.Yield();
                 return;
             }
@@ -817,11 +843,11 @@ internal static class CourierManager
                     // =========================================================
                     if (currentOrder is null)
                     {
-                        // --- 1. בדיקת זמן קירור (Cooldown) ---
-                        bool isCoolingDown = false;
                         DO.Delivery? lastDelivery = null;
+                        bool isCoolingDown = false;
 
-                        lock (AdminManager.BlMutex)
+                        // No current order - small chance to look for one
+                        if (s_rand.NextDouble() < 0.15)
                         {
                             // שליפת המשלוח האחרון שהסתיים
                             var history = s_dal.Delivery.ReadAll(d => d.CourierId == courier.Id && d.EndTime != null);
@@ -839,7 +865,7 @@ internal static class CourierManager
                             if (AdminManager.Now < freeAt)
                                 isCoolingDown = true;
                         }
-
+                            
                         if (isCoolingDown)
                             continue; // דלג לשליח הבא
 
@@ -853,20 +879,21 @@ internal static class CourierManager
                             var available = pendingOrders.Where(o => !o.CourierId.HasValue).ToList();
                             if (available.Any())
                             {
-                                var chosen = available[s_rand.Next(available.Count)];
-                                try
+                                // Sometimes open the selection screen but not choose (50% chance)
+                                if (s_rand.NextDouble() < 0.5)
                                 {
-                                    OrderManager.AssociateCourierToOrder(chosen.Id, courier.Id);
-                                    // עדכון רשימה מקומית למניעת כפילויות בריצה הנוכחית
-                                    pendingOrders.RemoveAll(o => o.Id == chosen.Id);
+                                    var chosen = available[s_rand.Next(available.Count)];
+                                    try
+                                    {
+                                        OrderManager.AssociateCourierToOrder(chosen.Id, courier.Id);
+                                        // Remove from local pending snapshot to avoid double assignment in this run
+                                        pendingOrders.RemoveAll(o => o.Id == chosen.Id);
+                                    }
+                                    catch { /* ignore assignment failures */ }
                                 }
-                                catch { }
                             }
                         }
                     }
-                    // =========================================================
-                    // CASE 2: שליח עובד (מבצע משלוח)
-                    // =========================================================
                     else
                     {
                         // חישוב זמנים
@@ -891,38 +918,35 @@ internal static class CourierManager
                             DO.DeliveryType.OnFoot => config.OnFootSpeed,
                             _ => config.CarSpeed
                         };
-                        if (speed <= 0)
-                            speed = 30.0;
 
-                        double physicalMinutesRequired = (distanceKm / speed) * 60.0;
+                        if (speed <= 0) speed = config.CarSpeed > 0 ? config.CarSpeed : 30.0;
 
-                        // --- 2. קביעת "זמן יעד" סטטיסטי לפי ה-ID ---
-                        // משתמשים ב-ID כ-Seed כדי שההזמנה תשמור על ה"אופי" שלה לאורך כל הריצות
-                        Random specificOrderRand = new Random(currentOrder.Id);
-                        double statRoll = specificOrderRand.NextDouble();
+                        // Base estimated time in minutes
+                        double estimatedMinutes = (distanceKm / speed) * 60.0;
+                        // Add some randomness to simulate delays (10-60 minutes)
+                        double randomExtra = s_rand.Next(10, 61);
+                        TimeSpan threshold = TimeSpan.FromMinutes(Math.Max(estimatedMinutes, 5) + randomExtra);
 
-                        int targetTotalLifespanMinutes; // כמה זמן ההזמנה צריכה "לחיות" בסך הכל
+                        // --- 2. בדיקת תנאי פיזי: האם עבר מספיק זמן נסיעה ---
+                        bool physicalConditionMet = drivingTimeElapsed >= threshold;
 
-                        if (statRoll < 0.50) // 50% - On Time (< 90 mins)
+                        // --- 3. בדיקת תנאי סטטיסטי: הסתברות להצלחה ---
+                        double successProbability = 0.50; // ברירת מחדל: 50% הצלחה
+
+                        if (totalTimeSinceCreation <= config.MaxDeliveryTime)
                         {
-                            targetTotalLifespanMinutes = specificOrderRand.Next(20, 90);
+                            successProbability = 0.90; // קרוב ל-100% הצלחה אם בזמן
                         }
-                        else if (statRoll < 0.95) // 45% - At Risk (90 - 120 mins)
+                        else if (totalTimeSinceCreation <= config.MaxDeliveryTime * 1.5)
                         {
-                            targetTotalLifespanMinutes = specificOrderRand.Next(90, 120);
+                            successProbability = 0.55; // 55% הצלחה אם מעט איחור
                         }
-                        else // 5% - Late (> 120 mins)
+                        else
                         {
-                            targetTotalLifespanMinutes = specificOrderRand.Next(121, 240);
+                            successProbability = 0.15; // 15% הצלחה אם איחור גדול
                         }
 
-                        // --- 3. בדיקת תנאי סיום ---
-                        // המשלוח מסתיים רק אם:
-                        // א. השליח עבר את המרחק הפיזי.
-                        // ב. עבר מספיק זמן מהיצירה כדי לעמוד ביעד הסטטיסטי (למשל, כדי "לייצר" איחור).
-
-                        bool physicalConditionMet = drivingTimeElapsed.TotalMinutes >= physicalMinutesRequired;
-                        bool statisticalConditionMet = totalTimeSinceCreation.TotalMinutes >= targetTotalLifespanMinutes;
+                        bool statisticalConditionMet = s_rand.NextDouble() < successProbability;
 
                         if (physicalConditionMet && statisticalConditionMet)
                         {
@@ -933,34 +957,37 @@ internal static class CourierManager
                                 if (resultRoll < 0.90) // 90% Success
                                 {
                                     OrderManager.DeliverOrder(currentOrder.Id);
-
-                                    // לוג לדיבוג - מראה את הסטטוס שנוצר בפועל
-                                    string status = totalTimeSinceCreation.TotalMinutes > 120 ? "LATE" :
-                                                    totalTimeSinceCreation.TotalMinutes > 90 ? "RISK" : "OK";
-
-                                    System.Diagnostics.Debug.WriteLine($"[SIM] Order {currentOrder.Id} Delivered ({status}). Created {totalTimeSinceCreation.TotalMinutes:F0}m ago.");
                                 }
-                                else if (resultRoll < 0.95) // 5% Customer Refused (0.90 - 0.95)
+                                else if (resultRoll < 0.95) // 5% Refusal (0.90 - 0.95)
                                 {
                                     OrderManager.RefuseOrder(currentOrder.Id);
-                                    System.Diagnostics.Debug.WriteLine($"[SIM] Order {currentOrder.Id} - CUSTOMER REFUSED");
                                 }
                                 else // 5% Cancelled (0.95 - 1.00)
                                 {
                                     OrderManager.CancelOrder(currentOrder.Id);
-                                    System.Diagnostics.Debug.WriteLine($"[SIM] Order {currentOrder.Id} - CANCELLED");
                                 }
 
-                                // הסרה מהרשימה המקומית
+                                // Remove from local pending snapshot
                                 pendingOrders.RemoveAll(o => o.Id == currentOrder.Id);
                             }
-                            catch (Exception ex)
+                            catch { /* ignore errors */ }
+                        }
+                        else
+                        {
+                            // Not enough time yet - small chance manager cancels
+                            if (s_rand.NextDouble() < 0.10)
                             {
-                                System.Diagnostics.Debug.WriteLine($"[SIM ERROR] Action failed: {ex.Message}");
+                                try
+                                {
+                                    OrderManager.CancelOrder(currentOrder.Id);
+                                    pendingOrders.RemoveAll(o => o.Id == currentOrder.Id);
+                                }
+                                catch { }
                             }
                         }
                     }
                 }
+
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"[SIM ERROR] Loop courier {courier.Id}: {ex.Message}");
