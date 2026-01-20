@@ -1,9 +1,10 @@
-﻿namespace Dal;
+namespace Dal;
 using DalApi;
-
+using System;
 sealed internal class DalList : IDal
 {
-    public static IDal Instance { get; } = new DalList();
+    private static readonly Lazy<DalList> s_instance = new(() => new DalList());
+    public static IDal Instance => s_instance.Value;
     private DalList() { }
     public ICourier Courier { get; } = new CourierImplementation();
     public IOrder Order { get; } = new OrderImplementation();

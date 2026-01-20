@@ -20,9 +20,13 @@
 - **שדה סיסמה ביישויות הנתונים (Courier & Config)**  
   - לשכבת הנתונים יש שדה `Password` לישויות השליחים (`Courier`) וכן שדה `ManagerPassword` בקונפיגורציה.  
 
-- **שימוש ב Parsing בטוח בקונסולה (BlTest / DalTest)**  
+- **שימוש ב- Parsing בטוח בקונסולה (BlTest / DalTest)**  
   - בפרויקטי הבדיקה (`BlTest`, `DalTest`) נעשה שימוש נרחב ב-`TryParse` (`int.TryParse`, `double.TryParse`, `Enum.TryParse` וכו') יחד עם בדיקת ערך החזרה.  
   - מונע קריסות בקלט מהמשתמש ומאפשר חוויית בדיקה יציבה יותר.
+
+- **שימוש ב- Lazy Singleton Pattern**  
+  - שכבת הנתונים `DalList` משתמשת ב-`Lazy<T>` מ-.NET ליישום תבנית Singleton בטוחה לתהליכים מרובים (thread-safe).  
+  - האובייקט נוצר רק כאשר הוא נדרש בפעם הראשונה (`lazy initialization`), מה שחוסך משאבים ומבטיח thread-safety מובנה.
 
 ---
 
@@ -121,6 +125,10 @@
   - The console test projects (`BlTest`, `DalTest`) rely heavily on `TryParse` (`int.TryParse`, `double.TryParse`, `Enum.TryParse`, etc.) with proper checks on the boolean return value.  
   - This prevents crashes on invalid input and provides a more robust interactive testing experience.
 
+- **Lazy Singleton Pattern**  
+  - The `DalList` data layer uses .NET's `Lazy<T>` class to implement a thread-safe Singleton pattern.  
+  - The instance is created only when first accessed (`lazy initialization`), saving resources and providing built-in thread safety.
+
 ---
 
 ### 🧠 BL – Business Logic Layer
@@ -129,13 +137,16 @@
   - A dedicated helper class enforces a strong password policy (minimum length, mixed upper/lowercase letters, digits and special characters).  
   - Courier password updates are validated explicitly against these security rules before being accepted.
 
+- **Password management – initial password**  
+  - When a courier is created, a strong initial password is automatically generated. The courier can subsequently update it as needed.
+
 - **Courier salary calculation 💰**  
-  - A full business operation calculates a courier’s salary for a given time period.  
+  - A complete business operation calculates a courier's salary for a given time period.  
   - The computation takes into account:  
-    - **The number of completed deliveries**, including on-time vs late deliveries.  
-    - **The total distance traveled**, using company–destination distances per order.  
-    - **Courier type** (car/motorcycle/bicycle/on-foot) to determine different base hourly rates and per-delivery bonuses.  
-  - Results are returned as a `CourierSalary` object and surfaced in the admin UI.
+    - **The number of completed deliveries**, including a distinction between on-time and late deliveries.  
+    - **The total distance traveled**, computed by calculating company-to-destination distances for each delivery.  
+    - **Courier type** (car / motorcycle / bicycle / on-foot), which determines different base rates and performance bonuses.  
+  - Results are returned as a `CourierSalary` object and displayed to the admin in the UI.
 
 ---
 

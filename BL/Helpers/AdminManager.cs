@@ -284,7 +284,7 @@ internal static class AdminManager
             
             CourierManager.Observers.NotifyListUpdated();
             OrderManager.Observers.NotifyListUpdated();
-
+            DeliveryManager.Observers.NotifyListUpdated();
         }
         catch (Exception ex)
         {

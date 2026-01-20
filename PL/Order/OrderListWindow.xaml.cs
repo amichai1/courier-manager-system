@@ -130,28 +130,42 @@ namespace PL.Order
         private void OrderListObserver()
         {
             #region Stage 7 - Thread-safe observer with non-blocking mutex
+            // 1. בדיקה אם כבר רץ עדכון - אם כן, יוצאים (בדיקה מהירה)
             if (_orderListMutex.CheckAndSetLoadInProgressOrRestartRequired())
                 return;
 
-            if (_instance == null || !_instance.IsLoaded)
+            // 2. כל הלוגיקה עוברת ל-Dispatcher כדי למנוע שימוש ב-.Wait()
+            Dispatcher.BeginInvoke(new Action(async () =>
             {
-                _orderListMutex.UnsetLoadInProgressAndCheckRestartRequested().Wait();
-                return;
-            }
-
-            Dispatcher.BeginInvoke(async () =>
-            {
-                if (_instance != null && _instance.IsLoaded)
+                try
                 {
-                    QueryOrderList();
+                    // בדיקה האם החלון עדיין רלוונטי
+                    if (_instance != null && _instance.IsLoaded)
+                    {
+                        QueryOrderList();
+                    }
                 }
+                catch (Exception ex)
+                {
+                    // תפיסת שגיאות כדי למנוע קריסה, אבל לאפשר שחרור נעילה
+                    System.Diagnostics.Debug.WriteLine($"Error in OrderListObserver: {ex.Message}");
+                }
+                finally
+                {
+                    // 3. הבלוק הזה ירוץ *תמיד*, גם אם הייתה שגיאה למעלה!
+                    // זה מבטיח שהמסך לא ייתקע.
+                    bool shouldRestart = await _orderListMutex.UnsetLoadInProgressAndCheckRestartRequested();
 
-                if (await _orderListMutex.UnsetLoadInProgressAndCheckRestartRequested())
-                    OrderListObserver();
-            });
-            #endregion
+                    if (shouldRestart)
+                    {
+                        // אם הגיעה בקשה חדשה בזמן שעבדנו, נריץ שוב
+                        OrderListObserver();
+                    }
+                }
+            }));
         }
-
+            #endregion
+        
         #endregion
 
         #region Query & Actions
