@@ -301,22 +301,37 @@ internal static class OrderManager
     /// </summary>
     public static void AssociateCourierToOrder(int orderId, int courierId)
     {
-        lock (AdminManager.BlMutex) //stage 7
+        lock (AdminManager.BlMutex)
         {
-            DO.Order d = s_dal.Order.Read(orderId)!;
-            var c = s_dal.Courier.Read(courierId)!;
-            
-            // ✅ שמור את הזמן המדויק בזמן ההשמה (זה יהיה זמן האיסוף)
-            DateTime associationTime = AdminManager.Now;
-            
-            s_dal.Order.Update(d with { CourierId = courierId, CourierAssociatedDate = associationTime });
-            
-            // ✅ בדיוק אותו זמן כ-StartTime - לא יתשנה אחר כך
-            s_dal.Delivery.Create(new DO.Delivery(0, orderId, courierId, (DO.DeliveryType)c.DeliveryType, associationTime, 0) 
-            { 
-                CompletionStatus = null, 
-                EndTime = null 
-            });
+            try
+            {
+                DO.Order d = s_dal.Order.Read(orderId)!;
+                var c = s_dal.Courier.Read(courierId)!;
+                
+                DateTime associationTime = AdminManager.Now;
+                
+                s_dal.Order.Update(d with 
+                { 
+                    CourierId = courierId, 
+                    CourierAssociatedDate = associationTime 
+                });
+                
+                s_dal.Delivery.Create(new DO.Delivery(
+                    0, orderId, courierId, 
+                    (DO.DeliveryType)c.DeliveryType, 
+                    associationTime, 0) 
+                { 
+                    CompletionStatus = null, 
+                    EndTime = null 
+                });
+                
+                System.Diagnostics.Debug.WriteLine($"[ORDER] ✅ Associated courier {courierId} to order {orderId}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ORDER] ❌ Failed to associate: {ex.Message}");
+                throw;
+            }
         }
         
         Observers.NotifyItemUpdated(orderId);

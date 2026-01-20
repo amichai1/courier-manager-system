@@ -200,42 +200,32 @@ namespace PL
 
         private void OpenOrders_Click(object sender, MouseButtonEventArgs e)
         {
-            _suppressActivation = true;
             PL.Order.OrderListWindow.ShowListFiltered(BO.OrderStatus.Open);
-            Dispatcher.BeginInvoke(new Action(() => _suppressActivation = false), 
-                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            e.Handled = true; 
         }
 
         private void InProgressOrders_Click(object sender, MouseButtonEventArgs e)
         {
-            _suppressActivation = true;
             PL.Order.OrderListWindow.ShowListFiltered(BO.OrderStatus.InProgress);
-            Dispatcher.BeginInvoke(new Action(() => _suppressActivation = false), 
-                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            e.Handled = true; 
         }
 
         private void DeliveredOrders_Click(object sender, MouseButtonEventArgs e)
         {
-            _suppressActivation = true;
             PL.Order.OrderListWindow.ShowListFiltered(BO.OrderStatus.Delivered);
-            Dispatcher.BeginInvoke(new Action(() => _suppressActivation = false), 
-                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            e.Handled = true; 
         }
 
         private void RefusedOrders_Click(object sender, MouseButtonEventArgs e)
         {
-            _suppressActivation = true;
             PL.Order.OrderListWindow.ShowListFiltered(BO.OrderStatus.OrderRefused);
-            Dispatcher.BeginInvoke(new Action(() => _suppressActivation = false), 
-                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            e.Handled = true; 
         }
 
         private void CanceledOrders_Click(object sender, MouseButtonEventArgs e)
         {
-            _suppressActivation = true;
             PL.Order.OrderListWindow.ShowListFiltered(BO.OrderStatus.Canceled);
-            Dispatcher.BeginInvoke(new Action(() => _suppressActivation = false), 
-                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            e.Handled = true; 
         }
 
         #endregion
@@ -244,26 +234,20 @@ namespace PL
 
         private void btnDeliveries_Click(object sender, RoutedEventArgs e)
         {
-            _suppressActivation = true;
             PL.Delivery.DeliveryListWindow.ShowList();
-            Dispatcher.BeginInvoke(new Action(() => _suppressActivation = false), 
-                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            e.Handled = true;
         }
 
         private void btnOrders_Click(object sender, RoutedEventArgs e)
         {
-            _suppressActivation = true;
             PL.Order.OrderListWindow.ShowList();
-            Dispatcher.BeginInvoke(new Action(() => _suppressActivation = false), 
-                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            e.Handled = true;
         }
 
         private void btnCouriers_Click(object sender, RoutedEventArgs e)
         {
-            _suppressActivation = true;
             PL.Courier.CourierListWindow.ShowList();
-            Dispatcher.BeginInvoke(new Action(() => _suppressActivation = false), 
-                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            e.Handled = true; 
         }
 
         #endregion
