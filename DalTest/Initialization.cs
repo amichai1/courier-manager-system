@@ -41,7 +41,7 @@ public static class Initialization
         Console.WriteLine("Initializing orders (Open/InProgress only)...");
         CreateOrders();
 
-        Console.WriteLine("Creating courier delivery history (completed historical orders)...");
+        Console.WriteLine("Creating courier delivery history (until yesterday)...");
         CreateCourierDeliveryHistory();
 
         // Debug: Check how many deliveries exist after initialization
@@ -93,9 +93,8 @@ public static class Initialization
             string plainPassword = GenerateStrongPassword();
             double? maxDistance = s_rand.Next(10, 51);
             DeliveryType deliveryType = deliveryTypes[i % deliveryTypes.Length];
-            
-            // ✅ FIX: ALL couriers start working at the simulator's current clock time
-            // So they won't be automatically deactivated when simulator time advances
+
+            // ✅ ALL couriers start working at the simulator's current clock time
             DateTime startDate = s_dal!.Config.Clock;
 
             Courier courier = new Courier(id, startDate)
@@ -222,9 +221,15 @@ public static class Initialization
 
             switch (scheduleStatusRoll)
             {
-                case 0: onTimeCount++; break;
-                case 1: inRiskCount++; break;
-                default: lateCount++; break;
+                case 0:
+                    onTimeCount++;
+                    break;
+                case 1:
+                    inRiskCount++;
+                    break;
+                default:
+                    lateCount++;
+                    break;
             }
 
             Order order = new Order(Id: 0, CreatedAt: createdAt)
@@ -271,12 +276,14 @@ public static class Initialization
                 currentDeliveryCount++;
             }
 
-            // First 12 orders ALWAYS get delivery history
-            bool shouldHaveHistory = (i < 12) || (s_rand.Next(100) < 30);
+            // ✅ LOGIC CHANGE: We want ~10% total CustomerRefused.
+            // Active orders will contribute a small part to this.
+            // ~15% chance for active orders to have a "Refused" history
+            bool shouldHaveHistory = s_rand.NextDouble() < 0.15;
 
             if (shouldHaveHistory)
             {
-                int historyCount = s_rand.Next(1, 6);
+                int historyCount = s_rand.Next(1, 4);
                 int created = CreateDeliveryHistoryForOrder(createdOrderId, createdAt, allCouriers, historyCount);
                 totalDeliveryHistory += created;
                 ordersWithHistory++;
@@ -304,7 +311,7 @@ public static class Initialization
             var courier = allCouriers[s_rand.Next(allCouriers.Count)];
             DateTime startTime = orderCreatedAt.AddMinutes(s_rand.Next(5, 30) + (i * 60));
 
-            // All history deliveries are CustomerRefused (as per requirements)
+            // All history deliveries generated here are "Bad History" for active orders
             DeliveryStatus status = DeliveryStatus.CustomerRefused;
             DateTime endTime = startTime.AddMinutes(s_rand.Next(10, 45));
 
@@ -332,7 +339,7 @@ public static class Initialization
     private static void CreateCourierDeliveryHistory()
     {
         var allCouriers = s_dal!.Courier.ReadAll().ToList();
-        var couriersWithHistory = allCouriers.Take(18).ToList();
+        var couriersWithHistory = allCouriers.Take(18).ToList(); // 18 couriers with history
 
         var addressData = new[]
         {
@@ -346,16 +353,18 @@ public static class Initialization
         string[] customerNames = { "History Customer 1", "History Customer 2", "History Customer 3" };
 
         int totalHistoryDeliveries = 0;
-        int completedCount = 0, canceledCount = 0;
+        int completedCount = 0, canceledCount = 0, refusedCount = 0;
 
         foreach (var courier in couriersWithHistory)
         {
-            int deliveryCount = s_rand.Next(2, 5);
+            int deliveryCount = s_rand.Next(2, 5); // 2-4 deliveries per courier
 
             for (int i = 0; i < deliveryCount; i++)
             {
                 var (address, lat, lon) = addressData[s_rand.Next(addressData.Length)];
-                DateTime historicalDate = s_dal.Config.Clock.AddDays(-s_rand.Next(7, 60));
+
+                // ✅ TIMING FIX: 1 to 60 days BACK. Ensures it is strictly "until yesterday".
+                DateTime historicalDate = s_dal.Config.Clock.AddDays(-s_rand.Next(1, 60));
 
                 int scheduleRoll = s_rand.Next(3);
                 int deliveryMinutes = scheduleRoll switch
@@ -365,24 +374,40 @@ public static class Initialization
                     _ => s_rand.Next(241, 360)
                 };
 
-                // Determine if this is a completed or canceled delivery
-                // 70% completed, 30% canceled
-                bool isCanceled = s_rand.Next(100) < 30;
-                DeliveryStatus deliveryStatus = isCanceled ? DeliveryStatus.Cancelled : DeliveryStatus.Completed;
+                // ✅ STATS CALCULATION:
+                // Global Target: ~15% Canceled, ~10% Refused.
+                // Assuming ~85 total orders in DB (30 active + ~55 historical).
+                // 15% of 85 = ~13 Canceled orders.
+                // 10% of 85 = ~9 Refused deliveries.
 
-                if (isCanceled)
+                // We generated some Refused in CreateOrders (~4-5). Need ~4-5 more here.
+                // All Canceled must come from here (since active orders aren't canceled).
+
+                double r = s_rand.NextDouble();
+                DeliveryStatus deliveryStatus;
+
+                if (r < 0.25) // 25% of history = Cancelled (approx 13 orders)
                 {
+                    deliveryStatus = DeliveryStatus.Cancelled;
                     canceledCount++;
                 }
-                else
+                else if (r < 0.35) // 10% of history = Refused (approx 5-6 deliveries)
                 {
+                    deliveryStatus = DeliveryStatus.CustomerRefused;
+                    refusedCount++;
+                }
+                else // Remainder (65%) = Completed
+                {
+                    deliveryStatus = DeliveryStatus.Completed;
                     completedCount++;
                 }
+
+                bool isCanceled = (deliveryStatus == DeliveryStatus.Cancelled);
 
                 Order historicalOrder = new Order(Id: 0, CreatedAt: historicalDate)
                 {
                     OrderType = (OrderType)s_rand.Next(0, 3),
-                    Description = $"Historical Order - {(isCanceled ? "Canceled" : "Delivered")} by {courier.Name}",
+                    Description = $"Historical Order - {deliveryStatus} by {courier.Name}",
                     Address = address,
                     Latitude = lat,
                     Longitude = lon,
@@ -421,7 +446,7 @@ public static class Initialization
         }
 
         Console.WriteLine($"  Created {totalHistoryDeliveries} historical orders for {couriersWithHistory.Count} couriers");
-        Console.WriteLine($"    Status: {completedCount} Completed, {canceledCount} Canceled");
+        Console.WriteLine($"    Status: {completedCount} Completed, {canceledCount} Canceled, {refusedCount} Refused");
     }
 
     private static int GenerateValidIsraeliId()

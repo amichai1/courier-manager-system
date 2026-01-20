@@ -347,6 +347,14 @@ internal static class AdminManager
         if (s_thread is null)
         {
             s_interval = interval;
+            
+            // ✅ שמור את האינטרוול בconfig כדי שיהיה זמין ב-CourierManager
+            lock (BlMutex)
+            {
+                var config = s_dal.Config;
+                config.SimulatorIntervalMinutes = interval;
+            }
+            
             s_stop = false;
             s_thread = new Thread(clockRunner) { Name = "ClockRunner", IsBackground = true };
             s_thread.Start();

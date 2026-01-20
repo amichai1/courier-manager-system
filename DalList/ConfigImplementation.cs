@@ -3,13 +3,8 @@ using DalApi;
 using System.Runtime.CompilerServices;
 
 /// <summary>
-/// Implementation of configuration access interface.
+/// Implementation of configuration access interface for list-based DAL.
 /// </summary>
-/// <remarks>
-/// Provides a wrapper for accessing the static Config class through the IConfig interface.
-/// Exposes only configuration properties needed by upper layers (BL, PL).
-/// Internal settings like running ID counters remain private to the DAL.
-/// </remarks>
 internal class ConfigImplementation : IConfig
 {
     /// <summary>
@@ -164,6 +159,17 @@ internal class ConfigImplementation : IConfig
         get => Config.InactivityRange;
         [MethodImpl(MethodImplOptions.Synchronized)]
         set => Config.InactivityRange = value;
+    }
+
+    /// <summary>
+    /// ✅ Simulator interval in minutes per tick.
+    /// </summary>
+    public int SimulatorIntervalMinutes
+    {
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        get => Config.SimulatorIntervalMinutes;
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        set => Config.SimulatorIntervalMinutes = value;
     }
 
     /// <summary>

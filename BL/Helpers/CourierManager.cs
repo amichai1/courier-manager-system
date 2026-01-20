@@ -717,54 +717,38 @@ internal static class CourierManager
             try
             {
                 TimeSpan maxInactivityTime = AdminManager.GetConfig().InactivityRange;
-                List<int> deactivatedCourierIds = new();
-
-                System.Diagnostics.Debug.WriteLine($"[PERIODIC] ⏰ Clock updated: {oldClock:g} → {newClock:g} (Δ = {(newClock - oldClock).TotalDays:F1} days)");
-                System.Diagnostics.Debug.WriteLine($"[PERIODIC] Inactivity threshold: {maxInactivityTime.TotalDays} days");
-
+                List<int> deactivatedCourierIds = new(); // ✅ הוסף רשימה
+                // LINQ Method Syntax - get only active couriers
                 var activeCouriersToCheck = s_dal.Courier.ReadAll()
                     .Where(c => c.IsActive)
                     .ToList();
 
-                System.Diagnostics.Debug.WriteLine($"[PERIODIC] Checking {activeCouriersToCheck.Count} active couriers");
-
-                // LINQ Query Syntax - find couriers exceeding inactivity threshold
+                // LINQ Query Syntax - find couriers exceeding inactivity time threshold
                 var couriersToDeactivate = (from courier in activeCouriersToCheck
-                                       let timeSinceStart = newClock - courier.StartWorkingDate
-                                       where courier.StartWorkingDate.Year > 1900
-                                       where timeSinceStart > maxInactivityTime
-                                       select courier).ToList();
+                                           let timeSinceStart = newClock - courier.StartWorkingDate
+                                           where timeSinceStart > maxInactivityTime
+                                           select courier).ToList();
 
-                System.Diagnostics.Debug.WriteLine($"[PERIODIC] Found {couriersToDeactivate.Count} couriers to deactivate");
+                // Debug: Log details about the check
+                if (activeCouriersToCheck.Any())
+                {
+                    System.Diagnostics.Debug.WriteLine($"[COURIER] Periodic check - Current time: {newClock}, MaxInactivityTime: {maxInactivityTime.TotalDays} days");
+                    foreach (var c in activeCouriersToCheck)
+                    {
+                        TimeSpan elapsed = newClock - c.StartWorkingDate;
+                        System.Diagnostics.Debug.WriteLine($"[COURIER] Courier {c.Id} ({c.Name}) - Started: {c.StartWorkingDate}, Elapsed: {elapsed.TotalDays} days, Status: {(elapsed > maxInactivityTime ? "TO DEACTIVATE" : "OK")}");
+                    }
+                }
 
                 // Update each inactive courier
                 foreach (var doCourier in couriersToDeactivate)
                 {
                     try
                     {
-                        // Check if courier has any active orders before deactivating
-                        bool hasActiveOrders = s_dal.Order.ReadAll()
-                            .Any(o => o.CourierId == doCourier.Id && !o.DeliveryDate.HasValue);
-
-                        if (!hasActiveOrders)
-                        {
-                            DO.Courier updatedCourier = doCourier with { IsActive = false };
-                            s_dal.Courier.Update(updatedCourier);
-                            
-                            System.Diagnostics.Debug.WriteLine(
-                                $"[PERIODIC] ✅ Courier {doCourier.Id} ({doCourier.Name}) deactivated - " +
-                                $"worked for {(newClock - doCourier.StartWorkingDate).TotalDays:F0} days " +
-                                $"(threshold: {maxInactivityTime.TotalDays} days)"
-                            );
-                            
-                            deactivatedCourierIds.Add(doCourier.Id);
-                        }
-                        else
-                        {
-                            System.Diagnostics.Debug.WriteLine(
-                                $"[PERIODIC] ⚠️ Courier {doCourier.Id} ({doCourier.Name}) NOT deactivated - has active orders"
-                            );
-                        }
+                        DO.Courier updatedCourier = doCourier with { IsActive = false };
+                        s_dal.Courier.Update(updatedCourier);
+                        System.Diagnostics.Debug.WriteLine($"[INFO] Courier {doCourier.Id} marked as Inactive - worked for more than {maxInactivityTime.TotalDays} days");
+                        deactivatedCourierIds.Add(doCourier.Id); 
                     }
                     catch (Exception ex)
                     {
@@ -772,35 +756,25 @@ internal static class CourierManager
                     }
                 }
 
-                // Notify observers AFTER all updates are complete
-                if (deactivatedCourierIds.Any())
+                foreach (var courierId in deactivatedCourierIds)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[PERIODIC] 📢 Notifying observers about {deactivatedCourierIds.Count} deactivated couriers");
-                    
-                    foreach (var courierId in deactivatedCourierIds)
-                    {
-                        Observers.NotifyItemUpdated(courierId);
-                    }
-                    
-                    Observers.NotifyListUpdated();
+                    Observers.NotifyItemUpdated(courierId);
                 }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine($"[PERIODIC] ℹ️ No couriers to deactivate at this time");
-                }
+                
+                Observers.NotifyListUpdated();
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[ERROR] Error in PeriodicCourierUpdates: {ex.Message}\n{ex.StackTrace}");
+                System.Diagnostics.Debug.WriteLine($"[ERROR] Error in PeriodicCourierUpdates: {ex.Message}");
             }
         }
     }
 
     /// <summary>
-    /// Simulates courier activity periodically. Called once per simulator tick.
-    /// - Fetches active couriers and pending orders under a short lock (ToList)
-    /// - For couriers without an assigned order, sometimes assigns one
-    /// - For couriers with an order, sometimes completes it based on elapsed simulated time
+    /// Simulates courier activity periodically.
+    /// - 60% chance to pick up an order if idle.
+    /// - Strict travel time calculation (Distance / Speed) without random delays.
+    /// - 95% Success rate on delivery.
     /// </summary>
     internal static async Task SimulateCourierActivityAsync()
     {
@@ -812,6 +786,7 @@ internal static class CourierManager
         {
             List<DO.Courier> activeCouriers;
             List<DO.Order> pendingOrders;
+
             // Snapshot needed lists under short lock
             lock (AdminManager.BlMutex)
             {
@@ -819,19 +794,8 @@ internal static class CourierManager
                 pendingOrders = s_dal.Order.ReadAll().Where(o => !o.DeliveryDate.HasValue).ToList();
             }
 
-            //debug
-            System.Diagnostics.Debug.WriteLine($"[SIM] Active couriers: {activeCouriers.Count}, Pending orders: {pendingOrders.Count}");
-
-            if (!activeCouriers.Any())
+            if (!activeCouriers.Any()) // No need to check pendingOrders here, couriers might be mid-delivery
             {
-                System.Diagnostics.Debug.WriteLine($"[SIM] ❌ NO ACTIVE COURIERS FOUND!");
-                await Task.Yield();
-                return;
-            }
-            
-            if (!pendingOrders.Any())
-            {
-                System.Diagnostics.Debug.WriteLine($"[SIM] ❌ NO PENDING ORDERS FOUND!");
                 await Task.Yield();
                 return;
             }
@@ -845,40 +809,41 @@ internal static class CourierManager
                     // Determine if courier currently has an assigned in-progress or queued order
                     var currentOrder = pendingOrders.FirstOrDefault(o => o.CourierId == courier.Id && !o.DeliveryDate.HasValue);
 
+                    // ---------------------------------------------------------
+                    // CASE 1: COURIER IS IDLE (Has no order)
+                    // ---------------------------------------------------------
                     if (currentOrder is null)
                     {
-                        // No current order - small chance to look for one
-                        if (s_rand.NextDouble() < 0.50)
+                        // 60% chance to look for a new order
+                        if (s_rand.NextDouble() < 0.60)
                         {
                             // Choose an available order (no courier assigned)
                             var available = pendingOrders.Where(o => !o.CourierId.HasValue).ToList();
                             if (available.Any())
                             {
-                                // Sometimes open the selection screen but not choose (50% chance)
-                                if (s_rand.NextDouble() < 0.8)
+                                // Pick a random order
+                                var chosen = available[s_rand.Next(available.Count)];
+                                try
                                 {
-                                    var chosen = available[s_rand.Next(available.Count)];
-                                    try
-                                    {
-                                        OrderManager.AssociateCourierToOrder(chosen.Id, courier.Id);
-                                        pendingOrders.RemoveAll(o => o.Id == chosen.Id);
-                                        System.Diagnostics.Debug.WriteLine($"[SIM] Assigned courier {courier.Id} to order {chosen.Id}");
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        System.Diagnostics.Debug.WriteLine($"[SIM] Failed to assign: {ex.Message}");
-                                    }
+                                    OrderManager.AssociateCourierToOrder(chosen.Id, courier.Id);
+
+                                    // Remove from local pending snapshot to avoid double assignment in this run
+                                    pendingOrders.RemoveAll(o => o.Id == chosen.Id);
                                 }
+                                catch { /* ignore assignment failures */ }
                             }
                         }
                     }
+                    // ---------------------------------------------------------
+                    // CASE 2: COURIER IS WORKING (Has an order)
+                    // ---------------------------------------------------------
                     else
                     {
-                        // Courier has an order - maybe it's time to complete it
+                        // Calculate Elapsed Time in Simulation
                         DateTime startHandling = currentOrder.PickupDate ?? currentOrder.CourierAssociatedDate ?? AdminManager.Now;
                         TimeSpan elapsed = AdminManager.Now - startHandling;
 
-                        // Estimate travel time based on aerial distance and courier speed
+                        // Calculate Required Travel Time (Distance / Speed)
                         double distanceKm = 0;
                         if (config.CompanyLatitude.HasValue && config.CompanyLongitude.HasValue)
                         {
@@ -897,63 +862,50 @@ internal static class CourierManager
                         };
 
                         if (speed <= 0)
-                            speed = config.CarSpeed > 0 ? config.CarSpeed : 30.0;
+                            speed = 30.0; // Fallback to avoid division by zero
 
-                        // Base estimated time in minutes
+                        // Calculate estimated minutes pure (No random buffer)
                         double estimatedMinutes = (distanceKm / speed) * 60.0;
-                        // Add some randomness to simulate delays (10-60 minutes)
-                        double randomExtra = s_rand.Next(5, 31);
-                        TimeSpan threshold = TimeSpan.FromMinutes(Math.Max(estimatedMinutes, 5) + randomExtra);
 
-                        if (elapsed >= threshold)
+                        // Ensure at least 1 minute to avoid instant delivery on creation
+                        TimeSpan requiredTime = TimeSpan.FromMinutes(Math.Max(estimatedMinutes, 1.0));
+
+                        // Check if Delivery is Done
+                        if (elapsed >= requiredTime)
                         {
-                            // Enough time passed -> complete the delivery
+                            // Determine Outcome Probabilities
                             double r = s_rand.NextDouble();
                             try
                             {
-                                if (r < 0.80)
+                                if (r < 0.95)  // ✅ 95% = Successful delivery
                                 {
                                     OrderManager.DeliverOrder(currentOrder.Id);
-                                    System.Diagnostics.Debug.WriteLine($"[SIM] Delivered order {currentOrder.Id}");
+                                    System.Diagnostics.Debug.WriteLine($"[SIM] Courier {courier.Id} delivered order {currentOrder.Id} (Time: {elapsed.TotalMinutes:F1}m / Req: {requiredTime.TotalMinutes:F1}m)");
                                 }
-                                else if (r < 0.95)
+                                else if (r < 0.975)  // ✅ 2.5% = Customer Refused (0.95 to 0.975)
                                 {
                                     OrderManager.RefuseOrder(currentOrder.Id);
-                                    System.Diagnostics.Debug.WriteLine($"[SIM] Refused order {currentOrder.Id}");
+                                    System.Diagnostics.Debug.WriteLine($"[SIM] Courier {courier.Id} - REFUSED order {currentOrder.Id}");
                                 }
-                                else
+                                else  // ✅ 2.5% = Cancelled (> 0.975)
                                 {
                                     OrderManager.CancelOrder(currentOrder.Id);
-                                    System.Diagnostics.Debug.WriteLine($"[SIM] Cancelled order {currentOrder.Id}");
+                                    System.Diagnostics.Debug.WriteLine($"[SIM] Courier {courier.Id} - CANCELLED order {currentOrder.Id}");
                                 }
 
+                                // Remove from local pending snapshot so we don't process it again this tick
                                 pendingOrders.RemoveAll(o => o.Id == currentOrder.Id);
                             }
                             catch (Exception ex)
                             {
-                                System.Diagnostics.Debug.WriteLine($"[SIM] Failed to complete order {currentOrder.Id}: {ex.Message}");
-                            }
-                        }
-                        else
-                        {
-                            // Not enough time yet - chance manager cancels
-                            if (s_rand.NextDouble() < 0.2)
-                            {
-                                try
-                                {
-                                    OrderManager.CancelOrder(currentOrder.Id);
-                                    pendingOrders.RemoveAll(o => o.Id == currentOrder.Id);
-                                    System.Diagnostics.Debug.WriteLine($"[SIM] Manager cancelled order {currentOrder.Id}");
-                                }
-                                catch { }
+                                System.Diagnostics.Debug.WriteLine($"[SIM ERROR] Action failed: {ex.Message}");
                             }
                         }
                     }
                 }
-
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[SIM-COURIER] Error simulating courier {courier.Id}: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"[SIM-COURIER] Error loop for courier {courier.Id}: {ex.Message}");
                 }
             }
 

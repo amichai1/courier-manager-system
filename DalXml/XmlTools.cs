@@ -4,10 +4,15 @@ using DO;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.Serialization;
+using System.Globalization;
 
 static class XMLTools
 {
     const string s_xmlDir = @"..\xml\";
+    
+    // Israeli date/time format constant
+    private const string ISRAELI_DATETIME_FORMAT = "dd/MM/yyyy HH:mm:ss";
+    private static readonly CultureInfo IsraeliCulture = CultureInfo.GetCultureInfo("he-IL");
     
     // Static lock for thread-safe file access
     private static readonly object s_fileLock = new object();
@@ -127,6 +132,23 @@ static class XMLTools
         }
     }
 
+    public static int GetConfigIntValWithDefault(string xmlFileName, string elemName, int defaultValue)
+    {
+        lock (s_fileLock)
+        {
+            try
+            {
+                XElement root = XMLTools.LoadListFromXMLElement(xmlFileName);
+                return root.ToIntNullable(elemName) ?? defaultValue;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to read {elemName} from {xmlFileName}, using default: {defaultValue}. Error: {ex.Message}");
+                return defaultValue;
+            }
+        }
+    }
+
     public static DateTime GetConfigDateVal(string xmlFileName, string elemName)
     {
         lock (s_fileLock)
@@ -154,7 +176,8 @@ static class XMLTools
         {
             XElement root = XMLTools.LoadListFromXMLElement(xmlFileName);
             root.Elements(elemName).Remove();
-            root.Add(new XElement(elemName, elemVal.ToString()));
+            // ✅ Use Israeli format for DateTime
+            root.Add(new XElement(elemName, elemVal.ToString(ISRAELI_DATETIME_FORMAT, IsraeliCulture)));
             XMLTools.SaveListToXMLElement(root, xmlFileName);
         }
     }
@@ -260,17 +283,30 @@ static class XMLTools
     #region ExtensionFuctions
     public static T? ToEnumNullable<T>(this XElement element, string name) where T : struct, Enum =>
         Enum.TryParse<T>((string?)element.Element(name), out var result) ? (T?)result : null;
+    
     public static DateTime? ToDateTimeNullable(this XElement element, string name)
     {
         string? dateStr = (string?)element.Element(name);
         if (dateStr == null) return null;
         
-        return DateTime.TryParseExact(dateStr, "M/d/yyyy h:mm:ss tt", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var result) 
-            ? (DateTime?)result 
-            : null;
+        // ✅ Try Israeli format first (dd/MM/yyyy HH:mm:ss)
+        if (DateTime.TryParseExact(dateStr, ISRAELI_DATETIME_FORMAT, IsraeliCulture, DateTimeStyles.None, out var result))
+            return (DateTime?)result;
+        
+        // ✅ Fallback to invariant format for backwards compatibility
+        if (DateTime.TryParseExact(dateStr, "M/d/yyyy h:mm:ss tt", CultureInfo.InvariantCulture, DateTimeStyles.None, out var resultInvariant))
+            return (DateTime?)resultInvariant;
+        
+        // ✅ Try generic parsing as last resort
+        if (DateTime.TryParse(dateStr, IsraeliCulture, DateTimeStyles.None, out var resultGeneric))
+            return (DateTime?)resultGeneric;
+        
+        return null;
     }
+    
     public static double? ToDoubleNullable(this XElement element, string name) =>
         double.TryParse((string?)element.Element(name), out var result) ? (double?)result : null;
+    
     public static int? ToIntNullable(this XElement element, string name) =>
         int.TryParse((string?)element.Element(name), out var result) ? (int?)result : null;
     #endregion

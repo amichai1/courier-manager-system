@@ -167,6 +167,17 @@ internal class ConfigImplementation : IConfig
     }
 
     /// <summary>
+    /// ✅ Simulator interval in minutes per tick.
+    /// </summary>
+    public int SimulatorIntervalMinutes
+    {
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        get => Config.SimulatorIntervalMinutes;
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        set => Config.SimulatorIntervalMinutes = value;
+    }
+
+    /// <summary>
     /// Resets all configuration properties to their initial values.
     /// </summary>
     [MethodImpl(MethodImplOptions.Synchronized)]

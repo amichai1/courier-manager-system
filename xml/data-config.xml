@@ -2,7 +2,7 @@
 <config>
   <NextOrderId>1</NextOrderId>
   <NextDeliveryId>1</NextDeliveryId>
-  <Clock>1/21/2026 2:00:00 PM</Clock>
+  <Clock>21.01.2026 14:00:00</Clock>
   <ManagerId>123456789</ManagerId>
   <ManagerPassword>123456789</ManagerPassword>
   <CompanyAddress></CompanyAddress>
@@ -14,4 +14,5 @@
   <MaxDeliveryTime>02:00:00</MaxDeliveryTime>
   <RiskRange>01:30:00</RiskRange>
   <InactivityRange>30.00:00:00</InactivityRange>
+  <SimulatorIntervalMinutes>1</SimulatorIntervalMinutes>
 </config>

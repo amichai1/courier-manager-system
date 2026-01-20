@@ -1,4 +1,4 @@
-﻿namespace BO;
+namespace BO;
 
 public class Config
 {
@@ -17,4 +17,5 @@ public class Config
     public TimeSpan MaxDeliveryTime { get; set; }
     public TimeSpan RiskRange { get; set; }
     public TimeSpan InactivityRange { get; set; }
+    public int SimulatorIntervalMinutes { get; set; } = 1;
 }

@@ -1,4 +1,4 @@
-﻿namespace DalApi;
+namespace DalApi;
 
 /// <summary>
 /// Interface for accessing and managing system configuration settings.
@@ -105,6 +105,7 @@ public interface IConfig
     /// Time range with no courier activity after which courier is automatically set as inactive.
     /// </remarks>
     TimeSpan InactivityRange { get; set; }
+    int SimulatorIntervalMinutes { get; set; }
 
     /// <summary>
     /// Resets all configuration properties to their initial values.

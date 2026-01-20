@@ -146,6 +146,16 @@ internal static class Config
         set => XMLTools.SetConfigTimeSpanVal(s_data_config_xml, "InactivityRange", value);
     }
 
+    // ✅ Simulator interval in minutes per tick
+    internal static int SimulatorIntervalMinutes
+    {
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        get => XMLTools.GetConfigIntValWithDefault(s_data_config_xml, "SimulatorIntervalMinutes", 1);
+        
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        set => XMLTools.SetConfigIntVal(s_data_config_xml, "SimulatorIntervalMinutes", value);
+    }
+
     
     // Resets all configuration properties to their initial values by setting the values in XML.
     [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
@@ -158,8 +168,7 @@ internal static class Config
         // Resetting General Config
         Clock = new DateTime(2026, 1, 21, 14, 0, 0); // Start Clock based on original config
         ManagerId = 123456789;
-        ManagerPassword = "123456789";
-
+        ManagerPassword = "123456789";  
         // Reset company address and coordinates
         CompanyAddress = null;
         CompanyLatitude = null;
@@ -178,5 +187,8 @@ internal static class Config
         MaxDeliveryTime = TimeSpan.FromHours(2);
         RiskRange = TimeSpan.FromMinutes(90);
         InactivityRange = TimeSpan.FromDays(30);
+        
+        // ✅ Reset simulator interval
+        SimulatorIntervalMinutes = 1;
     }
 }

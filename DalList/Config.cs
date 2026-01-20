@@ -1,10 +1,11 @@
 namespace Dal;
 using System.Runtime.CompilerServices;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 /// <summary>
-/// In-memory configuration for DalList implementation.
-/// Stage 7: All ID and Clock properties synchronized for thread-safe access during simulator.
+/// Static configuration class for list-based DAL implementation.
 /// </summary>
 internal static class Config
 {
@@ -238,6 +239,23 @@ internal static class Config
         set => _inactivityRange = value;
     }
 
+    // ✅ Simulator Interval in minutes per tick
+    /// <summary>
+    /// Simulator interval - how many real minutes advance per simulator tick (1 second).
+    /// Default: 1 minute per tick
+    /// Stage 7: Thread-safe access
+    /// </summary>
+    private static int _simulatorIntervalMinutes = 1;
+    
+    internal static int SimulatorIntervalMinutes
+    {
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        get => _simulatorIntervalMinutes;
+        
+        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
+        set => _simulatorIntervalMinutes = value > 0 ? value : 1;  // Ensure always > 0
+    }
+
     /// <summary>
     /// Resets all configuration properties to their initial values.
     /// Stage 7: Thread-safe reset during simulator operations.
@@ -274,5 +292,8 @@ internal static class Config
         _maxDeliveryTime = TimeSpan.FromHours(2);
         _riskRange = TimeSpan.FromMinutes(90);       
         _inactivityRange = TimeSpan.FromDays(30);
+        
+        // ✅ Reset simulator interval
+        _simulatorIntervalMinutes = 1;
     }
 }
