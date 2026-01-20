@@ -260,8 +260,15 @@ static class XMLTools
     #region ExtensionFuctions
     public static T? ToEnumNullable<T>(this XElement element, string name) where T : struct, Enum =>
         Enum.TryParse<T>((string?)element.Element(name), out var result) ? (T?)result : null;
-    public static DateTime? ToDateTimeNullable(this XElement element, string name) =>
-        DateTime.TryParse((string?)element.Element(name), out var result) ? (DateTime?)result : null;
+    public static DateTime? ToDateTimeNullable(this XElement element, string name)
+    {
+        string? dateStr = (string?)element.Element(name);
+        if (dateStr == null) return null;
+        
+        return DateTime.TryParseExact(dateStr, "M/d/yyyy h:mm:ss tt", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var result) 
+            ? (DateTime?)result 
+            : null;
+    }
     public static double? ToDoubleNullable(this XElement element, string name) =>
         double.TryParse((string?)element.Element(name), out var result) ? (double?)result : null;
     public static int? ToIntNullable(this XElement element, string name) =>

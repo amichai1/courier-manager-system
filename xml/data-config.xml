@@ -2,7 +2,7 @@
 <config>
   <NextOrderId>1</NextOrderId>
   <NextDeliveryId>1</NextDeliveryId>
-  <Clock>21/01/2026 14:00:00</Clock>
+  <Clock>1/21/2026 2:00:00 PM</Clock>
   <ManagerId>123456789</ManagerId>
   <ManagerPassword>123456789</ManagerPassword>
   <CompanyAddress></CompanyAddress>
