@@ -772,13 +772,15 @@ internal static class CourierManager
 
     /// <summary>
     /// Simulates courier activity periodically.
-    /// - 60% chance to pick up an order if idle.
-    /// - Strict travel time calculation (Distance / Speed) without random delays.
-    /// - 95% Success rate on delivery.
+    /// Logic includes:
+    /// 1. Cooldown: Couriers rest after delivery based on duration.
+    /// 2. Deterministic Status: Orders are strictly categorized (50% OnTime, 45% Risk, 5% Late) based on creation time.
+    /// 3. Physical Constraints: Delivery cannot happen faster than physical travel time.
+    /// 4. Outcome Probabilities: 90% Success, 5% Refusal, 5% Cancellation.
     /// </summary>
     internal static async Task SimulateCourierActivityAsync()
     {
-        // If previous simulation still running, skip
+        // אם הסימולציה הקודמת עדיין רצה, דלג
         if (s_simulationMutex.CheckAndSetInProgress())
             return;
 
@@ -787,63 +789,92 @@ internal static class CourierManager
             List<DO.Courier> activeCouriers;
             List<DO.Order> pendingOrders;
 
-            // Snapshot needed lists under short lock
+            // שליפת נתונים בטוחה (Snapshot)
             lock (AdminManager.BlMutex)
             {
                 activeCouriers = s_dal.Courier.ReadAll().Where(c => c.IsActive).ToList();
+                // הזמנות שטרם נמסרו (גם Open וגם InProgress)
                 pendingOrders = s_dal.Order.ReadAll().Where(o => !o.DeliveryDate.HasValue).ToList();
             }
 
-            if (!activeCouriers.Any()) // No need to check pendingOrders here, couriers might be mid-delivery
+            if (!activeCouriers.Any())
             {
                 await Task.Yield();
                 return;
             }
 
             var config = AdminManager.GetConfig();
+            int interval = config.SimulatorIntervalMinutes;
 
             foreach (var courier in activeCouriers)
             {
                 try
                 {
-                    // Determine if courier currently has an assigned in-progress or queued order
-                    var currentOrder = pendingOrders.FirstOrDefault(o => o.CourierId == courier.Id && !o.DeliveryDate.HasValue);
+                    var currentOrder = pendingOrders.FirstOrDefault(o => o.CourierId == courier.Id);
 
-                    // ---------------------------------------------------------
-                    // CASE 1: COURIER IS IDLE (Has no order)
-                    // ---------------------------------------------------------
+                    // =========================================================
+                    // CASE 1: שליח פנוי (מחפש עבודה)
+                    // =========================================================
                     if (currentOrder is null)
                     {
-                        // 60% chance to look for a new order
-                        if (s_rand.NextDouble() < 0.60)
+                        // --- 1. בדיקת זמן קירור (Cooldown) ---
+                        bool isCoolingDown = false;
+                        DO.Delivery? lastDelivery = null;
+
+                        lock (AdminManager.BlMutex)
                         {
-                            // Choose an available order (no courier assigned)
+                            // שליפת המשלוח האחרון שהסתיים
+                            var history = s_dal.Delivery.ReadAll(d => d.CourierId == courier.Id && d.EndTime != null);
+                            if (history.Any())
+                                lastDelivery = history.OrderByDescending(d => d.EndTime).First();
+                        }
+
+                        if (lastDelivery != null && lastDelivery.EndTime.HasValue && lastDelivery.StartTime < lastDelivery.EndTime)
+                        {
+                            // חישוב זמן המנוחה: זהה לזמן שלקח המשלוח האחרון
+                            TimeSpan deliveryDuration = lastDelivery.EndTime.Value - lastDelivery.StartTime;
+                            DateTime freeAt = lastDelivery.EndTime.Value.Add(deliveryDuration);
+
+                            // אם השעון הנוכחי עדיין לפני זמן השחרור - השליח נח
+                            if (AdminManager.Now < freeAt)
+                                isCoolingDown = true;
+                        }
+
+                        if (isCoolingDown)
+                            continue; // דלג לשליח הבא
+
+                        // --- 2. הסתברות למציאת משלוח ---
+                        // הנוסחה מבטיחה שאם האינטרוול גדול (למשל 100 דקות), הסיכוי יתקרב ל-100%
+                        double baseFailureRate = 0.40; // 60% הצלחה לדקה בודדת
+                        double adjustedSuccessRate = 1.0 - Math.Pow(baseFailureRate, Math.Max(1, interval));
+
+                        if (s_rand.NextDouble() < adjustedSuccessRate)
+                        {
                             var available = pendingOrders.Where(o => !o.CourierId.HasValue).ToList();
                             if (available.Any())
                             {
-                                // Pick a random order
                                 var chosen = available[s_rand.Next(available.Count)];
                                 try
                                 {
                                     OrderManager.AssociateCourierToOrder(chosen.Id, courier.Id);
-
-                                    // Remove from local pending snapshot to avoid double assignment in this run
+                                    // עדכון רשימה מקומית למניעת כפילויות בריצה הנוכחית
                                     pendingOrders.RemoveAll(o => o.Id == chosen.Id);
                                 }
-                                catch { /* ignore assignment failures */ }
+                                catch { }
                             }
                         }
                     }
-                    // ---------------------------------------------------------
-                    // CASE 2: COURIER IS WORKING (Has an order)
-                    // ---------------------------------------------------------
+                    // =========================================================
+                    // CASE 2: שליח עובד (מבצע משלוח)
+                    // =========================================================
                     else
                     {
-                        // Calculate Elapsed Time in Simulation
-                        DateTime startHandling = currentOrder.PickupDate ?? currentOrder.CourierAssociatedDate ?? AdminManager.Now;
-                        TimeSpan elapsed = AdminManager.Now - startHandling;
+                        // חישוב זמנים
+                        DateTime startDriving = currentOrder.PickupDate ?? currentOrder.CourierAssociatedDate ?? AdminManager.Now;
+                        TimeSpan drivingTimeElapsed = AdminManager.Now - startDriving; // כמה זמן הוא נוהג
+                        TimeSpan totalTimeSinceCreation = AdminManager.Now - currentOrder.CreatedAt!; // כמה זמן ההזמנה קיימת
 
-                        // Calculate Required Travel Time (Distance / Speed)
+                        // --- 1. חישוב זמן פיזי נדרש (מרחק / מהירות) ---
                         double distanceKm = 0;
                         if (config.CompanyLatitude.HasValue && config.CompanyLongitude.HasValue)
                         {
@@ -860,40 +891,67 @@ internal static class CourierManager
                             DO.DeliveryType.OnFoot => config.OnFootSpeed,
                             _ => config.CarSpeed
                         };
-
                         if (speed <= 0)
-                            speed = 30.0; // Fallback to avoid division by zero
+                            speed = 30.0;
 
-                        // Calculate estimated minutes pure (No random buffer)
-                        double estimatedMinutes = (distanceKm / speed) * 60.0;
+                        double physicalMinutesRequired = (distanceKm / speed) * 60.0;
 
-                        // Ensure at least 1 minute to avoid instant delivery on creation
-                        TimeSpan requiredTime = TimeSpan.FromMinutes(Math.Max(estimatedMinutes, 1.0));
+                        // --- 2. קביעת "זמן יעד" סטטיסטי לפי ה-ID ---
+                        // משתמשים ב-ID כ-Seed כדי שההזמנה תשמור על ה"אופי" שלה לאורך כל הריצות
+                        Random specificOrderRand = new Random(currentOrder.Id);
+                        double statRoll = specificOrderRand.NextDouble();
 
-                        // Check if Delivery is Done
-                        if (elapsed >= requiredTime)
+                        int targetTotalLifespanMinutes; // כמה זמן ההזמנה צריכה "לחיות" בסך הכל
+
+                        if (statRoll < 0.50) // 50% - On Time (< 90 mins)
                         {
-                            // Determine Outcome Probabilities
-                            double r = s_rand.NextDouble();
+                            targetTotalLifespanMinutes = specificOrderRand.Next(20, 90);
+                        }
+                        else if (statRoll < 0.95) // 45% - At Risk (90 - 120 mins)
+                        {
+                            targetTotalLifespanMinutes = specificOrderRand.Next(90, 120);
+                        }
+                        else // 5% - Late (> 120 mins)
+                        {
+                            targetTotalLifespanMinutes = specificOrderRand.Next(121, 240);
+                        }
+
+                        // --- 3. בדיקת תנאי סיום ---
+                        // המשלוח מסתיים רק אם:
+                        // א. השליח עבר את המרחק הפיזי.
+                        // ב. עבר מספיק זמן מהיצירה כדי לעמוד ביעד הסטטיסטי (למשל, כדי "לייצר" איחור).
+
+                        bool physicalConditionMet = drivingTimeElapsed.TotalMinutes >= physicalMinutesRequired;
+                        bool statisticalConditionMet = totalTimeSinceCreation.TotalMinutes >= targetTotalLifespanMinutes;
+
+                        if (physicalConditionMet && statisticalConditionMet)
+                        {
+                            // --- קביעת תוצאת המסירה ---
+                            double resultRoll = s_rand.NextDouble(); // הגרלה אמיתית לתוצאה
                             try
                             {
-                                if (r < 0.95)  // ✅ 95% = Successful delivery
+                                if (resultRoll < 0.90) // 90% Success
                                 {
                                     OrderManager.DeliverOrder(currentOrder.Id);
-                                    System.Diagnostics.Debug.WriteLine($"[SIM] Courier {courier.Id} delivered order {currentOrder.Id} (Time: {elapsed.TotalMinutes:F1}m / Req: {requiredTime.TotalMinutes:F1}m)");
+
+                                    // לוג לדיבוג - מראה את הסטטוס שנוצר בפועל
+                                    string status = totalTimeSinceCreation.TotalMinutes > 120 ? "LATE" :
+                                                    totalTimeSinceCreation.TotalMinutes > 90 ? "RISK" : "OK";
+
+                                    System.Diagnostics.Debug.WriteLine($"[SIM] Order {currentOrder.Id} Delivered ({status}). Created {totalTimeSinceCreation.TotalMinutes:F0}m ago.");
                                 }
-                                else if (r < 0.975)  // ✅ 2.5% = Customer Refused (0.95 to 0.975)
+                                else if (resultRoll < 0.95) // 5% Customer Refused (0.90 - 0.95)
                                 {
                                     OrderManager.RefuseOrder(currentOrder.Id);
-                                    System.Diagnostics.Debug.WriteLine($"[SIM] Courier {courier.Id} - REFUSED order {currentOrder.Id}");
+                                    System.Diagnostics.Debug.WriteLine($"[SIM] Order {currentOrder.Id} - CUSTOMER REFUSED");
                                 }
-                                else  // ✅ 2.5% = Cancelled (> 0.975)
+                                else // 5% Cancelled (0.95 - 1.00)
                                 {
                                     OrderManager.CancelOrder(currentOrder.Id);
-                                    System.Diagnostics.Debug.WriteLine($"[SIM] Courier {courier.Id} - CANCELLED order {currentOrder.Id}");
+                                    System.Diagnostics.Debug.WriteLine($"[SIM] Order {currentOrder.Id} - CANCELLED");
                                 }
 
-                                // Remove from local pending snapshot so we don't process it again this tick
+                                // הסרה מהרשימה המקומית
                                 pendingOrders.RemoveAll(o => o.Id == currentOrder.Id);
                             }
                             catch (Exception ex)
@@ -905,7 +963,7 @@ internal static class CourierManager
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[SIM-COURIER] Error loop for courier {courier.Id}: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"[SIM ERROR] Loop courier {courier.Id}: {ex.Message}");
                 }
             }
 

@@ -6,6 +6,7 @@ namespace DalTest;
 
 /// <summary>
 /// Static class responsible for initializing the data source with sample data.
+/// Updated Logic: Optimized for fewer "Late" orders and realistic simulation start.
 /// </summary>
 public static class Initialization
 {
@@ -19,7 +20,7 @@ public static class Initialization
     private static readonly string[] validPhonePrefixes = { "050", "051", "052", "053", "054", "055", "058" };
     private static List<int> s_courierIds = new();
 
-    // Track the next order ID manually
+    // Track the next order ID manually to avoid conflicts during init
     private static int s_nextOrderId = 1;
 
     public static void Do()
@@ -62,8 +63,8 @@ public static class Initialization
         s_dal.Config.MotorcycleSpeed = 35.0;
         s_dal.Config.BicycleSpeed = 15.0;
         s_dal.Config.OnFootSpeed = 4.0;
-        s_dal.Config.MaxDeliveryTime = TimeSpan.FromHours(4);
-        s_dal.Config.RiskRange = TimeSpan.FromMinutes(120);
+        s_dal.Config.MaxDeliveryTime = TimeSpan.FromHours(2);
+        s_dal.Config.RiskRange = TimeSpan.FromMinutes(90);
         s_dal.Config.InactivityRange = TimeSpan.FromDays(30);
     }
 
@@ -94,7 +95,7 @@ public static class Initialization
             double? maxDistance = s_rand.Next(10, 51);
             DeliveryType deliveryType = deliveryTypes[i % deliveryTypes.Length];
 
-            // ✅ ALL couriers start working at the simulator's current clock time
+            // ✅ FIX: ALL couriers start working at the simulator's current clock time
             DateTime startDate = s_dal!.Config.Clock;
 
             Courier courier = new Courier(id, startDate)
@@ -112,7 +113,7 @@ public static class Initialization
 
             s_dal.Courier.Create(courier);
             s_courierIds.Add(id);
-            Console.WriteLine($"  Created: {courierNames[i]}, ID: {id}, Password: {plainPassword}, Start Date: {startDate:yyyy-MM-dd HH:mm:ss}");
+            Console.WriteLine($"  Created: {courierNames[i]}, ID: {id}, Start Date: {startDate:yyyy-MM-dd HH:mm:ss}");
         }
     }
 
@@ -192,14 +193,30 @@ public static class Initialization
             };
 
             bool isInProgress = s_rand.Next(2) == 1;
-            int scheduleStatusRoll = s_rand.Next(3);
 
-            int minutesAgo = scheduleStatusRoll switch
+            // ✅ לוגיקה מעודכנת לחלוקת סטטוסים:
+            // 55% בזמן (פחות מ-90 דקות)
+            // 40% בסיכון (90 עד 120 דקות)
+            // 5% באיחור (מעל 120 דקות)
+
+            double statusRoll = s_rand.NextDouble();
+            int minutesAgo;
+
+            if (statusRoll < 0.55) // 55% בזמן
             {
-                0 => s_rand.Next(0, 119),
-                1 => s_rand.Next(121, 239),
-                _ => s_rand.Next(241, 400)
-            };
+                minutesAgo = s_rand.Next(0, 90);
+                onTimeCount++;
+            }
+            else if (statusRoll < 0.95) // 40% בסיכון (בין 0.55 ל-0.95 זה בדיוק 40%)
+            {
+                minutesAgo = s_rand.Next(90, 120);
+                inRiskCount++;
+            }
+            else // 5% הנותרים - באיחור
+            {
+                minutesAgo = s_rand.Next(120, 300); // איחור של בין שעתיים ל-5 שעות
+                lateCount++;
+            }
 
             DateTime createdAt = clock.AddMinutes(-minutesAgo);
             int? courierId = null;
@@ -210,26 +227,22 @@ public static class Initialization
             {
                 var courier = allCouriers[s_rand.Next(allCouriers.Count)];
                 courierId = courier.Id;
+
+                // תאריכים הגיוניים ביחס ליצירה
                 courierAssociatedDate = createdAt.AddMinutes(s_rand.Next(5, 15));
                 pickupDate = courierAssociatedDate.Value.AddMinutes(s_rand.Next(5, 10));
+
+                // הגנות כדי לא לחרוג לעתיד
+                if (pickupDate > clock)
+                    pickupDate = clock.AddMinutes(-1);
+                if (courierAssociatedDate > clock)
+                    courierAssociatedDate = clock.AddMinutes(-5);
+
                 inProgressCount++;
             }
             else
             {
                 openCount++;
-            }
-
-            switch (scheduleStatusRoll)
-            {
-                case 0:
-                    onTimeCount++;
-                    break;
-                case 1:
-                    inRiskCount++;
-                    break;
-                default:
-                    lateCount++;
-                    break;
             }
 
             Order order = new Order(Id: 0, CreatedAt: createdAt)
@@ -276,9 +289,7 @@ public static class Initialization
                 currentDeliveryCount++;
             }
 
-            // ✅ LOGIC CHANGE: We want ~10% total CustomerRefused.
-            // Active orders will contribute a small part to this.
-            // ~15% chance for active orders to have a "Refused" history
+            // יצירת היסטוריה חלקית לחלק מההזמנות
             bool shouldHaveHistory = s_rand.NextDouble() < 0.15;
 
             if (shouldHaveHistory)
@@ -295,11 +306,6 @@ public static class Initialization
         Console.WriteLine($"    ScheduleStatus: {onTimeCount} OnTime, {inRiskCount} InRisk, {lateCount} Late");
         Console.WriteLine($"  Created {currentDeliveryCount} current delivery records");
         Console.WriteLine($"  Created {totalDeliveryHistory} delivery history records for {ordersWithHistory} orders");
-
-        // Verify deliveries were created
-        var verifyDeliveries = s_dal.Delivery.ReadAll().ToList();
-        Console.WriteLine($"  [VERIFY] Deliveries in DAL after CreateOrders: {verifyDeliveries.Count}");
-        System.Diagnostics.Debug.WriteLine($"[Initialization] Deliveries in DAL after CreateOrders: {verifyDeliveries.Count}");
     }
 
     private static int CreateDeliveryHistoryForOrder(int orderId, DateTime orderCreatedAt, List<Courier> allCouriers, int historyCount)
@@ -329,7 +335,6 @@ public static class Initialization
             };
 
             s_dal!.Delivery.Create(delivery);
-            System.Diagnostics.Debug.WriteLine($"[Initialization] Created history Delivery for Order: {orderId}, Status: {status}");
             created++;
         }
 
@@ -366,32 +371,27 @@ public static class Initialization
                 // ✅ TIMING FIX: 1 to 60 days BACK. Ensures it is strictly "until yesterday".
                 DateTime historicalDate = s_dal.Config.Clock.AddDays(-s_rand.Next(1, 60));
 
-                int scheduleRoll = s_rand.Next(3);
-                int deliveryMinutes = scheduleRoll switch
-                {
-                    0 => s_rand.Next(60, 119),
-                    1 => s_rand.Next(121, 239),
-                    _ => s_rand.Next(241, 360)
-                };
+                // ✅ FIX: Determine delivery duration based on Desired Status (Less Late)
+                // 85% On Time, 10% Risk, 5% Late
+                double statusRoll = s_rand.NextDouble();
+                int durationMinutes;
 
-                // ✅ STATS CALCULATION:
-                // Global Target: ~15% Canceled, ~10% Refused.
-                // Assuming ~85 total orders in DB (30 active + ~55 historical).
-                // 15% of 85 = ~13 Canceled orders.
-                // 10% of 85 = ~9 Refused deliveries.
-
-                // We generated some Refused in CreateOrders (~4-5). Need ~4-5 more here.
-                // All Canceled must come from here (since active orders aren't canceled).
+                if (statusRoll < 0.85) // 85% On Time history
+                    durationMinutes = s_rand.Next(20, 119); // Under 2 hours
+                else if (statusRoll < 0.95) // 10% Risk
+                    durationMinutes = s_rand.Next(120, 239);
+                else // 5% Late
+                    durationMinutes = s_rand.Next(241, 400); // Over 4 hours
 
                 double r = s_rand.NextDouble();
                 DeliveryStatus deliveryStatus;
 
-                if (r < 0.25) // 25% of history = Cancelled (approx 13 orders)
+                if (r < 0.25) // 25% of history = Cancelled
                 {
                     deliveryStatus = DeliveryStatus.Cancelled;
                     canceledCount++;
                 }
-                else if (r < 0.35) // 10% of history = Refused (approx 5-6 deliveries)
+                else if (r < 0.35) // 10% of history = Refused
                 {
                     deliveryStatus = DeliveryStatus.CustomerRefused;
                     refusedCount++;
@@ -419,7 +419,7 @@ public static class Initialization
                     CourierId = isCanceled ? null : courier.Id,
                     CourierAssociatedDate = isCanceled ? null : historicalDate.AddMinutes(10),
                     PickupDate = isCanceled ? null : historicalDate.AddMinutes(20),
-                    DeliveryDate = isCanceled ? null : historicalDate.AddMinutes(deliveryMinutes)
+                    DeliveryDate = isCanceled ? null : historicalDate.AddMinutes(durationMinutes) // Sets status via duration
                 };
 
                 s_dal.Order.Create(historicalOrder);
@@ -437,7 +437,7 @@ public static class Initialization
                 )
                 {
                     CompletionStatus = deliveryStatus,
-                    EndTime = historicalDate.AddMinutes(deliveryMinutes)
+                    EndTime = historicalDate.AddMinutes(durationMinutes)
                 };
 
                 s_dal.Delivery.Create(historicalDelivery);
