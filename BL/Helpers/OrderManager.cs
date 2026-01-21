@@ -72,9 +72,16 @@ internal static class OrderManager
 
         // Status Logic
         BO.OrderStatus orderStatus = BO.OrderStatus.Open;
-        if (doOrder.DeliveryDate.HasValue)
+        
+        var lastDelivery = deliveryHistory.Where(d => d.EndTime != null)
+            .OrderByDescending(d => d.EndTime).FirstOrDefault();
+        
+        if (lastDelivery?.EndType == BO.DeliveryStatus.Cancelled)
         {
-            var lastDelivery = deliveryHistory.Where(d => d.EndTime != null).OrderByDescending(d => d.EndTime).FirstOrDefault();
+            orderStatus = BO.OrderStatus.Canceled;
+        }
+        else if (doOrder.DeliveryDate.HasValue)
+        {
             if (lastDelivery != null && lastDelivery.EndType == BO.DeliveryStatus.CustomerRefused)
                 orderStatus = BO.OrderStatus.OrderRefused;
             else
@@ -487,7 +494,7 @@ internal static class OrderManager
                 CourierId = null, 
                 CourierAssociatedDate = null, 
                 PickupDate = null, 
-                DeliveryDate = null 
+                DeliveryDate = AdminManager.Now 
             });
         }
         
@@ -509,9 +516,16 @@ internal static class OrderManager
             {
                 var currentHist = deliveryLookup[doOrder.Id].ToList();
                 BO.OrderStatus status = BO.OrderStatus.Open;
-                if (doOrder.DeliveryDate.HasValue)
+                
+                // ✅ FIXED: Check for Canceled FIRST
+                var last = currentHist.Where(x => x.EndTime != null).OrderByDescending(x => x.Id).FirstOrDefault();
+                
+                if (last?.CompletionStatus == DO.DeliveryStatus.Cancelled)
                 {
-                    var last = currentHist.Where(x => x.EndTime != null).OrderByDescending(x => x.Id).FirstOrDefault();
+                    status = BO.OrderStatus.Canceled;
+                }
+                else if (doOrder.DeliveryDate.HasValue)
+                {
                     if (last != null && last.CompletionStatus == DO.DeliveryStatus.CustomerRefused)
                         status = BO.OrderStatus.OrderRefused;
                     else
@@ -549,8 +563,16 @@ internal static class OrderManager
 
     public static IEnumerable<BO.Order> GetAvailableOrdersForCourier(int courierId)
     {
-        lock (AdminManager.BlMutex) //stage 7
-            return s_dal.Order.ReadAll(o => !o.CourierId.HasValue).Select(ConvertDOToBO).ToList();
+        lock (AdminManager.BlMutex) // stage 7
+        {
+            var availableOrders = s_dal.Order.ReadAll()
+                .Where(o => !o.CourierId.HasValue && !o.DeliveryDate.HasValue)
+                .Select(ConvertDOToBO)
+                .Where(o => o.OrderStatus == BO.OrderStatus.Open) 
+                .ToList();
+            
+            return availableOrders;
+        }
     }
 
     // Wrappers
