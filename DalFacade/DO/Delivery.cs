@@ -28,7 +28,7 @@ public record Delivery
 )
 {
     /// <summary>
-    /// Default parameterless constructor for future use in stage 3 of the project.
+    /// Default parameterless constructor.
     /// </summary>
     public DeliveryStatus? CompletionStatus { get; set; } = null;
     public DateTime? EndTime { get; set; } = null;

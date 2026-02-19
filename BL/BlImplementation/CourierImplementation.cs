@@ -15,8 +15,7 @@ internal class CourierImplementation : IBICourier
     // --- CRUD Operations ---
     public void Create(BO.Courier courier) 
     {
-        AdminManager.ThrowOnSimulatorIsRunning(); //stage 7
-        CourierManager.CreateCourier(courier);
+        AdminManager.ThrowOnSimulatorIsRunning();        CourierManager.CreateCourier(courier);
     }
 
     public BO.Courier Read(int id) => CourierManager.ReadCourier(id);
@@ -28,27 +27,23 @@ internal class CourierImplementation : IBICourier
     
     public void Update(BO.Courier courier) 
     {
-        AdminManager.ThrowOnSimulatorIsRunning(); //stage 7
-        CourierManager.UpdateCourier(courier);
+        AdminManager.ThrowOnSimulatorIsRunning();        CourierManager.UpdateCourier(courier);
     }
     
     public void Delete(int id) 
     {
-        AdminManager.ThrowOnSimulatorIsRunning(); //stage 7
-        CourierManager.DeleteCourier(id);
+        AdminManager.ThrowOnSimulatorIsRunning();        CourierManager.DeleteCourier(id);
     }
 
     // --- Specific Operations ---
     public void UpdateLocation(int courierId, BO.Location newLocation)
     {
-        AdminManager.ThrowOnSimulatorIsRunning(); //stage 7
-        CourierManager.UpdateCourierLocation(courierId, newLocation);
+        AdminManager.ThrowOnSimulatorIsRunning();        CourierManager.UpdateCourierLocation(courierId, newLocation);
     }
         
     public void SetCourierStatus(int courierId, BO.CourierStatus status)
     {
-        AdminManager.ThrowOnSimulatorIsRunning(); //stage 7
-        CourierManager.SetCourierStatus(courierId, status);
+        AdminManager.ThrowOnSimulatorIsRunning();        CourierManager.SetCourierStatus(courierId, status);
     }
 
     /// <summary>
@@ -62,7 +57,6 @@ internal class CourierImplementation : IBICourier
     public BO.CourierSalary CalculateSalary(int courierId, DateTime periodStart, DateTime periodEnd)
         => CourierManager.CalculateSalary(courierId, periodStart, periodEnd);
 
-    #region Stage 5 - Observer Pattern Implementation
     public void AddObserver(Action listObserver) =>
         CourierManager.Observers.AddListObserver(listObserver);
 
@@ -74,5 +68,4 @@ internal class CourierImplementation : IBICourier
 
     public void RemoveObserver(int id, Action observer) =>
         CourierManager.Observers.RemoveObserver(id, observer);
-    #endregion Stage 5
 }

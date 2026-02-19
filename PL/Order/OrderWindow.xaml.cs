@@ -107,7 +107,6 @@ namespace PL.Order
         public static readonly DependencyProperty CancelOrderVisibilityProperty =
             DependencyProperty.Register("CancelOrderVisibility", typeof(Visibility), typeof(OrderWindow), new PropertyMetadata(Visibility.Collapsed));
 
-        // Stage 7 - Loading indicator
         public bool IsLoading
         {
             get => (bool)GetValue(IsLoadingProperty);
@@ -137,17 +136,14 @@ namespace PL.Order
             UpdateCourierInfoVisibility();
             UpdateCancelOrderVisibility();
 
-            // Register for order-specific updates (Stage 7 - Observer)
+            // Register for order-specific updates
             if (!_isAddMode && _orderId > 0)
             {
                 try
                 {
                     s_bl.Orders.AddObserver(_orderId, OrderUpdatedObserver);
                 }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[OrderWindow] Failed to register observer: {ex.Message}");
-                }
+                catch { /* Observer registration is best-effort */ }
             }
         }
 
@@ -160,10 +156,7 @@ namespace PL.Order
                 {
                     s_bl.Orders.RemoveObserver(_orderId, OrderUpdatedObserver);
                 }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[OrderWindow] Failed to unregister observer: {ex.Message}");
-                }
+                catch { /* Observer may already be removed */ }
             }
         }
 
@@ -197,13 +190,13 @@ namespace PL.Order
                         OrderStatus = OrderStatus.Open,
                         ScheduleStatus = ScheduleStatus.OnTime,
                         CreatedAt = s_bl.Admin.GetClock(),
-                        ExpectedDeliverdTime = s_bl.Admin.GetClock().AddHours(2),
+                        ExpectedDeliveryTime = s_bl.Admin.GetClock().AddHours(2),
                         MaxDeliveredTime = s_bl.Admin.GetClock().AddHours(24),
                         IsFragile = false,
                         Description = null,
                         Latitude = 0,
                         Longitude = 0,
-                        ArialDistance = 0
+                        AerialDistance = 0
                     };
 
                     DeliveryHistoryVisibility = Visibility.Collapsed;
@@ -247,13 +240,13 @@ namespace PL.Order
                 OrderStatus = order.OrderStatus,
                 ScheduleStatus = order.ScheduleStatus,
                 CreatedAt = order.CreatedAt,
-                ExpectedDeliverdTime = order.ExpectedDeliverdTime,
+                ExpectedDeliveryTime = order.ExpectedDeliveryTime,
                 MaxDeliveredTime = order.MaxDeliveredTime,
                 IsFragile = order.IsFragile,
                 Description = order.Description,
                 Latitude = order.Latitude,
                 Longitude = order.Longitude,
-                ArialDistance = order.ArialDistance,
+                AerialDistance = order.AerialDistance,
                 CourierId = order.CourierId
             };
         }
@@ -293,7 +286,6 @@ namespace PL.Order
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[OrderWindow] Error loading delivery history: {ex.Message}");
                 DeliveryHistory = new List<BO.DeliveryPerOrderInList>();
                 NoDeliveryHistoryVisibility = Visibility.Visible;
                 HasDeliveryHistoryVisibility = Visibility.Collapsed;
@@ -396,7 +388,7 @@ namespace PL.Order
 
         #endregion
 
-        #region Actions - Stage 7 Async
+        #region Actions
 
         private async void btnActionOrSave_Click(object sender, RoutedEventArgs e)
         {
@@ -552,7 +544,7 @@ namespace PL.Order
 
         #endregion
 
-        #region Observers - Stage 7
+        #region Observers
 
         /// <summary>
         /// Called when the order is updated externally (status changes, etc.)
@@ -577,20 +569,12 @@ namespace PL.Order
                             // Update UI state based on new status
                             UpdateCourierInfoVisibility();
                             UpdateCancelOrderVisibility();
-                            
-                            System.Diagnostics.Debug.WriteLine($"[OrderWindow] Order #{_orderId} updated via observer");
                         }
-                        catch (Exception ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"[OrderWindow] Error refreshing order: {ex.Message}");
-                        }
+                        catch { /* Silently handle UI refresh errors during observer callback */ }
                     }
                 }), System.Windows.Threading.DispatcherPriority.DataBind);
             }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[OrderWindow] Observer error: {ex.Message}");
-            }
+            catch { /* Observer callback may fire after window is closed */ }
         }
 
         #endregion

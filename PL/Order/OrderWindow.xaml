@@ -194,7 +194,7 @@
 
                             <StackPanel Grid.Column="2">
                                 <Label Content="Expected Delivery" Style="{StaticResource LabelHeader}"/>
-                                <TextBox Text="{Binding CurrentOrder.ExpectedDeliverdTime, Mode=OneWay, StringFormat='yyyy-MM-dd HH:mm:ss'}" 
+                                <TextBox Text="{Binding CurrentOrder.ExpectedDeliveryTime, Mode=OneWay, StringFormat='yyyy-MM-dd HH:mm:ss'}" 
                                          IsReadOnly="True"
                                          Style="{StaticResource TextBoxRegular}"/>
                             </StackPanel>
@@ -369,7 +369,6 @@
             </Grid>
         </Border>
 
-        <!-- Loading Overlay - Stage 7 -->
         <Grid Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}"
               Background="#80000000"
               Panel.ZIndex="1000">

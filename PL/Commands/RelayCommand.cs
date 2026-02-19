@@ -5,7 +5,6 @@ namespace PL.Commands
 {
     /// <summary>
     /// ICommand implementation - RelayCommand pattern.
-    /// תוספת - פקודות - commands, ממשק ICommand
     /// </summary>
     public class RelayCommand : ICommand
     {

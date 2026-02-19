@@ -41,7 +41,6 @@ internal class AdminImplementation : IAdmin
     public void ResetDB() => AdminManager.ResetDB();
     public void InitializeDB() => AdminManager.InitializeDB();
 
-    #region Stage 5 - Observer Pattern Implementation
     public void AddClockObserver(Action clockObserver) =>
         AdminManager.ClockUpdatedObservers += clockObserver;
 
@@ -53,19 +52,16 @@ internal class AdminImplementation : IAdmin
 
     public void RemoveConfigObserver(Action configObserver) =>
         AdminManager.ConfigUpdatedObservers -= configObserver;
-    #endregion Stage 5
 
-    #region Stage 7 - Simulator Control
-    public void StartSimulator(int interval)  //stage 7
+    public void StartSimulator(int interval)
     {
-        AdminManager.ThrowOnSimulatorIsRunning();  //stage 7
-        AdminManager.StartSimulator(interval);  //stage 7
+        AdminManager.ThrowOnSimulatorIsRunning();
+        AdminManager.StartSimulator(interval);
     }
 
-    public void StopSimulator()  //stage 7
-        => AdminManager.StopSimulator();  //stage 7
+    public void StopSimulator()
+        => AdminManager.StopSimulator();
 
     public bool IsSimulatorRunning =>
         AdminManager.IsSimulatorRunning;
-    #endregion Stage 7
 }

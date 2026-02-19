@@ -48,8 +48,6 @@ public static class Initialization
         // Debug: Check how many deliveries exist after initialization
         var allDeliveries = s_dal.Delivery.ReadAll().ToList();
         Console.WriteLine($"[DEBUG] Total deliveries in DAL after initialization: {allDeliveries.Count}");
-        System.Diagnostics.Debug.WriteLine($"[Initialization] Total deliveries created: {allDeliveries.Count}");
-
         Console.WriteLine("Data initialization completed successfully!");
     }
 
@@ -194,27 +192,24 @@ public static class Initialization
 
             bool isInProgress = s_rand.Next(2) == 1;
 
-            // ✅ לוגיקה מעודכנת לחלוקת סטטוסים:
-            // 55% בזמן (פחות מ-90 דקות)
-            // 40% בסיכון (90 עד 120 דקות)
-            // 5% באיחור (מעל 120 דקות)
+            // Status distribution: 55% OnTime (<90min), 40% InRisk (90-120min), 5% Late (>120min)
 
             double statusRoll = s_rand.NextDouble();
             int minutesAgo;
 
-            if (statusRoll < 0.55) // 55% בזמן
+            if (statusRoll < 0.55) // 55% OnTime
             {
                 minutesAgo = s_rand.Next(0, 90);
                 onTimeCount++;
             }
-            else if (statusRoll < 0.95) // 40% בסיכון (בין 0.55 ל-0.95 זה בדיוק 40%)
+            else if (statusRoll < 0.95) // 40% InRisk
             {
                 minutesAgo = s_rand.Next(90, 120);
                 inRiskCount++;
             }
-            else // 5% הנותרים - באיחור
+            else // 5% Late
             {
-                minutesAgo = s_rand.Next(120, 300); // איחור של בין שעתיים ל-5 שעות
+                minutesAgo = s_rand.Next(120, 300); // 2-5 hours late
                 lateCount++;
             }
 
@@ -228,11 +223,10 @@ public static class Initialization
                 var courier = allCouriers[s_rand.Next(allCouriers.Count)];
                 courierId = courier.Id;
 
-                // תאריכים הגיוניים ביחס ליצירה
                 courierAssociatedDate = createdAt.AddMinutes(s_rand.Next(5, 15));
                 pickupDate = courierAssociatedDate.Value.AddMinutes(s_rand.Next(5, 10));
 
-                // הגנות כדי לא לחרוג לעתיד
+                // Clamp dates so they don't exceed current clock
                 if (pickupDate > clock)
                     pickupDate = clock.AddMinutes(-1);
                 if (courierAssociatedDate > clock)
@@ -289,7 +283,7 @@ public static class Initialization
                 currentDeliveryCount++;
             }
 
-            // יצירת היסטוריה חלקית לחלק מההזמנות
+            // Create partial delivery history for some orders
             bool shouldHaveHistory = s_rand.NextDouble() < 0.15;
 
             if (shouldHaveHistory)

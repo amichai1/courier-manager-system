@@ -7,9 +7,7 @@ namespace DalTest;
 
 internal class Program
 {
-    //static readonly DalApi.IDal s_dal = new Dal.DalList(); // stage 2
-    //static readonly IDal s_dal = new DalXml(); //stage 3
-    static readonly IDal s_dal = Factory.Get; //stage 4
+    static readonly IDal s_dal = Factory.Get;
 
     private enum MainMenu { Exit, Couriers, Orders, Deliveries, Config, InitDb, ShowAll, Reset }
     private enum CrudMenu { Exit, Create, Read, ReadAll, Update, Delete, DeleteAll }
@@ -75,8 +73,7 @@ internal class Program
                         RunConfigMenu();
                         break;
                     case MainMenu.InitDb:
-                        //Initialization.Do(s_dal); //stage 2
-                        Initialization.Do(); //stage 4
+                        Initialization.Do();
                         Console.WriteLine("Initialization success!");
                         break;
                     case MainMenu.ShowAll:
@@ -101,7 +98,7 @@ internal class Program
     {
         bool exit = false;
 
-        // [Stage 2 Fix: Local variables referencing the relevant sub-interface via s_dal]
+        // Local variables referencing the relevant sub-interface via s_dal
         ICourier? dalCourier = entity == "Courier" ? s_dal.Courier : null;
         IOrder? dalOrder = entity == "Order" ? s_dal.Order : null;
         IDelivery? dalDelivery = entity == "Delivery" ? s_dal.Delivery : null;
@@ -206,7 +203,7 @@ internal class Program
     {
         bool exit = false;
 
-        // [Stage 2 Fix: Referencing the Config sub-interface via the unified s_dal]
+        // Referencing the Config sub-interface via the unified s_dal
         IConfig? dalConfig = s_dal.Config;
 
         while (!exit)
@@ -276,7 +273,7 @@ internal class Program
                         Console.WriteLine("Current Configuration:");
                         Console.WriteLine($"Clock: {dalConfig?.Clock}");
                         Console.WriteLine($"Manager id: {dalConfig?.ManagerId}");
-                        Console.WriteLine($"Manager passowrd is: {dalConfig?.ManagerPassword}");
+                        Console.WriteLine($"Manager password is: ********");
                         Console.WriteLine($"Company address is: {dalConfig?.CompanyAddress}");
                         Console.WriteLine($"Max delivery distance is: {dalConfig?.MaxDeliveryDistance?.ToString() ?? "(no limit)"}");
                         Console.WriteLine($"Risk range is: {dalConfig?.RiskRange}");
@@ -317,7 +314,7 @@ internal class Program
 
     private static void ResetDatabase()
     {
-        // [Stage 2 Fix: Using the single ResetDB method from IDal to clear all data]
+        // Using the single ResetDB method from IDal to clear all data
         s_dal.ResetDB();
         Console.WriteLine("DB reset successful.");
     }

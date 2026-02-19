@@ -11,7 +11,6 @@ using System.Windows.Shapes;
 using BlApi;
 using PL.Converters;
 using System.Threading.Tasks;
-using SendGrid;
 
 namespace PL
 {
@@ -27,7 +26,7 @@ namespace PL
         private bool _suppressActivation = false;
         private bool _isInitializing = false;
 
-        // Stage 7 - Observer Mutexes for thread-safe updates
+        // Observer Mutexes for thread-safe updates
         private readonly PL.Helpers.ObserverMutex _clockMutex = new();
         private readonly PL.Helpers.ObserverMutex _configMutex = new();
         private readonly PL.Helpers.ObserverMutex _simulatorMutex = new();
@@ -67,7 +66,7 @@ namespace PL
         public static readonly DependencyProperty OrderSummaryProperty =
             DependencyProperty.Register("OrderSummary", typeof(BO.OrderStatusSummary), typeof(MainWindow));
 
-        // Stage 7 - Simulator Interval
+        // Simulator Interval
         public int Interval
         {
             get { return (int)GetValue(IntervalProperty); }
@@ -77,7 +76,7 @@ namespace PL
         public static readonly DependencyProperty IntervalProperty =
             DependencyProperty.Register("Interval", typeof(int), typeof(MainWindow), new PropertyMetadata(1));
 
-        // Stage 7 - Is Simulator Running
+        // Is Simulator Running
         public bool IsSimulatorRunning
         {
             get { return (bool)GetValue(IsSimulatorRunningProperty); }
@@ -270,12 +269,7 @@ namespace PL
                     try
                     {
                         s_bl.Admin.InitializeDB();
-                        
-                        // Force file handles to close
-                        System.GC.Collect();
-                        System.GC.WaitForPendingFinalizers();
-                        System.Threading.Thread.Sleep(500);
-                        
+
                         RefreshAllData();
                         MessageBox.Show("Database initialized successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
@@ -319,12 +313,7 @@ namespace PL
                     try
                     {
                         s_bl.Admin.ResetDB();
-                        
-                        // Force file handles to close
-                        System.GC.Collect();
-                        System.GC.WaitForPendingFinalizers();
-                        System.Threading.Thread.Sleep(500);
-                        
+
                         RefreshAllData();
                         MessageBox.Show("Database reset successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
@@ -414,11 +403,10 @@ namespace PL
 
         #endregion
 
-        #region Observers (Stage 7 - Updated with ObserverMutex)
+        #region Observers
 
         private void clockObserver()
         {
-            #region Stage 7 - Thread-safe observer with non-blocking mutex
             if (_clockMutex.CheckAndSetLoadInProgressOrRestartRequired())
                 return;
             
@@ -432,12 +420,10 @@ namespace PL
                 if (await _clockMutex.UnsetLoadInProgressAndCheckRestartRequested())
                     clockObserver();
             });
-            #endregion
         }
 
         private void configObserver()
         {
-            #region Stage 7 - Thread-safe observer with non-blocking mutex
             if (_configMutex.CheckAndSetLoadInProgressOrRestartRequired())
                 return;
             
@@ -453,12 +439,10 @@ namespace PL
                 if (await _configMutex.UnsetLoadInProgressAndCheckRestartRequested())
                     configObserver();
             });
-            #endregion
         }
 
         private void orderObserver()
         {
-            #region Stage 7 - Thread-safe observer with non-blocking mutex
             if (_simulatorMutex.CheckAndSetLoadInProgressOrRestartRequired())
                 return;
             
@@ -473,12 +457,11 @@ namespace PL
                 if (await _simulatorMutex.UnsetLoadInProgressAndCheckRestartRequested())
                     orderObserver();
             });
-            #endregion
         }
 
         #endregion
 
-        #region Simulator Control (Stage 7)
+        #region Simulator Control
 
         private void btnToggleSimulator_Click(object sender, RoutedEventArgs e)
         {

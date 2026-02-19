@@ -23,7 +23,6 @@ internal class DeliveryImplementation : IBIDelivery
     public DateTime CalculateEstimatedCompletionTime(int deliveryId)
         => DeliveryManager.CalculateEstimatedCompletionTime(deliveryId);
 
-    #region Stage 5 - Observer Pattern Implementation
     public void AddObserver(Action listObserver) =>
         DeliveryManager.Observers.AddListObserver(listObserver);
 
@@ -35,5 +34,4 @@ internal class DeliveryImplementation : IBIDelivery
 
     public void RemoveObserver(int id, Action observer) =>
         DeliveryManager.Observers.RemoveObserver(id, observer);
-    #endregion Stage 5
 }

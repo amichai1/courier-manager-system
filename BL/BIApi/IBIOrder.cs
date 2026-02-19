@@ -60,8 +60,6 @@ public interface IBIOrder : BIApi.IObservable
     /// </summary>
     IEnumerable<BO.DeliveryPerOrderInList> GetDeliveryHistoryForOrder(int orderId);
 
-    #region Stage 7 - Async Network Operations
-
     /// <summary>
     /// Creates an order with async geocoding of the address.
     /// Returns geocoding status for UI feedback.
@@ -92,5 +90,4 @@ public interface IBIOrder : BIApi.IObservable
     /// <returns>Order list with updated distances</returns>
     Task<IEnumerable<BO.OrderInList>> GetOrderListWithDistancesAsync();
 
-    #endregion Stage 7
 }

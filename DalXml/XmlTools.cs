@@ -143,7 +143,6 @@ static class XMLTools
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Failed to read {elemName} from {xmlFileName}, using default: {defaultValue}. Error: {ex.Message}");
                 return defaultValue;
             }
         }

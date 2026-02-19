@@ -21,7 +21,6 @@
             <converters:DeliveryTimeRemainingConverter x:Key="DeliveryTimeConverter"/>
             <converters:AllTrueMultiConverter x:Key="AllTrueConverter"/>
 
-            <!-- Stage 7 - Single Value Converters -->
             <converters:BoolInverterConverter x:Key="BoolInverterConverter"/>
             <converters:SimulatorButtonTextConverter x:Key="SimulatorButtonTextConverter"/>
         </ResourceDictionary>

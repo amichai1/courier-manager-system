@@ -20,7 +20,6 @@ internal static class AdminManager
     private static readonly IDal s_dal = DalApi.Factory.Get;
     internal static readonly object BlMutex = new();
 
-    // Stage 7 fields - Simulator
     private static volatile Thread? s_thread = null;
     private static volatile bool s_stop = false;
     private static int s_interval = 1;
@@ -227,8 +226,6 @@ internal static class AdminManager
     }
 
     // -----------------------------------------------------------
-    // *** STAGE 7: SIMULATOR THREADING METHODS ***
-    // -----------------------------------------------------------
 
     [MethodImpl(MethodImplOptions.Synchronized)]
     public static void ThrowOnSimulatorIsRunning()
@@ -262,7 +259,6 @@ internal static class AdminManager
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[SIMULATOR] ClockRunner error: {ex.Message}");
             }
         }
     }
@@ -288,7 +284,6 @@ internal static class AdminManager
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[SIMULATOR] PeriodicUpdatesWrapper error: {ex.Message}");
         }
         finally
         {
@@ -325,7 +320,6 @@ internal static class AdminManager
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[SIMULATOR] SimulateRoutineOperationsAsync error: {ex.Message}");
         }
         finally
         {
@@ -348,7 +342,7 @@ internal static class AdminManager
         {
             s_interval = interval;
             
-            // ✅ שמור את האינטרוול בconfig כדי שיהיה זמין ב-CourierManager
+            // Persist interval in config so CourierManager can access it
             lock (BlMutex)
             {
                 var config = s_dal.Config;

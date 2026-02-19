@@ -18,10 +18,10 @@ public class BLDoesNotExistException : BLException
 }
 
 [Serializable]
-public class BLEnableDeleteACtiveCourierException : BLException
+public class BLCannotDeleteActiveCourierException : BLException
 {
-    public BLEnableDeleteACtiveCourierException(string message) : base(message) { }
-    public BLEnableDeleteACtiveCourierException(string message, Exception innerException) : base(message, innerException) { }
+    public BLCannotDeleteActiveCourierException(string message) : base(message) { }
+    public BLCannotDeleteActiveCourierException(string message, Exception innerException) : base(message, innerException) { }
 }
 
 [Serializable]

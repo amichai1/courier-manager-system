@@ -7,7 +7,6 @@ namespace PL.Helpers
 {
     /// <summary>
     /// Attached Properties for WPF controls.
-    /// תוספת - תכונות מצורפות (attached properties)
     /// </summary>
     public static class AttachedProperties
     {
@@ -144,7 +143,6 @@ namespace PL.Helpers
 
         /// <summary>
         /// Attached property to execute command on Enter key press.
-        /// תוספת - לחיצה על ENTER כמו לחיצה על כפתור
         /// </summary>
         public static readonly DependencyProperty EnterKeyCommandProperty =
             DependencyProperty.RegisterAttached(

@@ -16,5 +16,5 @@ public class OrderInProgress
     public DateTime MaxDeliveryTime { get; init; }
     public OrderStatus OrderStatus { get; init; }
     public ScheduleStatus ScheduleStatus { get; init; }
-    public TimeSpan OrderComplitionTime { get; init; }
+    public TimeSpan OrderCompletionTime { get; init; }
 }

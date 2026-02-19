@@ -9,7 +9,7 @@ using BIApi; // Add this
 /// Defines the service contract for managing Delivery entities.
 /// Delivery objects are usually complex and read-only from the PL perspective.
 /// </summary>
-public interface IBIDelivery : BIApi.IObservable // Stage 5 - Extend IObservable (use fully qualified name)
+public interface IBIDelivery : BIApi.IObservable
 {
     /// <summary>
     /// Reads a detailed Delivery entity by its unique ID.

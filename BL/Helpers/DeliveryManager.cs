@@ -15,10 +15,10 @@ namespace BL.Helpers;
 internal static class DeliveryManager
 {
     private static readonly IDal s_dal = DalApi.Factory.Get;
-    internal static ObserverManager Observers = new(); // Stage 5
+    internal static ObserverManager Observers = new();
     private const double EARTH_RADIUS_KM = 6371; // Earth radius for distance calculation
-    private static readonly AsyncMutex s_periodicMutex = new(); //stage 7
-    private static readonly AsyncMutex s_simulationMutex = new(); //stage 7
+    private static readonly AsyncMutex s_periodicMutex = new();
+    private static readonly AsyncMutex s_simulationMutex = new();
 
     // ------------------------------------
     // --- 1. GEOGRAPHICAL CALCULATION ---
@@ -557,11 +557,9 @@ internal static class DeliveryManager
                                 EndTime = AdminManager.Now
                             };
                             s_dal.Delivery.Update(updatedDelivery);
-                            System.Diagnostics.Debug.WriteLine($"[INFO] Delivery {delivery.Id} marked as Failed - exceeded MaxDeliveryTime");
                         }
                         catch (Exception ex)
                         {
-                            System.Diagnostics.Debug.WriteLine($"[ERROR] Failed to update delivery {delivery.Id}: {ex.Message}");
                         }
                     }
                 }
@@ -584,7 +582,7 @@ internal static class DeliveryManager
     /// <summary>
     /// Simulates delivery activity - auto-completes deliveries after sufficient time has elapsed.
     /// Called asynchronously by the simulator once per second.
-    /// Stage 7: Protected by AsyncMutex to prevent overlapping executions.
+    /// Protected by AsyncMutex to prevent overlapping executions.
     /// </summary>
     internal static async Task SimulateDeliveryAsync()
     {
@@ -633,22 +631,17 @@ internal static class DeliveryManager
                                 };
                                 
                                 s_dal.Delivery.Update(updatedDelivery);
-                                System.Diagnostics.Debug.WriteLine(
-                                    $"[DELIVERY SIM] Delivery {delivery.Id} completed with status: {status}");
-                                
+
                                 deliveriesToNotify.Add(delivery.Id);
                             }
                             catch (Exception ex)
                             {
-                                System.Diagnostics.Debug.WriteLine(
-                                    $"[DELIVERY SIM ERROR] Failed to complete delivery {delivery.Id}: {ex.Message}");
                             }
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[ERROR] SimulateDeliveryAsync lock block: {ex.Message}");
                 }
             }
 

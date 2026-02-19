@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace BL.Helpers;
 
 /// <summary>
-/// Stage 7 - Business Logic Manager for Orders
+/// Business Logic Manager for Orders.
 /// Handles all order-related operations with async network requests (Geocoding).
 /// Uses async/await all the way to keep UI responsive.
 /// </summary>
@@ -18,9 +18,7 @@ internal static class OrderManager
 {
     private static readonly IDal s_dal = DalApi.Factory.Get;
     internal static ObserverManager Observers = new();
-    private static readonly AsyncMutex s_periodicMutex = new(); //stage 7
-    private static readonly AsyncMutex s_simulationMutex = new(); //stage 7
-
+    private static readonly AsyncMutex s_periodicMutex = new();    private static readonly AsyncMutex s_simulationMutex = new();
     // ------------------------------------
     // --- 1. CONVERSION (Mappers) ---
     // ------------------------------------
@@ -108,17 +106,17 @@ internal static class OrderManager
             CreatedAt = doOrder.CreatedAt,
             OrderStatus = orderStatus,
             ScheduleStatus = CalculateScheduleStatus(doOrder),
-            ExpectedDeliverdTime = doOrder.CreatedAt.AddHours(2),
+            ExpectedDeliveryTime = doOrder.CreatedAt.AddHours(2),
             MaxDeliveredTime = doOrder.CreatedAt.Add(AdminManager.GetConfig().MaxDeliveryTime),
             CourierId = doOrder.CourierId,
             CourierName = assignedCourier?.Name,
             CourierAssociatedDate = doOrder.CourierAssociatedDate,
             PickupDate = actualPickupTime ?? doOrder.PickupDate, 
             DeliveryDate = doOrder.DeliveryDate,
-            OrderComplitionTime = doOrder.DeliveryDate.HasValue && doOrder.CreatedAt != default ? doOrder.DeliveryDate.Value - doOrder.CreatedAt : null,
+            OrderCompletionTime = doOrder.DeliveryDate.HasValue && doOrder.CreatedAt != default ? doOrder.DeliveryDate.Value - doOrder.CreatedAt : null,
             DeliveryHistory = deliveryHistory.ToList(),
             CustomerLocation = new BO.Location { Latitude = doOrder.Latitude, Longitude = doOrder.Longitude },
-            ArialDistance = CalculateAirDistance(doOrder) // Uses BO helper internally
+            AerialDistance = CalculateAirDistance(doOrder) // Uses BO helper internally
         };
     }
 
@@ -262,14 +260,12 @@ internal static class OrderManager
 
     public static BO.Order ReadOrder(int id)
     {
-        lock (AdminManager.BlMutex) //stage 7
-            return ConvertDOToBO(s_dal.Order.Read(id)!);
+        lock (AdminManager.BlMutex)            return ConvertDOToBO(s_dal.Order.Read(id)!);
     }
 
     public static IEnumerable<BO.Order> ReadAllOrders(Func<BO.Order, bool>? f = null)
     {
-        lock (AdminManager.BlMutex) //stage 7
-        {
+        lock (AdminManager.BlMutex)        {
             var L = s_dal.Order.ReadAll()
                 .Select(d =>
                 {
@@ -285,8 +281,7 @@ internal static class OrderManager
 
     public static void UpdateOrder(BO.Order order)
     {
-        lock (AdminManager.BlMutex) //stage 7
-            s_dal.Order.Update(ConvertBOToDO(order));
+        lock (AdminManager.BlMutex)            s_dal.Order.Update(ConvertBOToDO(order));
         
         Observers.NotifyItemUpdated(order.Id);
         Observers.NotifyListUpdated();
@@ -294,8 +289,7 @@ internal static class OrderManager
 
     public static void DeleteOrder(int id)
     {
-        lock (AdminManager.BlMutex) //stage 7
-            s_dal.Order.Delete(id);
+        lock (AdminManager.BlMutex)            s_dal.Order.Delete(id);
         
         Observers.NotifyItemUpdated(id);
         Observers.NotifyListUpdated();
@@ -304,7 +298,6 @@ internal static class OrderManager
     // --- ACTIONS ---
     /// <summary>
     /// Associates a courier to an order.
-    /// Stage 7: Order association simplified (no email notifications).
     /// </summary>
     public static void AssociateCourierToOrder(int orderId, int courierId)
     {
@@ -332,11 +325,9 @@ internal static class OrderManager
                     EndTime = null 
                 });
                 
-                System.Diagnostics.Debug.WriteLine($"[ORDER] ✅ Associated courier {courierId} to order {orderId}");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[ORDER] ❌ Failed to associate: {ex.Message}");
                 throw;
             }
         }
@@ -353,13 +344,11 @@ internal static class OrderManager
         {
             DO.Order d = s_dal.Order.Read(orderId)!;
             
-            // ✅ אל תעדכן את PickupDate אם כבר קיים!
-            // PickupDate צריך להישמר כפי שהוגדר בעבר
+            // Only set PickupDate if not already set; preserve existing value
             if (!d.PickupDate.HasValue)
             {
                 s_dal.Order.Update(d with { PickupDate = AdminManager.Now });
             }
-            // אם PickupDate כבר קיים - אל תשנה אותו!
         }
         
         Observers.NotifyItemUpdated(orderId);
@@ -402,7 +391,6 @@ internal static class OrderManager
                         CompletionStatus = DO.DeliveryStatus.Completed, 
                         EndTime = deliveryTime  // ✅ Use the same time captured above
                     });
-                    System.Diagnostics.Debug.WriteLine($"[ORDER] Order {orderId} delivered - StartTime: {ad.StartTime}, EndTime: {deliveryTime}");
                 }
             }
             
@@ -432,13 +420,11 @@ internal static class OrderManager
                     {
                         // Note: DO.Courier doesn't have DeliveredOnTime/Late fields
                         // These are calculated in CourierManager.GetCourierList() and BO.Courier
-                        System.Diagnostics.Debug.WriteLine($"[ORDER] Delivery stats for courier {courierId.Value} will be updated on next list query");
                     }
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[ORDER ERROR] Failed to update courier stats: {ex.Message}");
             }
         }
 
@@ -456,8 +442,7 @@ internal static class OrderManager
 
     public static void RefuseOrder(int orderId)
     {
-        lock (AdminManager.BlMutex) //stage 7
-        {
+        lock (AdminManager.BlMutex)        {
             DO.Order d = s_dal.Order.Read(orderId)!;
             var ad = s_dal.Delivery.ReadAll(x => x.OrderId == orderId && x.EndTime == null).FirstOrDefault();
             if (ad != null)
@@ -475,12 +460,10 @@ internal static class OrderManager
 
     /// <summary>
     /// Cancels an order.
-    /// Stage 7: Order cancellation simplified (no email notifications).
     /// </summary>
     public static void CancelOrder(int orderId)
     {
-        lock (AdminManager.BlMutex) //stage 7
-        {
+        lock (AdminManager.BlMutex)        {
             BO.Order b = ReadOrder(orderId);
             bool ip = b.OrderStatus == BO.OrderStatus.InProgress;
             if (ip)
@@ -504,8 +487,7 @@ internal static class OrderManager
 
     public static IEnumerable<BO.OrderInList> GetOrderList()
     {
-        lock (AdminManager.BlMutex) //stage 7
-        {
+        lock (AdminManager.BlMutex)        {
             var allOrders = s_dal.Order.ReadAll().ToList(); // Convert to concrete list
             var allDeliveries = s_dal.Delivery.ReadAll().ToList();
             var allCouriers = s_dal.Courier.ReadAll().ToDictionary(c => c.Id);
@@ -563,8 +545,7 @@ internal static class OrderManager
 
     public static IEnumerable<BO.Order> GetAvailableOrdersForCourier(int courierId)
     {
-        lock (AdminManager.BlMutex) // stage 7
-        {
+        lock (AdminManager.BlMutex)        {
             var availableOrders = s_dal.Order.ReadAll()
                 .Where(o => !o.CourierId.HasValue && !o.DeliveryDate.HasValue)
                 .Select(ConvertDOToBO)
@@ -578,14 +559,12 @@ internal static class OrderManager
     // Wrappers
     public static IEnumerable<BO.DeliveryPerOrderInList> GetDeliveryHistoryForOrderPublic(int id)
     {
-        lock (AdminManager.BlMutex) //stage 7
-            return GetDeliveryHistoryForOrder(id);
+        lock (AdminManager.BlMutex)            return GetDeliveryHistoryForOrder(id);
     }
 
     public static BO.OrderStatusSummary GetOrderStatusSummary()
     {
-        lock (AdminManager.BlMutex) //stage 7
-        {
+        lock (AdminManager.BlMutex)        {
             var all = ReadAllOrders();
             return new BO.OrderStatusSummary
             {
@@ -603,11 +582,10 @@ internal static class OrderManager
 
     public static IEnumerable<BO.Order> GetCourierOrders(int courierId)
     {
-        lock (AdminManager.BlMutex) //stage 7
-            return s_dal.Order.ReadAll(o => o.CourierId == courierId).Select(ConvertDOToBO).ToList();
+        lock (AdminManager.BlMutex)            return s_dal.Order.ReadAll(o => o.CourierId == courierId).Select(ConvertDOToBO).ToList();
     }
 
-    // --- PERIODIC UPDATES (Stage 7) ---
+    // --- PERIODIC UPDATES ---
 
     /// <summary>
     /// Recalculate and update schedule status for all active orders.
@@ -623,8 +601,6 @@ internal static class OrderManager
             {
                 var boOrder = ConvertDOToBO(order);
                 // Force recalculation of schedule status with current time
-                System.Diagnostics.Debug.WriteLine(
-                    $"[ORDER] Order {order.Id}: Created={order.CreatedAt}, Now={AdminManager.Now}, Status={boOrder.ScheduleStatus}");
             }
         }
     }
@@ -675,7 +651,6 @@ internal static class OrderManager
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[ERROR] PeriodicOrderUpdates: {ex.Message}");
         }
         finally
         {
@@ -718,7 +693,6 @@ internal static class OrderManager
                             });
                         }
                         
-                        System.Diagnostics.Debug.WriteLine($"[SIMULATOR] Order {order.Id} marked as expired/failed");
                         Observers.NotifyItemUpdated(order.Id);
                         anyUpdated = true;
                     }
@@ -729,7 +703,6 @@ internal static class OrderManager
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[ERROR] CheckAndUpdateExpiredOrders: {ex.Message}");
             }
         }
     }
@@ -750,9 +723,8 @@ internal static class OrderManager
         }
     }
 
-    // --- SIMULATION (Stage 7) ---
-    internal static async Task SimulateOrdersAsync() //stage 7
-    {
+    // --- SIMULATION ---
+    internal static async Task SimulateOrdersAsync()    {
         if (s_simulationMutex.CheckAndSetInProgress())
             return;
 
@@ -801,11 +773,8 @@ internal static class OrderManager
         }
     }
 
-    #region ========== STAGE 7: ASYNC NETWORK OPERATIONS ==========
-
     /// <summary>
     /// Creates an order with asynchronous geocoding.
-    /// Stage 7 - Type A: Single entity network request (Geocoding).
     /// 
     /// Flow:
     /// 1. Geocode the address asynchronously (await)
@@ -839,7 +808,6 @@ internal static class OrderManager
             }
             catch (Exception geocodeEx)
             {
-                System.Diagnostics.Debug.WriteLine($"[ORDER] Geocoding exception for: {order.Address}: {geocodeEx.Message}");
                 // Treat any exception as network error and continue with default coordinates
                 geocodeStatus = GeocodingService.GeocodingStatus.NetworkError;
             }
@@ -850,7 +818,6 @@ internal static class OrderManager
                 // Use actual coordinates
                 order.Latitude = lat;
                 order.Longitude = lon;
-                System.Diagnostics.Debug.WriteLine($"[ORDER] Geocoding successful for: {order.Address}");
             }
             else if (geocodeStatus == GeocodingService.GeocodingStatus.InvalidAddress)
             {
@@ -859,7 +826,6 @@ internal static class OrderManager
             }
             else if (geocodeStatus == GeocodingService.GeocodingStatus.NetworkError)
             {
-                System.Diagnostics.Debug.WriteLine($"[ORDER] Geocoding network error for: {order.Address}. Using estimated location.");
                 // Use default coordinates (0, 0) or order's current coordinates
                 if (order.Latitude == 0 && order.Longitude == 0)
                 {
@@ -873,7 +839,6 @@ internal static class OrderManager
             lock (AdminManager.BlMutex)
             {
                 CreateOrderWithoutNotification(order);
-                System.Diagnostics.Debug.WriteLine($"[ORDER] Order created successfully with ID: {order.Id}");
 
                 // Notify observers ONLY after successful creation
                 Observers.NotifyListUpdated();
@@ -883,7 +848,6 @@ internal static class OrderManager
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[ORDER ERROR] CreateOrderAsync failed: {ex.Message}");
             return (false, $"Error creating order: {ex.Message}", GeocodingService.GeocodingStatus.NetworkError);
         }
     }
@@ -902,7 +866,6 @@ internal static class OrderManager
 
     /// <summary>
     /// Updates an order with asynchronous geocoding if address changed.
-    /// Stage 7 - Type A: Single entity network request (Geocoding)
     /// 
     /// Flow:
     /// 1. Check if address was changed
@@ -919,8 +882,6 @@ internal static class OrderManager
             // Step 1: Check if address changed
             if (order.Address != originalAddress && !string.IsNullOrWhiteSpace(order.Address))
             {
-                System.Diagnostics.Debug.WriteLine($"[ORDER] Address changed from '{originalAddress}' to '{order.Address}'");
-
                 // Step 2: Geocode new address asynchronously - await
                 // ✅ Use ConfigureAwait(true) to return to UI thread
                 try
@@ -933,36 +894,30 @@ internal static class OrderManager
                     {
                         order.Latitude = lat;
                         order.Longitude = lon;
-                        System.Diagnostics.Debug.WriteLine($"[ORDER] New address geocoded successfully");
                     }
                     else if (geocodeStatus == GeocodingService.GeocodingStatus.InvalidAddress)
                     {
                         // Invalid address - DO NOT update the order
-                        System.Diagnostics.Debug.WriteLine($"[ORDER] New address is invalid: {order.Address}");
                         return (false, $"New address '{order.Address}' could not be found. Please verify.", geocodeStatus);
                     }
                     else if (geocodeStatus == GeocodingService.GeocodingStatus.NetworkError)
                     {
                         // Network error - update with existing coordinates
-                        System.Diagnostics.Debug.WriteLine($"[ORDER] Geocoding network error. Using existing coordinates.");
                     }
                 }
                 catch (Exception geocodeEx)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[ORDER] Geocoding exception: {geocodeEx.Message}");
                     geocodeStatus = GeocodingService.GeocodingStatus.NetworkError;
                 }
             }
             else if (order.Address == originalAddress)
             {
-                System.Diagnostics.Debug.WriteLine($"[ORDER] Address unchanged, skipping geocoding");
             }
 
             // ✅ Step 4: Update order
             lock (AdminManager.BlMutex)
             {
                 s_dal.Order.Update(ConvertBOToDO(order));
-                System.Diagnostics.Debug.WriteLine($"[ORDER] Order updated successfully");
 
                 // Notify observers ONLY after successful update
                 Observers.NotifyItemUpdated(order.Id);
@@ -973,7 +928,6 @@ internal static class OrderManager
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[ORDER ERROR] UpdateOrderAsync failed: {ex.Message}");
             return (false, $"Error updating order: {ex.Message}", GeocodingService.GeocodingStatus.NetworkError);
         }
     }
@@ -992,7 +946,6 @@ internal static class OrderManager
 
     /// <summary>
     /// Gets available orders for a courier with actual route distances.
-    /// Stage 7 - Type B: Collection query with network requests (Distance Calculation)
     /// 
     /// Flow:
     /// 1. Get all available orders
@@ -1016,8 +969,6 @@ internal static class OrderManager
                 return availableOrders;
             }
 
-            System.Diagnostics.Debug.WriteLine($"[ORDER] Calculating distances for {availableOrders.Count} orders");
-
             // Step 1: Calculate distances for all orders in parallel
             // This is Type B: Multiple async network requests in parallel
             var distanceTasks = availableOrders.Select(async order =>
@@ -1035,13 +986,11 @@ internal static class OrderManager
                         isDriving
                     ).ConfigureAwait(false);
 
-                    order.ArialDistance = distance;
-                    System.Diagnostics.Debug.WriteLine($"[ORDER] Distance for order {order.Id}: {distance:F2} km");
+                    order.AerialDistance = distance;
                     return order;
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[ORDER ERROR] Distance calculation failed for order {order.Id}: {ex.Message}");
                     return order; // Return order with existing distance
                 }
             });
@@ -1053,16 +1002,15 @@ internal static class OrderManager
             if (courier.MaxDeliveryDistance.HasValue)
             {
                 return ordersWithDistances
-                    .Where(o => o.ArialDistance <= courier.MaxDeliveryDistance.Value)
-                    .OrderBy(o => o.ArialDistance)
+                    .Where(o => o.AerialDistance <= courier.MaxDeliveryDistance.Value)
+                    .OrderBy(o => o.AerialDistance)
                     .ToList();
             }
 
-            return ordersWithDistances.OrderBy(o => o.ArialDistance).ToList();
+            return ordersWithDistances.OrderBy(o => o.AerialDistance).ToList();
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[ORDER ERROR] GetAvailableOrdersWithRouteDistanceAsync failed: {ex.Message}");
             // Fallback to non-async version with air distance
             return GetAvailableOrdersForCourier(courierId);
         }
@@ -1070,7 +1018,6 @@ internal static class OrderManager
 
     /// <summary>
     /// Gets order list with route distances calculated asynchronously.
-    /// Stage 7 - Type B: Collection query with network requests (Distance Calculation)
     /// 
     /// Uses same parallel approach as GetAvailableOrdersWithRouteDistanceAsync
     /// </summary>
@@ -1083,11 +1030,8 @@ internal static class OrderManager
 
             if (!config.CompanyLatitude.HasValue || !config.CompanyLongitude.HasValue)
             {
-                System.Diagnostics.Debug.WriteLine("[ORDER] Company location not set, returning air distances");
                 return orderList;
             }
-
-            System.Diagnostics.Debug.WriteLine($"[ORDER] Calculating route distances for {orderList.Count} orders");
 
             // Calculate distances for all orders in parallel
             var distanceTasks = orderList.Select(async orderInList =>
@@ -1125,7 +1069,6 @@ internal static class OrderManager
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[ORDER ERROR] Distance calculation failed for order {orderInList.OrderId}: {ex.Message}");
                     return orderInList; // Return original with existing distance
                 }
             });
@@ -1136,11 +1079,8 @@ internal static class OrderManager
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[ORDER ERROR] GetOrderListWithRouteDistancesAsync failed: {ex.Message}");
             // Fallback to non-async version
             return GetOrderList();
         }
     }
-
-    #endregion
 }

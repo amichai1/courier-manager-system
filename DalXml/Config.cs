@@ -19,44 +19,36 @@ internal static class Config
     // ✅ Synchronized:
     internal static int NextOrderId
     {
-        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
-        get => GetAndIncreaseConfigIntVal(s_data_config_xml, "NextOrderId");
+        [MethodImpl(MethodImplOptions.Synchronized)]        get => GetAndIncreaseConfigIntVal(s_data_config_xml, "NextOrderId");
         
-        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
-        private set => SetConfigIntVal(s_data_config_xml, "NextOrderId", value);
+        [MethodImpl(MethodImplOptions.Synchronized)]        private set => SetConfigIntVal(s_data_config_xml, "NextOrderId", value);
     }
 
     // Reads, increases, and saves the next Delivery ID.
     internal static int NextDeliveryId
     {
         // The getter reads the value, increases it by 1, and saves the new value back to XML.
-        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
-        get => GetAndIncreaseConfigIntVal(s_data_config_xml, "NextDeliveryId");
+        [MethodImpl(MethodImplOptions.Synchronized)]        get => GetAndIncreaseConfigIntVal(s_data_config_xml, "NextDeliveryId");
         
-        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
-        private set => SetConfigIntVal(s_data_config_xml, "NextDeliveryId", value);
+        [MethodImpl(MethodImplOptions.Synchronized)]        private set => SetConfigIntVal(s_data_config_xml, "NextDeliveryId", value);
     }
 
     /// <summary>
-    /// System clock for the delivery simulation - Stage 7: Thread-safe access
+    /// System clock for the delivery simulation.
     /// </summary>
     internal static DateTime Clock
     {
-        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
-        get => GetConfigDateVal(s_data_config_xml, "Clock");
+        [MethodImpl(MethodImplOptions.Synchronized)]        get => GetConfigDateVal(s_data_config_xml, "Clock");
         
-        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
-        set => SetConfigDateVal(s_data_config_xml, "Clock", value);
+        [MethodImpl(MethodImplOptions.Synchronized)]        set => SetConfigDateVal(s_data_config_xml, "Clock", value);
     }
 
     // Manager ID for initial login (Int type).
     internal static int ManagerId
     {
-        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
-        get => GetConfigIntVal(s_data_config_xml, "ManagerId");
+        [MethodImpl(MethodImplOptions.Synchronized)]        get => GetConfigIntVal(s_data_config_xml, "ManagerId");
         
-        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
-        set => SetConfigIntVal(s_data_config_xml, "ManagerId", value);
+        [MethodImpl(MethodImplOptions.Synchronized)]        set => SetConfigIntVal(s_data_config_xml, "ManagerId", value);
     }
 
     // Manager Password (String type).
@@ -149,17 +141,14 @@ internal static class Config
     // ✅ Simulator interval in minutes per tick
     internal static int SimulatorIntervalMinutes
     {
-        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
-        get => XMLTools.GetConfigIntValWithDefault(s_data_config_xml, "SimulatorIntervalMinutes", 1);
+        [MethodImpl(MethodImplOptions.Synchronized)]        get => XMLTools.GetConfigIntValWithDefault(s_data_config_xml, "SimulatorIntervalMinutes", 1);
         
-        [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
-        set => XMLTools.SetConfigIntVal(s_data_config_xml, "SimulatorIntervalMinutes", value);
+        [MethodImpl(MethodImplOptions.Synchronized)]        set => XMLTools.SetConfigIntVal(s_data_config_xml, "SimulatorIntervalMinutes", value);
     }
 
     
     // Resets all configuration properties to their initial values by setting the values in XML.
-    [MethodImpl(MethodImplOptions.Synchronized)] //stage 7
-    internal static void Reset()
+    [MethodImpl(MethodImplOptions.Synchronized)]    internal static void Reset()
     {
         // Resetting Auto-IDs to initial values
         NextOrderId = 1;
@@ -167,8 +156,8 @@ internal static class Config
 
         // Resetting General Config
         Clock = new DateTime(2026, 1, 21, 14, 0, 0); // Start Clock based on original config
-        ManagerId = 123456789;
-        ManagerPassword = "123456789";  
+        ManagerId = 123456789; // Default demo credentials
+        ManagerPassword = "123456789"; // Default demo credentials
         // Reset company address and coordinates
         CompanyAddress = null;
         CompanyLatitude = null;

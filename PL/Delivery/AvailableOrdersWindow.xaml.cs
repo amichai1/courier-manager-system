@@ -31,7 +31,6 @@ public partial class AvailableOrdersWindow : Window
     public static readonly DependencyProperty AvailableOrdersProperty =
         DependencyProperty.Register("AvailableOrders", typeof(IEnumerable<BO.Order>), typeof(AvailableOrdersWindow), new PropertyMetadata(null));
 
-    // Stage 7 - Loading indicator
     public bool IsLoading
     {
         get => (bool)GetValue(IsLoadingProperty);
@@ -76,7 +75,7 @@ public partial class AvailableOrdersWindow : Window
 
     #endregion
 
-    #region Loading - Stage 7 Async
+    #region Loading
 
     /// <summary>
     /// Loads available orders with actual route distances (async).
@@ -108,7 +107,6 @@ public partial class AvailableOrdersWindow : Window
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error loading available orders: {ex.Message}");
             AvailableOrders = new List<BO.Order>();
             tbEmptyState.Visibility = Visibility.Visible;
             tbOrderCount.Text = "Total Orders: 0";
@@ -142,7 +140,6 @@ public partial class AvailableOrdersWindow : Window
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error loading available orders: {ex.Message}");
             AvailableOrders = new List<BO.Order>();
             tbEmptyState.Visibility = Visibility.Visible;
         }
@@ -243,7 +240,6 @@ public partial class AvailableOrdersWindow : Window
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Order observer error: {ex.Message}");
         }
     }
 

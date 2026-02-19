@@ -6,7 +6,6 @@ namespace PL.Validation
 {
     /// <summary>
     /// Validation Rules for WPF Binding.
-    /// תוספת - ולידציה (בדיקת תקינות בסיסית) משולבת בתוך קישור לנתונים [binding]
     /// </summary>
 
     /// <summary>

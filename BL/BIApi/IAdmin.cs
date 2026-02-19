@@ -20,14 +20,11 @@ public interface IAdmin
     BO.Config GetConfig();
     void SetConfig(BO.Config config);
 
-    #region Stage 5 - Observer Pattern for Config and Clock Updates
     void AddConfigObserver(Action configObserver);
     void RemoveConfigObserver(Action configObserver);
     void AddClockObserver(Action clockObserver);
     void RemoveClockObserver(Action clockObserver);
-    #endregion Stage 5
 
-    #region Stage 7 - Simulator Control
     /// <summary>
     /// Starts the simulator with specified clock advancement interval.
     /// </summary>
@@ -43,5 +40,4 @@ public interface IAdmin
     /// Returns whether the simulator is currently running.
     /// </summary>
     bool IsSimulatorRunning { get; }
-    #endregion Stage 7
 }

@@ -13,7 +13,7 @@ namespace PL.Courier
 
         private static CourierListWindow? _instance = null;
 
-        // Stage 7 - Observer Mutex for thread-safe updates
+        // Observer Mutex for thread-safe updates
         private readonly PL.Helpers.ObserverMutex _courierListMutex = new();
 
         private CourierListWindow()
@@ -86,18 +86,17 @@ namespace PL.Courier
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             QueryCourierList();
-            try { s_bl.Couriers.AddObserver(CourierListObserver); } catch { }
+            try { s_bl.Couriers.AddObserver(CourierListObserver); } catch { /* Observer registration is best-effort */ }
         }
 
         private void Window_Closed(object sender, EventArgs e)
         {
-            try { s_bl.Couriers.RemoveObserver(CourierListObserver); } catch { }
+            try { s_bl.Couriers.RemoveObserver(CourierListObserver); } catch { /* Observer may already be removed */ }
             _instance = null;
         }
 
         private void CourierListObserver()
         {
-            #region Stage 7 - Thread-safe observer with non-blocking mutex
             if (_courierListMutex.CheckAndSetLoadInProgressOrRestartRequired())
                 return;
 
@@ -117,7 +116,6 @@ namespace PL.Courier
                 if (await _courierListMutex.UnsetLoadInProgressAndCheckRestartRequested())
                     CourierListObserver();
             });
-            #endregion
         }
 
         #endregion

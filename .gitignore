@@ -416,3 +416,12 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Project-specific data files
+xml/couriers.xml
+xml/orders.xml
+xml/deliveries.xml
+xml/data-config.xml
+
+# Academic documents
+*.docx

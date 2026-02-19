@@ -8,7 +8,6 @@ namespace PL.Converters
 {
     /// <summary>
     /// IMultiValueConverter - Combines multiple values into a single display string.
-    /// תוספת - שימוש ב-IMultiValueConverter
     /// </summary>
     public class FullAddressMultiConverter : IMultiValueConverter
     {
@@ -89,7 +88,6 @@ namespace PL.Converters
 
     /// <summary>
     /// MultiTrigger condition converter - returns true when multiple conditions are met.
-    /// תוספת - מולטי-טריגר
     /// </summary>
     public class AllTrueMultiConverter : IMultiValueConverter
     {

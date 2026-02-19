@@ -219,8 +219,8 @@ public partial class CourierWindow : Window
     private void Window_Closed(object sender, EventArgs e)
     {
         _isClosed = true;
-        try { s_bl.Couriers.RemoveObserver(CourierObserver); } catch { }
-        try { s_bl.Orders.RemoveObserver(OrderObserver); } catch { }
+        try { s_bl.Couriers.RemoveObserver(CourierObserver); } catch { /* Observer may already be removed */ }
+        try { s_bl.Orders.RemoveObserver(OrderObserver); } catch { /* Observer may already be removed */ }
     }
 
     #endregion
@@ -267,7 +267,7 @@ public partial class CourierWindow : Window
                 UpdateSalaryDisplay();
 
                 _originalCourier = CloneCourier(CurrentCourier);
-                try { s_bl.Couriers.AddObserver(CourierObserver); } catch { }
+                try { s_bl.Couriers.AddObserver(CourierObserver); } catch { /* Observer registration is best-effort */ }
             }
         }
         catch (Exception ex)
@@ -278,7 +278,7 @@ public partial class CourierWindow : Window
     }
 
     /// <summary>
-    /// עדכן את תצוגת השכר (משכורת וכמות הזמנות שהובילו)
+    /// Updates the salary display (net salary and delivery count).
     /// </summary>
     private void UpdateSalaryDisplay()
     {
@@ -297,7 +297,6 @@ public partial class CourierWindow : Window
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error calculating salary: {ex.Message}");
             SalaryVisibility = Visibility.Collapsed;
         }
     }
@@ -340,7 +339,7 @@ public partial class CourierWindow : Window
                     SelectOrderButtonEnabled = false;
                     IsDeliveryTypeEnabled = false;
 
-                    try { s_bl.Orders.AddObserver(OrderObserver); } catch { }
+                    try { s_bl.Orders.AddObserver(OrderObserver); } catch { /* Observer registration is best-effort */ }
                 }
                 else
                 {
@@ -357,7 +356,6 @@ public partial class CourierWindow : Window
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error loading current order: {ex.Message}");
             CurrentOrder = null;
             CurrentOrderVisibility = Visibility.Collapsed;
             NoCurrentOrderVisibility = Visibility.Visible;
@@ -567,12 +565,11 @@ public partial class CourierWindow : Window
                 courierIdTextBox.IsReadOnly = true;
                 _originalCourier = CloneCourier(CurrentCourier);
 
-                // ✅ עדכן את תצוגת השכר אחרי הוספה
                 UpdateSalaryDisplay();
 
                 try
                 { s_bl.Couriers.AddObserver(CourierObserver); }
-                catch { }
+                catch { /* Observer registration is best-effort */ }
             }
             else
             {
@@ -580,7 +577,6 @@ public partial class CourierWindow : Window
                 s_bl.Couriers.Update(CurrentCourier);
                 MessageBox.Show("Courier updated successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 
-                // ✅ עדכן את תצוגת השכר אחרי עדכון
                 UpdateSalaryDisplay();
             }
         }
@@ -701,7 +697,6 @@ public partial class CourierWindow : Window
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Order observer error: {ex.Message}");
         }
     }
 

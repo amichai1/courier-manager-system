@@ -51,7 +51,7 @@
                             <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="50"/>
                             <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="120"/>
                             <DataGridTextColumn Header="Type" Binding="{Binding OrderType}" Width="70"/>
-                            <DataGridTextColumn Header="Distance (km)" Binding="{Binding ArialDistance, StringFormat={}{0:F2}}" Width="100"/>
+                            <DataGridTextColumn Header="Distance (km)" Binding="{Binding AerialDistance, StringFormat={}{0:F2}}" Width="100"/>
                             <DataGridTextColumn Header="Weight (kg)" Binding="{Binding Weight, StringFormat={}{0:F2}}" Width="100"/>
                             <DataGridTextColumn Header="Fragile" Binding="{Binding IsFragile}" Width="70"/>
                             <DataGridTemplateColumn Header="Action" Width="100">
@@ -110,7 +110,6 @@
             </Border>
         </Grid>
 
-        <!-- Loading Overlay - Stage 7 -->
         <Grid Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}"
               Background="#80000000"
               Panel.ZIndex="1000">

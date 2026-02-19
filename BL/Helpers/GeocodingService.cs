@@ -9,7 +9,6 @@ namespace BL.Helpers;
 /// <summary>
 /// Async service for geocoding and distance calculations using external APIs.
 /// Implements caching (ConcurrentDictionary) to avoid duplicate API calls.
-/// Stage 7 - Async network requests with cache.
 /// </summary>
 public static class GeocodingService
 {
@@ -62,8 +61,7 @@ public static class GeocodingService
         {
             if (cachedResult.HasValue)
             {
-                System.Diagnostics.Debug.WriteLine($"[GEOCODING] Cache hit for: {address}");
-                return (cachedResult.Value.lat, cachedResult.Value.lon, GeocodingStatus.Success);
+                    return (cachedResult.Value.lat, cachedResult.Value.lon, GeocodingStatus.Success);
             }
             return (0, 0, GeocodingStatus.InvalidAddress);
         }
@@ -72,8 +70,6 @@ public static class GeocodingService
         {
             string encodedAddress = Uri.EscapeDataString(address);
             string url = $"https://nominatim.openstreetmap.org/search?format=json&q={encodedAddress}&limit=1";
-
-            System.Diagnostics.Debug.WriteLine($"[GEOCODING] API call for: {address}");
 
             HttpResponseMessage response = await s_httpClient.GetAsync(url).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
@@ -85,7 +81,6 @@ public static class GeocodingService
             if (results.GetArrayLength() == 0)
             {
                 s_geocodeCache.TryAdd(address, null);
-                System.Diagnostics.Debug.WriteLine($"[GEOCODING] No results for: {address}");
                 return (0, 0, GeocodingStatus.InvalidAddress);
             }
 
@@ -94,23 +89,19 @@ public static class GeocodingService
 
             // Store in cache
             s_geocodeCache.TryAdd(address, (lat, lon));
-            System.Diagnostics.Debug.WriteLine($"[GEOCODING] Success for: {address} -> ({lat}, {lon})");
 
             return (lat, lon, GeocodingStatus.Success);
         }
         catch (HttpRequestException ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[GEOCODING] Network error for {address}: {ex.Message}");
             return (0, 0, GeocodingStatus.NetworkError);
         }
         catch (TaskCanceledException)
         {
-            System.Diagnostics.Debug.WriteLine($"[GEOCODING] Timeout for: {address}");
             return (0, 0, GeocodingStatus.NetworkError);
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[GEOCODING] Error for {address}: {ex.Message}");
             s_geocodeCache.TryAdd(address, null);
             return (0, 0, GeocodingStatus.InvalidAddress);
         }
@@ -142,7 +133,6 @@ public static class GeocodingService
         // Check cache first
         if (s_distanceCache.TryGetValue(cacheKey, out double cachedDistance))
         {
-            System.Diagnostics.Debug.WriteLine($"[DISTANCE] Cache hit: {cacheKey} = {cachedDistance:F2} km");
             return (cachedDistance, true);
         }
 
@@ -151,8 +141,6 @@ public static class GeocodingService
             // Using OSRM demo server (for educational purposes)
             // For production, use your own OSRM server or a paid service
             string url = $"https://router.project-osrm.org/route/v1/{profile}/{fromLon},{fromLat};{toLon},{toLat}?overview=false";
-
-            System.Diagnostics.Debug.WriteLine($"[DISTANCE] API call: {profile} from ({fromLat:F4},{fromLon:F4}) to ({toLat:F4},{toLon:F4})");
 
             HttpResponseMessage response = await s_httpClient.GetAsync(url).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
@@ -176,14 +164,11 @@ public static class GeocodingService
 
             // Store in cache
             s_distanceCache.TryAdd(cacheKey, distanceKm);
-            System.Diagnostics.Debug.WriteLine($"[DISTANCE] Success: {distanceKm:F2} km");
 
             return (distanceKm, true);
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[DISTANCE] API error, using fallback: {ex.Message}");
-
             // Fallback to air distance * 1.4 (typical road factor)
             double airDistance = CalculateAirDistanceFallback(fromLat, fromLon, toLat, toLon);
             double estimatedRoadDistance = airDistance * 1.4;
@@ -254,7 +239,6 @@ public static class GeocodingService
     {
         s_distanceCache.Clear();
         s_geocodeCache.Clear();
-        System.Diagnostics.Debug.WriteLine("[GEOCODING] Cache cleared");
     }
 
     /// <summary>

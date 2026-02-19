@@ -22,7 +22,7 @@ public record Courier
         string name,
         string phone,
         string email,
-        string pasword,
+        string password,
         bool isActive,
         double? maxDeliveryDistance,
         DeliveryType type,
@@ -34,7 +34,7 @@ public record Courier
         this.Name = name;
         this.Phone = phone;
         this.Email = email;
-        this.Password = pasword;
+        this.Password = password;
         IsActive = isActive;
         MaxDeliveryDistance = maxDeliveryDistance;
         this.DeliveryType = type;

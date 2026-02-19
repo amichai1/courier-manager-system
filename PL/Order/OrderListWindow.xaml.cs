@@ -15,7 +15,7 @@ namespace PL.Order
         private static OrderListWindow? _instance = null;
         private BO.OrderStatus? _initialFilter = null;
 
-        // Stage 7 - Observer Mutex for thread-safe updates
+        // Observer Mutex for thread-safe updates
         private readonly PL.Helpers.ObserverMutex _orderListMutex = new();
 
         private OrderListWindow(BO.OrderStatus? filterStatus = null)
@@ -118,54 +118,46 @@ namespace PL.Order
                 QueryOrderList();
             }
 
-            try { s_bl.Orders.AddObserver(OrderListObserver); } catch { }
+            try { s_bl.Orders.AddObserver(OrderListObserver); } catch { /* Observer registration is best-effort */ }
         }
 
         private void Window_Closed(object sender, EventArgs e)
         {
-            try { s_bl.Orders.RemoveObserver(OrderListObserver); } catch { }
+            try { s_bl.Orders.RemoveObserver(OrderListObserver); } catch { /* Observer may already be removed */ }
             _instance = null;
         }
 
         private void OrderListObserver()
         {
-            #region Stage 7 - Thread-safe observer with non-blocking mutex
-            // 1. בדיקה אם כבר רץ עדכון - אם כן, יוצאים (בדיקה מהירה)
+            // Skip if an update is already running (fast check)
             if (_orderListMutex.CheckAndSetLoadInProgressOrRestartRequired())
                 return;
 
-            // 2. כל הלוגיקה עוברת ל-Dispatcher כדי למנוע שימוש ב-.Wait()
+            // Dispatch all logic to UI thread to avoid blocking with .Wait()
             Dispatcher.BeginInvoke(new Action(async () =>
             {
                 try
                 {
-                    // בדיקה האם החלון עדיין רלוונטי
                     if (_instance != null && _instance.IsLoaded)
                     {
                         QueryOrderList();
                     }
                 }
-                catch (Exception ex)
-                {
-                    // תפיסת שגיאות כדי למנוע קריסה, אבל לאפשר שחרור נעילה
-                    System.Diagnostics.Debug.WriteLine($"Error in OrderListObserver: {ex.Message}");
-                }
+                catch { /* Silently handle UI refresh errors during observer callback */ }
                 finally
                 {
-                    // 3. הבלוק הזה ירוץ *תמיד*, גם אם הייתה שגיאה למעלה!
-                    // זה מבטיח שהמסך לא ייתקע.
+                    // This block always runs, even on error, ensuring the UI never deadlocks
                     bool shouldRestart = await _orderListMutex.UnsetLoadInProgressAndCheckRestartRequested();
 
                     if (shouldRestart)
                     {
-                        // אם הגיעה בקשה חדשה בזמן שעבדנו, נריץ שוב
+                        // A new request arrived while we were working; re-run
                         OrderListObserver();
                     }
                 }
             }));
         }
-            #endregion
-        
+
         #endregion
 
         #region Query & Actions

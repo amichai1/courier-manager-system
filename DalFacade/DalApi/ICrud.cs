@@ -14,8 +14,8 @@ public interface ICrud<T> where T : class
 
     // [Chapter 8b] Update ReadAll signature for generic filtering 
      // Replaces: List<T> ReadAll(); [cite: 915]
-    IEnumerable<T> ReadAll(Func<T, bool>? filter = null); // Stage 2: Returns filtered list [cite: 193]
+    IEnumerable<T> ReadAll(Func<T, bool>? filter = null);
 
     // [Chapter 8c] Add new Read method for single object retrieval by filter
-    T? Read(Func<T, bool> filter); // Stage 2: Returns single object matching filter [cite: 227]
+    T? Read(Func<T, bool> filter);
 }

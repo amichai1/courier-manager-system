@@ -7,7 +7,7 @@ using BIApi; // Add this
 /// <summary>
 /// Defines the service contract for managing Courier entities.
 /// </summary>
-public interface IBICourier : BIApi.IObservable // Stage 5 - Extend IObservable (use fully qualified name)
+public interface IBICourier : BIApi.IObservable
 {
     // CRUD Operations
     void Create(BO.Courier courier);

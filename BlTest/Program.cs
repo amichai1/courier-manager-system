@@ -469,15 +469,13 @@ internal class Program
 
         if (int.TryParse(Console.ReadLine(), out int choice) && choice >= 1 && choice <= 5)
         {
-            // המרה של הבחירה ל-Enum
-            BO.TimeUnit unit = (BO.TimeUnit)(choice - 1); // אם ה-Enum מתחיל מ-0
+            BO.TimeUnit unit = (BO.TimeUnit)(choice - 1);
 
             Console.Write($"Enter number of {unit}s to advance: ");
             if (int.TryParse(Console.ReadLine(), out int amount) && amount > 0)
             {
                 try
                 {
-                    // קוראים ל-ForwardClock שוב ושוב עבור כל יחידה
                     for (int i = 0; i < amount; i++)
                     {
                         s_bl.Admin.ForwardClock(unit);

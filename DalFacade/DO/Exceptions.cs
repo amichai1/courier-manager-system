@@ -37,10 +37,8 @@ public class DalAlreadyExistsException : Exception
 [Serializable]
 public class DalXMLFileLoadCreateException : Exception
 {
-    // בנאי המקבל הודעת שגיאה
     public DalXMLFileLoadCreateException(string? message) : base(message) { }
 
-    // בנאי המקבל הודעת שגיאה וחריגה פנימית (Inner Exception)
-    // נדרש בדרך כלל כאשר קריאה או כתיבה ל-XML נכשלת (כגון בעיות הרשאה או פורמט)
+    // Accepts an inner exception for XML read/write failures (e.g. permissions or format issues)
     public DalXMLFileLoadCreateException(string? message, Exception? innerException) : base(message, innerException) { }
 }

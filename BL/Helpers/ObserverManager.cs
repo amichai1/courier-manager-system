@@ -10,7 +10,7 @@ namespace Helpers
     /// <item>a hash table of delegates for individual entity observers – indexed by appropriate entity ID</item>
     /// </list>
     /// </summary>
-    class ObserverManager //stage 5
+    class ObserverManager
     {
         /// <summary>
         /// event delegate for list observers – it’s called whenever there may be need to update the presentation

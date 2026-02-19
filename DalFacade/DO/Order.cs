@@ -26,7 +26,7 @@ public record Order
 )
 {
     /// <summary>
-    /// Default parameterless constructor for future use in stage 3 of the project.
+    /// Default parameterless constructor.
     /// </summary>
     public OrderType OrderType { get; set; } = OrderType.Retail;
     public string? Description { get; set; } = null;

@@ -13,20 +13,17 @@ internal class OrderImplementation : IBIOrder
     // --- CRUD ---
     public void Create(BO.Order order)
     {
-        AdminManager.ThrowOnSimulatorIsRunning(); //stage 7
-        OrderManager.CreateOrder(order);
+        AdminManager.ThrowOnSimulatorIsRunning();        OrderManager.CreateOrder(order);
     }
     public BO.Order Read(int id) => OrderManager.ReadOrder(id);
     public IEnumerable<BO.Order> ReadAll(Func<BO.Order, bool>? filter = null) => OrderManager.ReadAllOrders(filter);
     public void Update(BO.Order order)
     {
-        AdminManager.ThrowOnSimulatorIsRunning(); //stage 7
-        OrderManager.UpdateOrder(order);
+        AdminManager.ThrowOnSimulatorIsRunning();        OrderManager.UpdateOrder(order);
     }
     public void Delete(int id)
     {
-        AdminManager.ThrowOnSimulatorIsRunning(); //stage 7
-        OrderManager.DeleteOrder(id);
+        AdminManager.ThrowOnSimulatorIsRunning();        OrderManager.DeleteOrder(id);
     }
 
     // --- List ---
@@ -35,31 +32,26 @@ internal class OrderImplementation : IBIOrder
     // --- Specific Operations ---
     public void AssociateCourierToOrder(int orderId, int courierId)
     {
-        AdminManager.ThrowOnSimulatorIsRunning(); //stage 7
-        OrderManager.AssociateCourierToOrder(orderId, courierId);
+        AdminManager.ThrowOnSimulatorIsRunning();        OrderManager.AssociateCourierToOrder(orderId, courierId);
     }
     public void PickUpOrder(int orderId)
     {
-        AdminManager.ThrowOnSimulatorIsRunning(); //stage 7
-        OrderManager.PickUpOrder(orderId);
+        AdminManager.ThrowOnSimulatorIsRunning();        OrderManager.PickUpOrder(orderId);
     }
     public void DeliverOrder(int orderId)
     {
-        AdminManager.ThrowOnSimulatorIsRunning(); //stage 7
-        OrderManager.DeliverOrder(orderId);
+        AdminManager.ThrowOnSimulatorIsRunning();        OrderManager.DeliverOrder(orderId);
     }
     
     // Updated Method Call
     public void RefuseOrder(int orderId)
     {
-        AdminManager.ThrowOnSimulatorIsRunning(); //stage 7
-        OrderManager.RefuseOrder(orderId);
+        AdminManager.ThrowOnSimulatorIsRunning();        OrderManager.RefuseOrder(orderId);
     }
     
     public void CancelOrder(int orderId)
     {
-        AdminManager.ThrowOnSimulatorIsRunning(); //stage 7
-        OrderManager.CancelOrder(orderId);
+        AdminManager.ThrowOnSimulatorIsRunning();        OrderManager.CancelOrder(orderId);
     }
 
     public IEnumerable<BO.Order> GetAvailableOrdersForCourier(int courierId) => OrderManager.GetAvailableOrdersForCourier(courierId);
@@ -73,7 +65,6 @@ internal class OrderImplementation : IBIOrder
     public void RemoveObserver(int id, Action observer) => OrderManager.Observers.RemoveObserver(id, observer);
     #endregion
 
-    #region Stage 7
     public async Task<(bool success, string? errorMessage, int geocodeStatus)> CreateOrderAsync(BO.Order order)
     {
         var (success, error, status) = await OrderManager.CreateOrderAsync(order);

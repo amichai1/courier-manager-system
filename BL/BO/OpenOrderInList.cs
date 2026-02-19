@@ -9,7 +9,7 @@ public class OpenOrderInList
     public double Volume { get; init; }
     public bool IsFragile { get; init; }
     public string Address { get; init; }
-    public double ArialDistance { get; init; }
+    public double AerialDistance { get; init; }
     public double? ActualDistance { get; init; }
     public DateTime? ExpectedTime { get; init; }
     public ScheduleStatus ScheduleStatus { get; init; }

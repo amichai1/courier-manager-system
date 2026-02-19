@@ -85,7 +85,6 @@ namespace PL.Delivery
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error loading delivery history: {ex.Message}");
                 DeliveryHistory = new List<BO.DeliveryInList>();
                 tbEmptyState.Visibility = Visibility.Visible;
             }
@@ -131,10 +130,7 @@ namespace PL.Delivery
                 DeliveryHistory = filtered.ToList();
                 UpdateStats();
             }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error applying filters: {ex.Message}");
-            }
+            catch { /* Silently handle filter errors to keep UI stable */ }
         }
 
         private void cbxStatusFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -206,7 +202,6 @@ namespace PL.Delivery
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error updating stats: {ex.Message}");
                 tbAverageTime.Text = "—";
             }
         }
