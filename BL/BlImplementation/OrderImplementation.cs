@@ -77,5 +77,4 @@ internal class OrderImplementation : IBIOrder
     }
     public async Task<IEnumerable<BO.Order>> GetAvailableOrdersWithDistanceAsync(int courierId) => await OrderManager.GetAvailableOrdersWithRouteDistanceAsync(courierId);
     public async Task<IEnumerable<BO.OrderInList>> GetOrderListWithDistancesAsync() => await OrderManager.GetOrderListWithRouteDistancesAsync();
-    #endregion
 }

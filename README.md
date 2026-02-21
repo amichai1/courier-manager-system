@@ -14,13 +14,15 @@ A delivery management system inspired by platforms like Wolt, featuring an **Adm
 - Full CRUD for couriers and orders
 - Real-time order tracking with status indicators (On Time / At Risk / Late)
 - Courier salary calculation based on deliveries, distance, and vehicle type
+- Password management: auto-generated passwords on courier creation, admin reset with copyable dialog
 - Database initialization and reset controls
 - Delivery history viewer with filtering
 
 ### Courier Interface
-- Login with ID and password
+- Login with ID and password (SHA256-hashed credentials)
 - View and accept available orders sorted by distance
 - Pick up and deliver orders with status transitions
+- Change password with current/new/confirm validation
 - Route distance calculation (Haversine formula + optional geocoding)
 
 ### Simulation Engine
@@ -67,6 +69,7 @@ A delivery management system inspired by platforms like Wolt, featuring an **Adm
 - **Framework**: .NET 8, WPF (Windows Presentation Foundation)
 - **Language**: C# 12
 - **Data**: XML persistence / In-memory collections
+- **Security**: SHA256 password hashing (`PasswordHelper`), passwords never stored in plain text
 - **UI**: Custom `ControlTemplate`s, `IValueConverter`s, `DataTrigger`s, vector graphics in XAML
 - **Concurrency**: `Task.Run`, `Dispatcher.BeginInvoke`, `Lazy<T>`, mutex-based thread safety
 - **Pattern**: Observer pattern for real-time UI updates, Factory pattern for DAL abstraction
@@ -97,8 +100,9 @@ dotnet run --project PL
 ### Default Credentials
 - **Manager ID**: `123456789`
 - **Manager Password**: `123456789`
+- **Test Couriers** (after Initialize DB): Password `Test1234!` for all
 
-> These are demo credentials for development/testing purposes only.
+> All passwords are stored as SHA256 hashes. These are demo credentials for development/testing purposes only.
 
 ---
 

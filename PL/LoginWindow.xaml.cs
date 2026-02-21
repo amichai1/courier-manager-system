@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Input;
 using BlApi;
+using Helpers;
 
 namespace PL
 {
@@ -122,7 +123,7 @@ namespace PL
                 var config = s_bl.Admin.GetConfig();
                 
                 // Validate admin credentials
-                if (parsedId == config.ManagerId && password == config.ManagerPassword)
+                if (parsedId == config.ManagerId && PasswordHelper.VerifyPassword(password, config.ManagerPassword))
                 {
                     HandleAdminLogin();
                 }
@@ -163,7 +164,7 @@ namespace PL
             try
             {
                 var courier = s_bl.Couriers.Read(courierId);
-                if (courier == null || courier.Password != password)
+                if (courier == null || !PasswordHelper.VerifyPassword(password, courier.Password))
                 {
                     lblError.Text = "Invalid ID or Password. Please try again.";
                     ClearLoginForm();

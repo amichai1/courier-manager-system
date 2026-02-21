@@ -81,13 +81,26 @@
                             <!-- Password -->
                             <Label Grid.Row="1" Grid.Column="0" Content="Password:" Style="{StaticResource LabelHeader}"
                                    Visibility="{Binding PasswordFieldVisibility}"/>
-                            <TextBox Grid.Row="1" Grid.Column="1"
-                                    x:Name="passwordBox"
-                                    Text="{Binding CurrentPassword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                    Style="{StaticResource TextBoxRegular}"
-                                    Margin="0,0,0,10"
-                                    Visibility="{Binding PasswordFieldVisibility}"
-                                    ToolTip="At least 8 chars: uppercase, lowercase, digit, special char"/>
+                            <Grid Grid.Row="1" Grid.Column="1"
+                                  Margin="0,0,0,10"
+                                  Visibility="{Binding PasswordFieldVisibility}">
+                                <Button Content="Reset Password"
+                                        Click="btnResetPassword_Click"
+                                        Style="{StaticResource SecondaryButton}"
+                                        HorizontalAlignment="Left"
+                                        MinWidth="140" Height="32"
+                                        Padding="12,4"
+                                        Visibility="{Binding ResetPasswordVisibility}"
+                                        ToolTip="Generate a new random password for this courier"/>
+                                <Button Content="Change Password"
+                                        Click="btnChangePassword_Click"
+                                        Style="{StaticResource SecondaryButton}"
+                                        HorizontalAlignment="Left"
+                                        MinWidth="140" Height="32"
+                                        Padding="12,4"
+                                        Visibility="{Binding ChangePasswordVisibility}"
+                                        ToolTip="Change your password"/>
+                            </Grid>
 
                             <!-- Name -->
                             <Label Grid.Row="2" Grid.Column="0" Content="Full Name:" Style="{StaticResource LabelHeader}"/>

@@ -43,6 +43,7 @@ public partial class CourierWindow : Window
 
         LoadCourier();
         LoadCurrentOrder();
+        UpdatePasswordButtonVisibility();
     }
 
     #region Dependency Properties
@@ -210,9 +211,9 @@ public partial class CourierWindow : Window
             courierIdTextBox.IsReadOnly = true;
         }
 
-        if (CurrentCourier != null && !_isNewCourier && !string.IsNullOrEmpty(CurrentCourier.Password))
+        if (CurrentCourier != null && !_isNewCourier)
         {
-            CurrentPassword = CurrentCourier.Password;
+            CurrentPassword = "";
         }
     }
 
@@ -261,7 +262,7 @@ public partial class CourierWindow : Window
                 }
 
                 CurrentCourier.AverageDeliveryTime = s_bl.Couriers.CalculateAverageDeliveryTime(_courierId);
-                CurrentPassword = CurrentCourier.Password;
+                CurrentPassword = "";
 
                 // ✅ Calculate and display salary
                 UpdateSalaryDisplay();
@@ -491,7 +492,7 @@ public partial class CourierWindow : Window
         if (!EmailConverter.IsValid(CurrentCourier.Email))
             errors.AppendLine($"• {EmailConverter.GetErrorMessage()}");
 
-        if (!_isNewCourier && !PasswordHelper.IsPasswordStrong(CurrentPassword))
+        if (!_isNewCourier && !string.IsNullOrEmpty(CurrentPassword) && !PasswordHelper.IsPasswordStrong(CurrentPassword))
         {
             errors.AppendLine("• Password must be at least 8 characters " +
                               "with uppercase, lowercase, digit, and special character.");
@@ -545,25 +546,24 @@ public partial class CourierWindow : Window
 
             if (ButtonText == "Add")
             {
-                CurrentCourier.Password = PasswordHelper.GenerateStrongPassword();
+                string plainPassword = PasswordHelper.GenerateStrongPassword();
+                CurrentCourier.Password = plainPassword;
                 s_bl.Couriers.Create(CurrentCourier);
 
-                MessageBox.Show(
-                    $"Courier '{CurrentCourier.Name}' (ID: {CurrentCourier.Id}) added successfully!\n\n" +
-                    $"Password: {CurrentCourier.Password}\n\n" +
-                    $"Please save this password securely.",
+                ShowCopyablePasswordDialog(
                     "Courier Added",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                    $"Courier '{CurrentCourier.Name}' (ID: {CurrentCourier.Id}) added successfully!\nPlease save this password securely.",
+                    plainPassword);
 
                 _courierId = CurrentCourier.Id;
                 _isNewCourier = false;
                 ButtonText = "Update";
                 DeleteVisibility = Visibility.Visible;           // Show delete button
                 PasswordFieldVisibility = Visibility.Visible;    // Show the password field
-                CurrentPassword = CurrentCourier.Password;
+                CurrentPassword = "";
                 courierIdTextBox.IsReadOnly = true;
                 _originalCourier = CloneCourier(CurrentCourier);
+                UpdatePasswordButtonVisibility();
 
                 UpdateSalaryDisplay();
 
@@ -666,7 +666,7 @@ public partial class CourierWindow : Window
                 Dispatcher.BeginInvoke(new Action(() =>
                 {
                     CurrentCourier = updated;
-                    CurrentPassword = updated.Password;
+                    CurrentPassword = "";
                     _originalCourier = CloneCourier(updated);
                     LoadCurrentOrder();
                     UpdateSalaryDisplay();
@@ -706,6 +706,191 @@ public partial class CourierWindow : Window
     {
         _isCourierMode = isCourierMode;
         ActionButtonsVisibility = isCourierMode ? Visibility.Visible : Visibility.Collapsed;
+        UpdatePasswordButtonVisibility();
         UpdatePromoteStatusButton();
     }
+
+    #region Password Management
+
+    public Visibility ResetPasswordVisibility
+    {
+        get => (Visibility)GetValue(ResetPasswordVisibilityProperty);
+        set => SetValue(ResetPasswordVisibilityProperty, value);
+    }
+    public static readonly DependencyProperty ResetPasswordVisibilityProperty =
+        DependencyProperty.Register("ResetPasswordVisibility", typeof(Visibility), typeof(CourierWindow), new PropertyMetadata(Visibility.Collapsed));
+
+    public Visibility ChangePasswordVisibility
+    {
+        get => (Visibility)GetValue(ChangePasswordVisibilityProperty);
+        set => SetValue(ChangePasswordVisibilityProperty, value);
+    }
+    public static readonly DependencyProperty ChangePasswordVisibilityProperty =
+        DependencyProperty.Register("ChangePasswordVisibility", typeof(Visibility), typeof(CourierWindow), new PropertyMetadata(Visibility.Collapsed));
+
+    private void UpdatePasswordButtonVisibility()
+    {
+        ResetPasswordVisibility = (!_isCourierMode && !_isNewCourier) ? Visibility.Visible : Visibility.Collapsed;
+        ChangePasswordVisibility = _isCourierMode ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void btnResetPassword_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (CurrentCourier == null || CurrentCourier.Id <= 0) return;
+
+            var result = MessageBox.Show(
+                $"Reset password for courier '{CurrentCourier.Name}'?",
+                "Confirm Reset",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result != MessageBoxResult.Yes) return;
+
+            string newPlainPassword = PasswordHelper.GenerateStrongPassword();
+            CurrentCourier.Password = newPlainPassword;
+            s_bl.Couriers.Update(CurrentCourier);
+            CurrentPassword = "";
+
+            ShowCopyablePasswordDialog(
+                "Password Reset",
+                $"Password for '{CurrentCourier.Name}' has been reset.\nPlease save this password securely.",
+                newPlainPassword);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to reset password: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void btnChangePassword_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (CurrentCourier == null || CurrentCourier.Id <= 0) return;
+
+            var dialog = new Window
+            {
+                Title = "Change Password",
+                Width = 350,
+                Height = 250,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner = this,
+                ResizeMode = ResizeMode.NoResize
+            };
+
+            var stack = new StackPanel { Margin = new Thickness(15) };
+
+            stack.Children.Add(new TextBlock { Text = "Current Password:", Margin = new Thickness(0, 0, 0, 3) });
+            var txtCurrent = new PasswordBox { Margin = new Thickness(0, 0, 0, 10) };
+            stack.Children.Add(txtCurrent);
+
+            stack.Children.Add(new TextBlock { Text = "New Password:", Margin = new Thickness(0, 0, 0, 3) });
+            var txtNew = new PasswordBox { Margin = new Thickness(0, 0, 0, 10) };
+            stack.Children.Add(txtNew);
+
+            stack.Children.Add(new TextBlock { Text = "Confirm New Password:", Margin = new Thickness(0, 0, 0, 3) });
+            var txtConfirm = new PasswordBox { Margin = new Thickness(0, 0, 0, 15) };
+            stack.Children.Add(txtConfirm);
+
+            var btnPanel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+            var btnOk = new Button { Content = "Change", Width = 80, Margin = new Thickness(0, 0, 5, 0) };
+            var btnCancelDlg = new Button { Content = "Cancel", Width = 80 };
+            btnPanel.Children.Add(btnOk);
+            btnPanel.Children.Add(btnCancelDlg);
+            stack.Children.Add(btnPanel);
+
+            btnCancelDlg.Click += (s, args) => dialog.DialogResult = false;
+            btnOk.Click += (s, args) =>
+            {
+                var courier = s_bl.Couriers.Read(CurrentCourier.Id);
+                if (!PasswordHelper.VerifyPassword(txtCurrent.Password, courier.Password))
+                {
+                    MessageBox.Show("Current password is incorrect.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (txtNew.Password != txtConfirm.Password)
+                {
+                    MessageBox.Show("New passwords do not match.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (!PasswordHelper.IsPasswordStrong(txtNew.Password))
+                {
+                    MessageBox.Show("Password must be at least 8 characters with uppercase, lowercase, digit, and special character.",
+                        "Weak Password", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                dialog.DialogResult = true;
+            };
+
+            dialog.Content = stack;
+
+            if (dialog.ShowDialog() == true)
+            {
+                CurrentCourier.Password = txtNew.Password;
+                s_bl.Couriers.Update(CurrentCourier);
+                CurrentPassword = "";
+                MessageBox.Show("Password changed successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to change password: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private static void ShowCopyablePasswordDialog(string title, string message, string password)
+    {
+        var dialog = new Window
+        {
+            Title = title,
+            Width = 400,
+            Height = 200,
+            WindowStartupLocation = WindowStartupLocation.CenterScreen,
+            ResizeMode = ResizeMode.NoResize
+        };
+
+        var stack = new StackPanel { Margin = new Thickness(15) };
+
+        stack.Children.Add(new TextBlock
+        {
+            Text = message,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 10)
+        });
+
+        var passwordPanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 15) };
+        var txtPassword = new TextBox
+        {
+            Text = password,
+            IsReadOnly = true,
+            FontFamily = new System.Windows.Media.FontFamily("Consolas"),
+            FontSize = 14,
+            Width = 250,
+            VerticalContentAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 10, 0)
+        };
+        var btnCopy = new Button { Content = "Copy", Width = 60 };
+        btnCopy.Click += (s, e) =>
+        {
+            Clipboard.SetText(password);
+            btnCopy.Content = "Copied!";
+        };
+        passwordPanel.Children.Add(txtPassword);
+        passwordPanel.Children.Add(btnCopy);
+        stack.Children.Add(passwordPanel);
+
+        var btnClose = new Button { Content = "OK", Width = 80, HorizontalAlignment = HorizontalAlignment.Right };
+        btnClose.Click += (s, e) => dialog.Close();
+        stack.Children.Add(btnClose);
+
+        dialog.Content = stack;
+        dialog.ShowDialog();
+    }
+
+    #endregion
 }

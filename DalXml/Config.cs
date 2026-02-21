@@ -157,7 +157,7 @@ internal static class Config
         // Resetting General Config
         Clock = new DateTime(2026, 1, 21, 14, 0, 0); // Start Clock based on original config
         ManagerId = 123456789; // Default demo credentials
-        ManagerPassword = "123456789"; // Default demo credentials
+        ManagerPassword = "15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225"; // SHA256 of "123456789"
         // Reset company address and coordinates
         CompanyAddress = null;
         CompanyLatitude = null;

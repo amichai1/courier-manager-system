@@ -59,7 +59,7 @@ internal static class Config
 
     /// <summary>
     /// Manager Password    /// </summary>
-    private static string _managerPassword = "123456789"; // Default demo credentials
+    private static string _managerPassword = "15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225"; // SHA256 of "123456789"
     
     internal static string ManagerPassword
     {
@@ -221,7 +221,7 @@ internal static class Config
         
         // Reset manager credentials
         _managerId = 123456789; // Default demo credentials
-        _managerPassword = "123456789"; // Default demo credentials
+        _managerPassword = "15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225"; // SHA256 of "123456789"
         
         // Reset company address and coordinates
         _companyAddress = null;

@@ -89,7 +89,7 @@ public static class Initialization
             string phone = GeneratePhoneNumber();
             string emailName = courierNames[i].Replace(" ", ".").ToLower();
             string email = emailName + emailDomains[s_rand.Next(emailDomains.Length)];
-            string plainPassword = GenerateStrongPassword();
+            string hashedPassword = "0fadf52a4580cfebb99e61162139af3d3a6403c1d36b83e4962b721d1c8cbd0b"; // SHA256 of "Test1234!"
             double? maxDistance = s_rand.Next(10, 51);
             DeliveryType deliveryType = deliveryTypes[i % deliveryTypes.Length];
 
@@ -101,7 +101,7 @@ public static class Initialization
                 Name = courierNames[i],
                 Phone = phone,
                 Email = email,
-                Password = plainPassword,
+                Password = hashedPassword,
                 IsActive = true,
                 MaxDeliveryDistance = maxDistance,
                 DeliveryType = deliveryType,
